@@ -1,0 +1,21 @@
+{
+  "app": {
+    "title": "我的应用",
+    "description": "一个带有国际化功能的Next.js应用"
+  },
+  "nav": {
+    "home": "首页",
+    "about": "关于",
+    "contact": "联系我们"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "submit": "提交",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "confirm": "确认",
+    "back": "返回"
+  }
+}

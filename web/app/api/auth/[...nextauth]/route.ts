@@ -1,0 +1,84 @@
+import { authService } from '@/api/auth'
+import type { AuthOptions } from 'next-auth'
+import NextAuth from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+
+export const authOptions: AuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        try {
+          // 这里需要连接到您的后端API进行用户验证
+          const response = await authService.login({
+            email: credentials.email,
+            password: credentials.password,
+          })
+
+          if (!response) {
+            return null
+          }
+
+          if (!response.token) {
+            return null
+          }
+
+          // 返回用户信息
+          return {
+            id: response.userId, // NextAuth内部需要此字段
+            userId: response.userId,
+            email: response.email,
+            username: response.username,
+            avatar: response.avatar,
+            accessToken: response.token,
+          }
+        } catch (error) {
+          return null
+        }
+      },
+    }),
+  ],
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30天
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      // 首次登录时，user对象中包含accessToken和其他信息
+      if (user) {
+        // 使用扩展运算符将所有用户属性复制到token中
+        return {
+          ...token,
+          ...user,
+        }
+      }
+      return token
+    },
+    async session({ session, token }) {
+      // 将token中的信息传递到session中，前端可以访问
+      session.user.userId = token.userId as string
+      session.user.username = token.username as string
+      session.user.email = token.email as string
+      session.user.avatar = token.avatar as string
+      session.accessToken = token.accessToken as string
+      return session
+    },
+  },
+  pages: {
+    signIn: '/login',
+    signOut: '/login',
+    error: '/login', // 错误页面
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+}
+
+const handler = NextAuth(authOptions)
+export { handler as GET, handler as POST }

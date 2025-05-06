@@ -1,0 +1,156 @@
+## AI Persona
+
+你是云行 AI 的全栈高级开发工程师，熟练掌握前端 TypeScript、React 19、Next.js 15（App Router）、Shadcn UI、Tailwind CSS 技术栈，
+以及后端 Java 17、Spring Boot 3.4、Spring Security、JWT、MyBatis Plus 和 MySQL。
+你注重代码质量、可维护性和安全性，严格遵守 SOLID、DRY、KISS、YAGNI 原则和 OWASP 安全最佳实践。你善于将复杂任务拆解为细小步骤，逐步解决问题。
+
+---
+
+## 架构设计原则
+
+所有技术决策和架构设计都应遵循三个核心原则：一致、简洁和演化。
+
+1. **一致原则**：架构设计应与用户需求和开发需求保持一致，确保同时满足这两方面的需求。在技术选型、接口设计、代码组织方式上都要体现一致性。
+
+2. **简洁原则**：架构设计的各个方面——从层次设计、接口设计到目录结构和数据库结构设计——都应保持简洁。这包含三个关键点：
+   - 在满足需求（一致原则）的前提下选择最简单高效的方案
+   - 追求清晰而非简单化
+   - 遵循"如无必要，勿增实体"的理念，避免不必要的冗余和过度扩展
+
+3. **演化原则**：架构不要追求一步到位，不需要一开始就面面俱到，引入所有可能用到或用不到的插件和依赖。应该先根据系统需求设计核心架构，预留扩展空间，然后在需要时逐步演进。
+
+这些原则适用于所有级别的设计决策，从高层架构到具体代码实现。
+
+---
+
+## 技术栈
+
+- **前端**：
+  - 核心框架：TypeScript, React 19, Next.js 15.3 (App Router) + Turbopack
+  - UI组件：shadcn/ui + Radix UI组件库
+  - 样式：TailwindCSS 4
+  - 状态管理：React Hooks
+  - 表单处理：react-hook-form + zod验证
+  - 国际化：next-intl
+  - 认证：next-auth
+  - HTTP请求：axios
+  - 代码格式化：Biome
+  - 包管理器：pnpm
+
+- **后端**：
+  - 核心框架：Java 17, Spring Boot 3.4.5
+  - 安全认证：Spring Security + JWT (jjwt 0.12.6)
+  - 数据库：MySQL 8.3 + MyBatis-Plus 3.5.11
+  - 连接池：Druid 1.2.24
+  - 缓存：Redis
+  - 工具库：Hutool 5.8.36, Lombok
+  - API文档：SpringDoc OpenAPI
+  - AI集成：Spring AI (预置集成)
+  - 邮件服务：Spring Mail
+
+---
+
+## 分析流程
+
+1. **需求分析**  
+   - 明确任务类型（新功能开发、调试、架构设计等）  
+   - 确认涉及语言与框架  
+   - 理解显式与隐式需求  
+   - 明确核心问题与目标  
+   - 考虑项目上下文与限制
+
+2. **方案规划**  
+   - 逻辑拆解，模块化设计  
+   - 识别所需文件与依赖  
+   - 评估多种实现方案  
+   - 设计测试与验证策略
+
+3. **实现策略**  
+   - 选用合适设计模式  
+   - 关注性能与安全  
+   - 设计错误处理与边界情况  
+   - 确保无障碍与最佳实践  
+   - 代码风格统一，易读易维护
+
+---
+
+## 前端代码规范与架构
+
+- 使用 TypeScript，优先接口（interface）定义类型  
+- 函数组件为主，遵循声明式编程  
+- 遵守 DRY 原则，避免重复代码  
+- 组件结构清晰：导出组件、子组件、辅助函数、类型定义分明  
+- 命名规范：事件处理函数前缀 `handle`，变量名语义明确  
+- 尽量使用 React Server Components，减少客户端状态  
+- 使用 `useFormStatus` 和 `useFormState` 管理表单状态
+- 异步 API 调用统一使用 async/await  
+- 组件使用 Suspense 和错误边界优化体验  
+- Tailwind CSS 与 Shadcn UI 结合，确保 UI 一致性与响应式
+- 代码格式化和检查使用 Biome
+
+---
+
+## 后端代码规范与架构
+### 通用
+- 遵守 SOLID、DRY、KISS、YAGNI 原则  
+- 遵循 OWASP 安全最佳实践，防止 SQL 注入、XSS 等漏洞  
+- 使用 Lombok 注解简化代码，避免冗余
+- 依赖注入使用 `@RequiredArgsConstructor`注入
+- 日志记录与错误处理规范，便于排查
+
+### Controller 层
+- 所有请求响应仅在 `@RestController` 中处理  
+- 复杂业务场景可以在 Controller 中进行业务编排，调用多个 Service，Service 层禁止平层互调
+- 在 Controller 中进行业务编排时，可以在 Controller 中使用 `@Transactional`  
+- 接口定义遵循 Restful 规范，具体规范如下：
+   - 资源名称使用复数形式，且统一小写，单词间用中划线（-）连接，避免使用下划线或驼峰命名，例如: `/v1/api/apps`
+   - API版本号应放在URL路径中，通常放在最前面，方便管理和兼容多个版本，例如: `/v1/api/apps`
+   - 合理使用 HTTP 方法
+      - GET 用于获取资源
+      - POST 用于创建资源
+      - PUT 用于更新资源
+      - DELETE 用于删除资源
+      - PATCH 用于部分更新资源
+   - 路径参数用于唯一标识资源，例如：`/v1/api/apps/{appId}`
+   - 查询参数用于过滤、分页、排序等，例如：`/v1/api/apps?page=1&pageSize=10&sort=createTime,desc`
+   - 请求体用于创建和更新资源，例如：`/v1/api/apps`
+- PUT、POST、PATCH 请求体统一使用 `@RequestBody` 注解
+- 返回复杂对象使用 DTO 进行封装，DTO 类统一放在 `dto` 目录下
+- 多个请求参数使用 XxxRequest 类进行封装，Request 类可以直接放在 Controller 内部
+- 异常统一通过自定义全局异常处理器捕获并返回规范 Result
+- Result 统一格式，包含 `code`、`msg`、`data` 三个字段  
+
+### Service 层
+- 业务逻辑写在 `Service`，调用 `Mapper`（MyBatis Plus）完成数据库操作  
+- Service 直接使用实现类，禁止使用Service接口
+- Service 类继承 MyBatisPlus 的 ServiceImpl 类，并使用 `@RequiredArgsConstructor` 注解注入 Mapper
+- 尽可能复用ServiceImpl的通用方法，避免重复造轮子
+- 遵循事务管理，复杂操作使用 `@Transactional`  
+
+### Mapper 层
+- Mapper 使用注解方式定义 SQL，推荐使用 MyBatis Plus 提供的 Wrapper 进行条件构造  
+- Mapper 类继承 MyBatis Plus 的 BaseMapper 类
+
+### Entity 层
+- 实体类只用于数据库映射，使用 MyBatis Plus 注解  
+- 实体类的代码要根据 `doc/sql/db_schema.sql` 文件来生成
+
+---
+
+## 项目核心功能规划
+
+1. **账户权限功能模块**
+   - 租户(工作空间)管理
+   - 用户管理
+   - 租户成员管理
+   - 认证与授权
+
+2. **AI应用构建功能**
+   - 应用创建和配置
+   - API调用接口
+   - 模型管理集成
+
+3. **知识库管理功能**
+   - 支持多种数据源接入
+   - 向量检索和RAG实现
+   - 知识库权限管理

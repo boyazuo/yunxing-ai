@@ -1,0 +1,46 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: yunxing-api
+  profiles:
+    active: dev
+      
+
+# Mybatis-plus
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-handlers-package: com.yxboot.config.mybatisplus.handler
+  global-config:
+    db-config:
+      logic-delete-field: deleted # 全局逻辑删除的实体字段名
+      logic-delete-value: 1 # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
+
+# JWT配置
+jwt:
+  secret: yunxing-ai-platform-secret-key-for-jwt-token-with-spring-boot
+  expiration: 86400000  # 1天
+  header: Authorization
+  token-prefix: Bearer
+
+# 日志配置
+logging:
+  level:
+    com.yxboot: INFO
+    org.springframework: WARN 
+
+# SpringDoc配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  packages-to-scan: com.yxboot.modules
+  show-actuator: false 
