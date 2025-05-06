@@ -1,5 +1,6 @@
 'use client'
 
+import { authService } from '@/api/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,7 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
   })
@@ -55,42 +57,35 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
         router.push(redirectUrl)
         router.refresh()
       } else if (mode === 'register') {
-        // 这里应该连接到您的后端API进行注册
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        try {
+          await authService.register({
+            username: formData.username,
             email: formData.email,
             password: formData.password,
-          }),
-        })
+          })
 
-        const data = await response.json()
+          // 注册成功后自动登录
+          const result = await signIn('credentials', {
+            redirect: false,
+            email: formData.email,
+            password: formData.password,
+          })
 
-        if (!response.ok) {
-          setError(data.message || t('registerFailed'))
-          toast.error(data.message || t('registerFailed'))
+          if (result?.error) {
+            setError(result.error)
+            toast.error(result.error || t('loginFailed'))
+            return
+          }
+
+          toast.success(t('registerSuccess'))
+          router.push(redirectUrl)
+          router.refresh()
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          setError(errorMessage)
+          toast.error(errorMessage || t('registerFailed'))
           return
         }
-
-        // 注册成功后自动登录
-        const result = await signIn('credentials', {
-          redirect: false,
-          email: formData.email,
-          password: formData.password,
-        })
-
-        if (result?.error) {
-          setError(result.error)
-          toast.error(result.error || t('loginFailed'))
-          return
-        }
-
-        toast.success(t('registerSuccess'))
-        router.push(redirectUrl)
-        router.refresh()
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -105,6 +100,22 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
     <form className={cn('flex flex-col gap-6', className)} onSubmit={handleSubmit} {...props}>
       <div className="grid gap-6">
         {error && <div className="text-sm text-red-500 p-2 bg-red-50 rounded border border-red-200">{error}</div>}
+        {mode === 'register' && (
+          <div className="grid gap-2">
+            <Label htmlFor="username">{t('username')}</Label>
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="请输入用户名"
+              required
+              value={formData.username}
+              onChange={handleChange}
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
         <div className="grid gap-2">
           <Label htmlFor="email">{t('email')}</Label>
           <Input

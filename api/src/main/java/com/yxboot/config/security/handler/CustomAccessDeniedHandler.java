@@ -1,14 +1,16 @@
 package com.yxboot.config.security.handler;
 
-import cn.hutool.json.JSONUtil;
-import com.yxboot.common.api.Result;
-import com.yxboot.common.api.ResultCode;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
-import java.io.IOException;
+import com.yxboot.common.api.Result;
+import com.yxboot.common.api.ResultCode;
+
+import cn.hutool.json.JSONUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 自定义返回结果：没有权限访问时
@@ -18,9 +20,10 @@ import java.io.IOException;
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request,
-                       HttpServletResponse response,
-                       AccessDeniedException e) throws IOException {
-        response.setHeader("Access-Control-Allow-Origin", "*");
+            HttpServletResponse response,
+            AccessDeniedException e) throws IOException {
+        response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+        response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setHeader("Cache-Control", "no-cache");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");

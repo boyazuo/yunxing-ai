@@ -5,6 +5,12 @@ export interface LoginParams {
   password: string
 }
 
+export interface RegisterParams {
+  username: string
+  email: string
+  password: string
+}
+
 export interface LoginResponse {
   userId: string
   username: string
@@ -23,14 +29,11 @@ export const authService = {
     }
   },
 
-  async logout(): Promise<void> {
+  async register(params: RegisterParams) {
     try {
-      await api.post<void>('/auth/logout')
+      await api.post<null>('/auth/register', params)
     } catch (error: unknown) {
-      // 即使登出失败也重定向到登录页
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      throw new Error('注册失败，请稍后重试')
     }
   },
 }

@@ -16,7 +16,7 @@ export function LogoutButton({ className, variant = 'default' }: LogoutButtonPro
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
-    router.push('/')
+    router.push('/login')
     router.refresh()
   }
 
