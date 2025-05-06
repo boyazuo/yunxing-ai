@@ -2,6 +2,11 @@
 
 云行 AI 是一个功能强大的 AI 应用构建平台，旨在简化 AI 应用的开发和部署过程。通过提供丰富的工具和接口，开发者可以快速构建、定制和部署 AI 解决方案。
 
+## 界面展示
+![](https://github.com/boyazuo/yunxing-ai/blob/main/web/public/images/login.png?raw=true)
+![](https://github.com/boyazuo/yunxing-ai/blob/main/web/public/images/chat.png?raw=true)
+![](https://github.com/boyazuo/yunxing-ai/blob/main/web/public/images/apps.png?raw=true)
+
 ## 项目架构
 
 项目采用前后端分离架构：
