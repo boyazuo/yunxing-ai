@@ -8,6 +8,7 @@ export interface AppRequest {
   appName: string
   intro?: string
   logo?: string
+  logoBackground?: string
   type: AppType
   status?: AppStatus
   tenantId: string

@@ -25,19 +25,22 @@ public class AppService extends ServiceImpl<AppMapper, App> {
     /**
      * 创建应用
      * 
-     * @param tenantId 租户ID
-     * @param appName  应用名称
-     * @param intro    应用介绍
-     * @param logo     应用Logo
-     * @param type     应用类型
+     * @param tenantId       租户ID
+     * @param appName        应用名称
+     * @param intro          应用介绍
+     * @param logo           应用Logo
+     * @param logoBackground 应用Logo背景色
+     * @param type           应用类型
      * @return 应用ID
      */
-    public App createApp(String tenantId, String appName, String intro, String logo, AppType type) {
+    public App createApp(String tenantId, String appName, String intro, String logo, String logoBackground,
+            AppType type) {
         App app = new App();
         app.setTenantId(tenantId);
         app.setAppName(appName);
         app.setIntro(intro);
         app.setLogo(logo);
+        app.setLogoBackground(logoBackground);
         app.setType(type);
         app.setStatus(AppStatus.DRAFT);
         save(app);

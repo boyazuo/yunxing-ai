@@ -1,6 +1,7 @@
 'use client'
 
 import { type AppRequest, appService } from '@/api/apps'
+import { type EmojiObject, EmojiPickerDialog } from '@/components/emoji/picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,6 +29,7 @@ const formSchema = z.object({
   }),
   intro: z.string().optional(),
   logo: z.string().optional(),
+  logoBackground: z.string().optional(),
   type: z.string({
     required_error: '请选择应用类型',
   }),
@@ -44,6 +46,7 @@ export interface AppFormDialogProps {
 
 export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: AppFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const isEditing = !!app?.appId
 
   // 表单
@@ -53,6 +56,7 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
       appName: '',
       intro: '',
       logo: '',
+      logoBackground: '',
       type: '',
       tenantId: tenantId,
     },
@@ -65,6 +69,7 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
         appName: app.appName,
         intro: app.intro || '',
         logo: app.logo || '',
+        logoBackground: app.logoBackground || '',
         type: app.type.toString(),
         tenantId: app.tenantId,
       })
@@ -73,11 +78,18 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
         appName: '',
         intro: '',
         logo: '',
+        logoBackground: '',
         type: '',
         tenantId: tenantId,
       })
     }
   }, [app, form, tenantId])
+
+  // 处理表情选择
+  const handleEmojiSelect = (emoji: EmojiObject) => {
+    form.setValue('logo', emoji.native, { shouldValidate: true })
+    form.setValue('logoBackground', emoji.bgColor, { shouldValidate: true })
+  }
 
   // 表单提交处理
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -88,6 +100,7 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
         appName: values.appName,
         intro: values.intro,
         logo: values.logo,
+        logoBackground: values.logoBackground,
         type: values.type as unknown as AppType,
         tenantId: values.tenantId,
       }
@@ -152,10 +165,21 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
               name="logo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>应用Logo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="输入Logo URL" {...field} />
-                  </FormControl>
+                  <FormLabel>应用图标</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <div
+                        className="flex h-9 w-9 items-center justify-center rounded-md border text-2xl shadow-xs"
+                        style={{ backgroundColor: form.watch('logoBackground') || 'transparent' }}
+                        aria-label="当前选择的图标"
+                      >
+                        {field.value || '🧩'}
+                      </div>
+                    </FormControl>
+                    <Button type="button" variant="outline" onClick={() => setIsEmojiPickerOpen(true)}>
+                      选择图标
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -195,6 +219,14 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
             </DialogFooter>
           </form>
         </Form>
+
+        {/* 表情选择器对话框 */}
+        <EmojiPickerDialog
+          open={isEmojiPickerOpen}
+          onOpenChange={setIsEmojiPickerOpen}
+          onEmojiSelect={handleEmojiSelect}
+          title="选择应用图标"
+        />
       </DialogContent>
     </Dialog>
   )

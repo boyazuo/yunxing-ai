@@ -11,6 +11,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-avatar": "^1.1.7",
     "@radix-ui/react-dialog": "^1.1.11",
@@ -19,10 +20,12 @@
     "@radix-ui/react-select": "^2.2.2",
     "@radix-ui/react-separator": "^1.1.4",
     "@radix-ui/react-slot": "^1.2.0",
+    "@radix-ui/react-tabs": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.4",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "emoji-mart": "^5.6.0",
     "lucide-react": "^0.503.0",
     "next": "15.3.1",
     "next-auth": "^4.24.11",

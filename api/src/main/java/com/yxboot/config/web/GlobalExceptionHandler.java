@@ -38,20 +38,20 @@ public class GlobalExceptionHandler {
     public Result<?> handleAuthenticationException(AuthenticationException ex) {
         log.error("认证异常", ex);
         return Result.error(ResultCode.UNAUTHORIZED,
-                "==认证失败：" + (ex instanceof BadCredentialsException ? "用户名或密码错误" : ex.getMessage()));
+                "认证失败：" + (ex instanceof BadCredentialsException ? "用户名或密码错误" : ex.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Result<?> handleAccessDeniedException(AccessDeniedException ex) {
         log.error("授权异常", ex);
-        return Result.error(ResultCode.FORBIDDEN, "==无权限访问此资源");
+        return Result.error(ResultCode.FORBIDDEN, "无权限访问此资源");
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<?> handleException(Exception ex) {
         log.error("系统异常", ex);
-        return Result.error(ResultCode.INTERNAL_SERVER_ERROR, "==服务器内部错误");
+        return Result.error(ResultCode.INTERNAL_SERVER_ERROR, "服务器内部错误");
     }
 }

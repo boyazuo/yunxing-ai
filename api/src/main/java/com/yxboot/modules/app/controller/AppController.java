@@ -65,10 +65,11 @@ public class AppController {
         String appName = appRequest.getAppName();
         String intro = appRequest.getIntro();
         String logo = appRequest.getLogo();
+        String logoBackground = appRequest.getLogoBackground();
         AppType type = appRequest.getType();
 
         // 创建应用
-        App app = appService.createApp(tenantId, appName, intro, logo, type);
+        App app = appService.createApp(tenantId, appName, intro, logo, logoBackground, type);
 
         return Result.success("应用创建成功", app);
     }
@@ -91,6 +92,9 @@ public class AppController {
         }
         if (appRequest.getLogo() != null) {
             existingApp.setLogo(appRequest.getLogo());
+        }
+        if (appRequest.getLogoBackground() != null) {
+            existingApp.setLogoBackground(appRequest.getLogoBackground());
         }
         if (appRequest.getType() != null) {
             existingApp.setType(appRequest.getType());
@@ -132,6 +136,7 @@ public class AppController {
         private String appName;
         private String intro;
         private String logo;
+        private String logoBackground;
         private AppType type;
         private AppStatus status;
         private String tenantId;

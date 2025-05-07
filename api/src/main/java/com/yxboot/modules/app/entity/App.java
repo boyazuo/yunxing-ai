@@ -39,6 +39,10 @@ public class App {
     @Schema(description = "应用Logo")
     private String logo;
 
+    @Schema(description = "应用Logo背景色")
+    @TableField("logo_background")
+    private String logoBackground;
+
     @Schema(description = "应用类型")
     private AppType type;
 
