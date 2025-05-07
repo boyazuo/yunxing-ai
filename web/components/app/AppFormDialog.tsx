@@ -1,11 +1,6 @@
 'use client'
 
-import { type App, type AppRequest, type AppType, appService } from '@/api/apps'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import * as z from 'zod'
-
+import { type AppRequest, appService } from '@/api/apps'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,7 +14,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import type { App, AppType } from '@/types/app'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 
 // 应用表单验证规则
 const formSchema = z.object({
