@@ -4,7 +4,6 @@
 Thumbs.db
 *.swp
 *.swo
-*~
 
 # 编辑器/IDE文件
 .idea/
@@ -65,10 +64,6 @@ api/target/
 api/*/target/
 api/*.log
 api/.mvn/wrapper/maven-wrapper.jar
-api/pom.xml.tag
-api/pom.xml.releaseBackup
-api/pom.xml.versionsBackup
-api/pom.xml.next
 api/release.properties
 api/dependency-reduced-pom.xml
 api/buildNumber.properties
