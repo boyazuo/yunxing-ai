@@ -18,9 +18,6 @@ import lombok.NoArgsConstructor;
 @Schema(description = "登录结果信息")
 public class UserDTO {
 
-    @Schema(description = "JWT令牌")
-    private String token;
-
     @Schema(description = "用户ID")
     private Long userId;
 

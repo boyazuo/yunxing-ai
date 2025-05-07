@@ -32,7 +32,7 @@ class ApiClient {
       try {
         const session = await getSession()
         if (session?.accessToken) {
-          config.headers.Authorization = `Bearer ${session.accessToken}`
+          config.headers.Authorization = `${session.accessToken}`
         }
         return config
       } catch (error) {

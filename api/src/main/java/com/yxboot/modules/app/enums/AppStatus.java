@@ -15,7 +15,8 @@ public enum AppStatus {
 
     DRAFT("draft", "草稿"),
     PUBLISHED("published", "已发布"),
-    DISABLED("disabled", "已禁用");
+    DISABLED("disabled", "已禁用"),
+    DELETED("deleted", "已删除");
 
     @EnumValue
     private final String value;
@@ -30,4 +31,4 @@ public enum AppStatus {
     public String getValue() {
         return this.value;
     }
-} 
+}

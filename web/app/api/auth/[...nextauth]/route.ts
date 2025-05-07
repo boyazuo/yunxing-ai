@@ -1,4 +1,5 @@
 import { authService } from '@/api/auth'
+import type { Tenant, User } from '@/types/account'
 import type { AuthOptions } from 'next-auth'
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
@@ -33,12 +34,10 @@ export const authOptions: AuthOptions = {
 
           // 返回用户信息
           return {
-            id: response.userId, // NextAuth内部需要此字段
-            userId: response.userId,
-            email: response.email,
-            username: response.username,
-            avatar: response.avatar,
+            id: response.user.userId,
             accessToken: response.token,
+            user: response.user,
+            tenant: response.tenant,
           }
         } catch (error) {
           return null
@@ -64,11 +63,9 @@ export const authOptions: AuthOptions = {
     },
     async session({ session, token }) {
       // 将token中的信息传递到session中，前端可以访问
-      session.user.userId = token.userId as string
-      session.user.username = token.username as string
-      session.user.email = token.email as string
-      session.user.avatar = token.avatar as string
       session.accessToken = token.accessToken as string
+      session.user = token.user as User
+      session.tenant = token.tenant as Tenant
       return session
     },
   },

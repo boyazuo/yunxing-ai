@@ -2,6 +2,7 @@ package com.yxboot.modules.account.controller;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.common.exception.ApiException;
 import com.yxboot.config.security.jwt.JwtUtil;
+import com.yxboot.modules.account.dto.TenantUserDTO;
 import com.yxboot.modules.account.dto.UserDTO;
 import com.yxboot.modules.account.entity.User;
 import com.yxboot.modules.account.enums.TenantUserRole;
@@ -51,7 +53,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "用户登录接口，返回JWT令牌")
-    public Result<UserDTO> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest loginRequest) {
 
         String email = loginRequest.getEmail();
         String password = loginRequest.getPassword();
@@ -77,20 +79,36 @@ public class AuthController {
         user.setLastLoginTime(LocalDateTime.now());
         userService.saveOrUpdate(user);
 
+        // 获取用户所属的租户
+        List<TenantUserDTO> tenantUserDTOs = tenantService.getTenantsByUserId(user.getUserId());
+
+        // 获取活跃租户
+        TenantUserDTO activeTenantUserDTO = tenantUserDTOs.stream()
+                .filter(tenantUserDTO -> tenantUserDTO.getIsActive())
+                .findFirst()
+                .orElse(null);
+
+        if (activeTenantUserDTO == null) {
+            throw new ApiException(ResultCode.VALIDATE_FAILED, "用户未激活");
+        }
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getUserId());
         String token = jwtUtil.generateToken(user.getEmail(), claims);
 
         // 使用LoginResultDTO封装登录结果
-        UserDTO loginResult = UserDTO.builder()
-                .token(tokenPrefix + " " + token)
+        UserDTO userDTO = UserDTO.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .avatar(user.getAvatar())
                 .build();
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", tokenPrefix + " " + token);
+        result.put("user", userDTO);
+        result.put("tenant", activeTenantUserDTO);
 
-        return Result.success("登录成功", loginResult);
+        return Result.success("登录成功", result);
     }
 
     @PostMapping("/register")

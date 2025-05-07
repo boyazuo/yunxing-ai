@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import type { Tenant, User } from '@/types/account'
 
 export interface LoginParams {
   email: string
@@ -12,11 +13,9 @@ export interface RegisterParams {
 }
 
 export interface LoginResponse {
-  userId: string
-  username: string
-  email: string
-  avatar: string
   token: string
+  user: User
+  tenant: Tenant
 }
 
 export const authService = {

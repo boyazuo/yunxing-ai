@@ -14,8 +14,8 @@ import lombok.Getter;
 public enum AppType {
 
     CHAT("chat", "对话应用"),
-    AGENT("agent", "智能体"),
-    WORKFLOW("workflow", "工作流");
+    AGENT("agent", "智能体应用"),
+    WORKFLOW("workflow", "工作流应用");
 
     @EnumValue
     private final String value;

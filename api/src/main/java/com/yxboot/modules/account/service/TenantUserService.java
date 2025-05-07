@@ -34,6 +34,7 @@ public class TenantUserService extends ServiceImpl<TenantUserMapper, TenantUser>
         if (role == null) {
             role = TenantUserRole.NORMAL;
         }
+        tenantUser.setIsActive(true);
         tenantUser.setRole(role);
         return save(tenantUser);
     }
