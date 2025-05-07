@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/theme/provider'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { Toaster } from 'sonner'
 import '../globals.css'
 
 export const metadata: Metadata = {
@@ -30,7 +31,10 @@ export default async function LocaleLayout({
       <body className="antialiased">
         <NextAuthSessionProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ThemeProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+            </ThemeProvider>
           </NextIntlClientProvider>
         </NextAuthSessionProvider>
       </body>
