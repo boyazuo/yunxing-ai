@@ -1,9 +1,9 @@
 import NextAuthSessionProvider from '@/components/auth/providers'
 import { ThemeProvider } from '@/components/theme/provider'
+import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { Toaster } from 'sonner'
 import '../globals.css'
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export default async function LocaleLayout({
           <NextIntlClientProvider locale={locale} messages={messages}>
             <ThemeProvider>
               {children}
-              <Toaster position="top-right" richColors />
+              <Toaster position="top-center" richColors />
             </ThemeProvider>
           </NextIntlClientProvider>
         </NextAuthSessionProvider>
