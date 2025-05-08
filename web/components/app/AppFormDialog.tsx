@@ -3,22 +3,14 @@
 import { type AppRequest, appService } from '@/api/apps'
 import { type EmojiObject, EmojiPicker } from '@/components/emoji/picker'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { App, AppType } from '@/types/app'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Bot, Loader2, MessageSquare, Workflow } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 
@@ -36,6 +28,42 @@ const formSchema = z.object({
   tenantId: z.string(),
 })
 
+// 定义表单数据类型
+type AppFormValues = z.infer<typeof formSchema>
+
+// 默认表单值
+const DEFAULT_LOGO = '🧩'
+const DEFAULT_LOGO_BG = '#FAFAFA'
+const DEFAULT_APP_TYPE = 'chat'
+
+// 应用类型配置
+const APP_TYPES = [
+  {
+    value: 'chat',
+    label: '对话应用',
+    description: '简单配置即可构建基于 LLM 的对话机器人',
+    icon: <MessageSquare className="h-6 w-6 text-white" />,
+    bgColor: 'bg-blue-500',
+    disabled: false,
+  },
+  {
+    value: 'agent',
+    label: '智能体应用',
+    description: '具备推理与自主工具调用的智能助手',
+    icon: <Bot className="h-6 w-6 text-white" />,
+    bgColor: 'bg-purple-500',
+    disabled: true,
+  },
+  {
+    value: 'workflow',
+    label: '工作流应用',
+    description: '构建自动化任务的编排工作流应用',
+    icon: <Workflow className="h-6 w-6 text-white" />,
+    bgColor: 'bg-teal-500',
+    disabled: true,
+  },
+]
+
 export interface AppFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -49,50 +77,39 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const isEditing = !!app?.appId
 
+  // 获取默认表单值
+  const getDefaultValues = useCallback(
+    (): AppFormValues => ({
+      appName: app?.appName || '',
+      intro: app?.intro || '',
+      logo: app?.logo || DEFAULT_LOGO,
+      logoBackground: app?.logoBackground || DEFAULT_LOGO_BG,
+      type: app?.type?.toString() || DEFAULT_APP_TYPE,
+      tenantId,
+    }),
+    [app, tenantId],
+  )
+
   // 表单
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<AppFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      appName: '',
-      intro: '',
-      logo: '',
-      logoBackground: '',
-      type: '',
-      tenantId: tenantId,
-    },
+    defaultValues: getDefaultValues(),
   })
 
-  // 当编辑现有应用时，加载应用数据
+  // 当编辑现有应用或tenantId变化时，重置表单数据
   useEffect(() => {
-    if (app) {
-      form.reset({
-        appName: app.appName,
-        intro: app.intro || '',
-        logo: app.logo || '',
-        logoBackground: app.logoBackground || '',
-        type: app.type.toString(),
-        tenantId: app.tenantId,
-      })
-    } else {
-      form.reset({
-        appName: '',
-        intro: '',
-        logo: '',
-        logoBackground: '',
-        type: '',
-        tenantId: tenantId,
-      })
-    }
-  }, [app, form, tenantId])
+    form.reset(getDefaultValues())
+  }, [form, getDefaultValues])
 
   // 处理表情选择
   const handleEmojiSelect = (emoji: EmojiObject) => {
     form.setValue('logo', emoji.native, { shouldValidate: true })
     form.setValue('logoBackground', emoji.bgColor, { shouldValidate: true })
+    setIsEmojiPickerOpen(false)
   }
 
   // 表单提交处理
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: AppFormValues) => {
     try {
       setIsSubmitting(true)
 
@@ -112,9 +129,7 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
       }
 
       onOpenChange(false)
-      if (onSuccess) {
-        onSuccess()
-      }
+      onSuccess?.()
     } catch (error) {
       console.error('保存应用失败', error)
     } finally {
@@ -122,25 +137,101 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
     }
   }
 
+  // 处理对话框关闭
+  const handleDialogChange = (newOpenState: boolean) => {
+    if (!newOpenState && !isSubmitting) {
+      form.reset(getDefaultValues())
+    }
+    onOpenChange(newOpenState)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader className="pb-4">
           <DialogTitle>{isEditing ? '编辑应用' : '创建应用'}</DialogTitle>
-          <DialogDescription>{isEditing ? '编辑应用基本信息' : '创建一个新的应用，填写基本信息'}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormItem>
+              <FormLabel>应用图标 & 名称</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormField
+                  control={form.control}
+                  name="logo"
+                  render={({ field }) => (
+                    <FormControl>
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border text-2xl shadow-xs cursor-pointer"
+                        style={{ backgroundColor: form.watch('logoBackground') || 'transparent' }}
+                        aria-label="点击选择应用图标"
+                        onClick={() => setIsEmojiPickerOpen(true)}
+                      >
+                        {field.value || DEFAULT_LOGO}
+                      </button>
+                    </FormControl>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="appName"
+                  render={({ field }) => (
+                    <FormControl>
+                      <Input className="w-full" placeholder="输入应用名称" {...field} />
+                    </FormControl>
+                  )}
+                />
+              </div>
+              <FormMessage>{form.formState.errors.appName?.message || form.formState.errors.logo?.message}</FormMessage>
+            </FormItem>
+
             <FormField
               control={form.control}
-              name="appName"
+              name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>应用名称</FormLabel>
-                  <FormControl>
-                    <Input placeholder="输入应用名称" {...field} />
-                  </FormControl>
+                  <FormLabel>应用类型</FormLabel>
+                  <div className="mt-1">
+                    <div className="grid grid-cols-3 gap-4">
+                      {APP_TYPES.map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          className={`group relative flex flex-col h-[100px] p-2 border rounded-lg cursor-pointer transition-all ${
+                            type.disabled
+                              ? 'opacity-50 cursor-not-allowed border-dashed'
+                              : `hover:bg-muted/30 ${
+                                  field.value === type.value
+                                    ? 'border-primary border-2 bg-muted/30'
+                                    : 'border hover:border-primary/50'
+                                }`
+                          }`}
+                          onClick={() => !type.disabled && field.onChange(type.value)}
+                          disabled={type.disabled}
+                        >
+                          <div className="flex items-center space-x-2.5">
+                            <div
+                              className={`${type.bgColor} rounded-md p-1.5 w-7 h-7 flex items-center justify-center flex-shrink-0`}
+                            >
+                              {type.icon}
+                            </div>
+                            <h3 className="font-medium text-sm">
+                              {type.label}
+                              {type.disabled && <span className="ml-1 text-xs">(即将推出)</span>}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2 text-left line-clamp-3">
+                            {type.description}
+                          </p>
+                          {field.value === type.value && !type.disabled && (
+                            <div className="absolute top-2 right-2 rounded-full bg-primary h-2 w-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -155,54 +246,6 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
                   <FormControl>
                     <Textarea placeholder="描述应用的功能和用途" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="logo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>应用图标</FormLabel>
-                  <div className="flex items-center gap-2">
-                    <FormControl>
-                      <div
-                        className="flex h-9 w-9 items-center justify-center rounded-md border text-2xl shadow-xs"
-                        style={{ backgroundColor: form.watch('logoBackground') || 'transparent' }}
-                        aria-label="当前选择的图标"
-                      >
-                        {field.value || '🧩'}
-                      </div>
-                    </FormControl>
-                    <Button type="button" variant="outline" onClick={() => setIsEmojiPickerOpen(true)}>
-                      选择图标
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>应用类型</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择应用类型" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="CHAT">对话应用</SelectItem>
-                      <SelectItem value="AGENT">智能体</SelectItem>
-                      <SelectItem value="WORKFLOW">工作流</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

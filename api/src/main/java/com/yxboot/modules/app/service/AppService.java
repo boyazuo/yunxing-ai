@@ -4,8 +4,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.yxboot.modules.app.dto.AppDTO;
 import com.yxboot.modules.app.entity.App;
 import com.yxboot.modules.app.enums.AppStatus;
 import com.yxboot.modules.app.enums.AppType;
@@ -53,10 +53,8 @@ public class AppService extends ServiceImpl<AppMapper, App> {
      * @param tenantId 租户ID
      * @return 应用列表
      */
-    public List<App> getAppsByTenantId(String tenantId) {
-        LambdaQueryWrapper<App> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(App::getTenantId, tenantId);
-        return list(queryWrapper);
+    public List<AppDTO> getAppsByTenantId(String tenantId) {
+        return baseMapper.getAppsByTenantId(tenantId);
     }
 
     /**

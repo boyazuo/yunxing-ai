@@ -21,7 +21,7 @@ export enum AppStatus {
  * 应用实体类型
  */
 export interface App {
-  appId: number
+  appId: string
   appName: string
   intro?: string
   logo?: string
@@ -30,5 +30,9 @@ export interface App {
   status: AppStatus
   tenantId: string
   createTime?: string
+  creatorId?: number
+  creatorUsername?: string
+  creatorAvatar?: string
   updateTime?: string
+  updatorId?: number
 }

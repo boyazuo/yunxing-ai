@@ -37,7 +37,7 @@ export const appService = {
    * @param appId 应用ID
    * @returns 应用详情
    */
-  async getAppById(appId: number): Promise<App> {
+  async getAppById(appId: string): Promise<App> {
     try {
       const response = await api.get<App>(`/apps/${appId}`)
       return response.data
@@ -66,7 +66,7 @@ export const appService = {
    * @param appRequest 应用参数
    * @returns 更新后的应用
    */
-  async updateApp(appId: number, appRequest: Partial<AppRequest>): Promise<App> {
+  async updateApp(appId: string, appRequest: Partial<AppRequest>): Promise<App> {
     try {
       const response = await api.put<App>(`/apps/${appId}`, appRequest)
       return response.data
@@ -79,7 +79,7 @@ export const appService = {
    * 删除应用
    * @param appId 应用ID
    */
-  async deleteApp(appId: number): Promise<void> {
+  async deleteApp(appId: string): Promise<void> {
     try {
       await api.delete<void>(`/apps/${appId}`)
     } catch (error) {

@@ -2,15 +2,26 @@
 
 import { appService } from '@/api/apps'
 import { AppFormDialog } from '@/components/app/AppFormDialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { App } from '@/types/app'
 import { AppType } from '@/types/app'
-import { Edit, MoreHorizontal, Plus, Trash, User } from 'lucide-react'
+import { Bot, Edit, GitBranch, MessageSquare, MoreHorizontal, Plus, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -23,6 +34,8 @@ export default function SpacePage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [currentApp, setCurrentApp] = useState<App | undefined>(undefined)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [appToDelete, setAppToDelete] = useState<App | null>(null)
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
@@ -65,13 +78,44 @@ export default function SpacePage() {
     setIsFormOpen(true)
   }
 
+  // 打开删除确认对话框
+  const confirmDeleteApp = (app: App) => {
+    // 关闭任何可能打开的其他UI组件
+    // 使用setTimeout确保React完成当前渲染循环
+    setTimeout(() => {
+      setAppToDelete(app)
+      setDeleteDialogOpen(true)
+    }, 0)
+  }
+
   // 删除应用
-  const handleDeleteApp = async (appId: number) => {
+  const handleDeleteApp = async () => {
     try {
-      await appService.deleteApp(appId)
+      if (!appToDelete) return
+
+      await appService.deleteApp(appToDelete.appId)
+      setDeleteDialogOpen(false)
+      setAppToDelete(null)
       loadApps() // 重新加载应用列表
     } catch (error) {
       console.error('删除应用失败', error)
+    }
+  }
+
+  // 格式化更新时间
+  const formatUpdateTime = (updateTime?: string) => {
+    if (!updateTime) return '未知'
+
+    try {
+      const date = new Date(updateTime)
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const day = date.getDate().toString().padStart(2, '0')
+      const hour = date.getHours().toString().padStart(2, '0')
+      const minute = date.getMinutes().toString().padStart(2, '0')
+
+      return `${month}-${day} ${hour}:${minute}`
+    } catch (error) {
+      return '未知'
     }
   }
 
@@ -81,7 +125,7 @@ export default function SpacePage() {
     const searchMatch = searchTerm ? app.appName.toLowerCase().includes(searchTerm.toLowerCase()) : true
 
     // 应用类型过滤
-    const typeMatch = typeFilter === 'all' ? true : app.type.toString() === typeFilter.toUpperCase()
+    const typeMatch = typeFilter === 'all' ? true : app.type.toString() === typeFilter
 
     return searchMatch && typeMatch
   })
@@ -129,43 +173,58 @@ export default function SpacePage() {
       </div>
 
       {/* 应用列表 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {isLoading ? (
           // 加载状态
-          [...Array(4)].map((_, index) => (
-            <Card key={`skeleton-item-${index}-${Date.now()}`} className="min-h-[200px] animate-pulse bg-muted">
+          [...Array(8)].map((_, index) => (
+            <Card key={`skeleton-${index}-${Date.now()}`} className="min-h-[120px] animate-pulse bg-muted p-0">
               <div className="h-full" />
             </Card>
           ))
         ) : filteredApps.length > 0 ? (
           // 应用列表
           filteredApps.map((app) => (
-            <Card key={app.appId} className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden">
+            <Card
+              key={app.appId}
+              className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden border-muted p-0 gap-3"
+            >
               {/* 卡片头部 */}
-              <div className="px-4 flex items-start justify-between">
-                <div className="flex space-x-3">
+              <div className="px-4 pt-4 pb-0 flex items-start justify-between">
+                <div className="flex space-x-2.5">
                   <div className="flex-shrink-0">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={app.logo} alt={app.appName} />
-                      <AvatarFallback>{app.appName.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
+                    <div
+                      className="h-10 w-10 rounded-md flex items-center justify-center text-xl shadow-sm border"
+                      style={{ backgroundColor: app.logoBackground || '#f0f0f0' }}
+                    >
+                      {app.logo || app.appName.slice(0, 2).toUpperCase()}
+                    </div>
                   </div>
                   <div>
-                    <h3 className="font-medium text-sm">{app.appName}</h3>
-                    <span className="inline-block px-2 py-0.5 mt-1 text-xs bg-muted rounded-full">
-                      {app.type === AppType.CHAT
-                        ? '对话应用'
-                        : app.type === AppType.AGENT
-                          ? '智能体'
-                          : app.type === AppType.WORKFLOW
-                            ? '工作流'
-                            : '未知类型'}
-                    </span>
+                    <h3 className="font-medium text-sm leading-tight mb-1">{app.appName}</h3>
+                    <Badge
+                      variant={
+                        app.type === AppType.CHAT ? 'secondary' : app.type === AppType.AGENT ? 'default' : 'outline'
+                      }
+                      className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal"
+                    >
+                      {app.type === AppType.CHAT && <MessageSquare className="h-3 w-3" />}
+                      {app.type === AppType.AGENT && <Bot className="h-3 w-3" />}
+                      {app.type === AppType.WORKFLOW && <GitBranch className="h-3 w-3" />}
+                      <span>
+                        {app.type === AppType.CHAT
+                          ? '对话应用'
+                          : app.type === AppType.AGENT
+                            ? '智能体'
+                            : app.type === AppType.WORKFLOW
+                              ? '工作流'
+                              : '未知类型'}
+                      </span>
+                    </Badge>
                   </div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 -mt-0.5 -mr-0.5">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -174,7 +233,7 @@ export default function SpacePage() {
                       <Edit className="mr-2 h-4 w-4" />
                       <span>编辑信息</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteApp(app.appId)}>
+                    <DropdownMenuItem className="text-destructive" onClick={() => confirmDeleteApp(app)}>
                       <Trash className="mr-2 h-4 w-4" />
                       <span>删除应用</span>
                     </DropdownMenuItem>
@@ -183,24 +242,34 @@ export default function SpacePage() {
               </div>
 
               {/* 卡片内容 */}
-              <CardContent className="px-4 h-12">
-                <p className="text-xs text-muted-foreground line-clamp-3">{app.intro || '暂无介绍'}</p>
-              </CardContent>
+              <div className="px-4 py-0 min-h-[60px]">
+                <p className="text-[12px] text-muted-foreground line-clamp-2">{app.intro || '暂无介绍'}</p>
+              </div>
 
               {/* 卡片底部 */}
-              <CardFooter className="px-4 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback>
-                      <User className="h-3 w-3" />
-                    </AvatarFallback>
+              <div className="mt-auto px-3 py-1.5 flex items-center justify-between border-t border-muted/70 bg-muted/5 text-[11px]">
+                <div className="flex items-center space-x-1.5">
+                  <Avatar className="h-4 w-4">
+                    {app.creatorAvatar ? (
+                      app.creatorAvatar.startsWith('http') ? (
+                        <AvatarImage src={app.creatorAvatar} alt={app.creatorUsername} />
+                      ) : (
+                        <AvatarFallback className="text-[9px]">{app.creatorAvatar}</AvatarFallback>
+                      )
+                    ) : (
+                      <AvatarFallback>
+                        {app.creatorUsername ? (
+                          app.creatorUsername.slice(0, 1).toUpperCase()
+                        ) : (
+                          <User className="h-2 w-2" />
+                        )}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
-                  <span className="text-xs">创建者</span>
+                  <span className="text-[12px] text-muted-foreground">{app.creatorUsername || '创建者'}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  更新于 {new Date(app.updateTime || '').toLocaleDateString()}
-                </span>
-              </CardFooter>
+                <span className="text-[12px] text-muted-foreground">更新于 {formatUpdateTime(app.updateTime)}</span>
+              </div>
             </Card>
           ))
         ) : (
@@ -223,6 +292,41 @@ export default function SpacePage() {
         onSuccess={loadApps}
         tenantId={tenantId}
       />
+
+      {/* 删除确认对话框 */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (open === false) {
+            setDeleteDialogOpen(false)
+            setAppToDelete(null)
+          }
+        }}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            // 阻止默认的焦点处理
+            event.preventDefault()
+            document.body.style.pointerEvents = ''
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除应用</AlertDialogTitle>
+            <AlertDialogDescription>
+              您确定要删除应用 "{appToDelete?.appName}" 吗？此操作不可撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteApp}
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

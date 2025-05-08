@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
+import com.yxboot.modules.app.dto.AppDTO;
 import com.yxboot.modules.app.entity.App;
 import com.yxboot.modules.app.enums.AppStatus;
 import com.yxboot.modules.app.enums.AppType;
@@ -39,11 +40,11 @@ public class AppController {
 
     @GetMapping
     @Operation(summary = "获取应用列表", description = "获取当前租户下的所有应用")
-    public Result<List<App>> getApps(@Parameter(description = "租户ID") String tenantId) {
+    public Result<List<AppDTO>> getApps(@Parameter(description = "租户ID") String tenantId) {
         if (tenantId == null || tenantId.isEmpty()) {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
         }
-        List<App> apps = appService.getAppsByTenantId(tenantId);
+        List<AppDTO> apps = appService.getAppsByTenantId(tenantId);
         return Result.success("查询成功", apps);
     }
 

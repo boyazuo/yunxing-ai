@@ -23,16 +23,16 @@ import lombok.extern.slf4j.Slf4j;
 public class MyMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void insertFill(MetaObject metaObject) {
-        this.strictInsertFill(metaObject, "create_user_id", Long.class, getCurrentUserId());
-        this.strictInsertFill(metaObject, "create_time", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject, "update_user_id", Long.class, getCurrentUserId());
-        this.strictInsertFill(metaObject, "update_time", LocalDateTime.class, LocalDateTime.now());
+        this.strictInsertFill(metaObject, "creatorId", Long.class, getCurrentUserId());
+        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
+        this.strictInsertFill(metaObject, "updatorId", Long.class, getCurrentUserId());
+        this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        this.strictUpdateFill(metaObject, "update_user_id", Long.class, getCurrentUserId());
-        this.strictUpdateFill(metaObject, "update_time", LocalDateTime.class, LocalDateTime.now());
+        this.strictUpdateFill(metaObject, "updatorId", Long.class, getCurrentUserId());
+        this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
     }
 
     private Long getCurrentUserId() {

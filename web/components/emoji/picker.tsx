@@ -143,7 +143,7 @@ export function EmojiPicker({ open, onOpenChange, onEmojiSelect, title = '选择
         />
 
         {/* Emoji 展示区域，带滚动条 */}
-        <div className="flex flex-wrap content-start py-1 gap-1 overflow-y-auto" style={{ height: '210px' }}>
+        <div className="flex flex-wrap content-start p-[1px] gap-1 overflow-y-auto" style={{ height: '210px' }}>
           {emojis.length === 0 && <p className="text-gray-500">无匹配结果</p>}
           {emojis.map((emoji) => (
             <button

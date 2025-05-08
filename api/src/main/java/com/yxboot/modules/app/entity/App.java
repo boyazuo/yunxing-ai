@@ -40,7 +40,6 @@ public class App {
     private String logo;
 
     @Schema(description = "应用Logo背景色")
-    @TableField("logo_background")
     private String logoBackground;
 
     @Schema(description = "应用类型")
@@ -49,9 +48,17 @@ public class App {
     @Schema(description = "状态")
     private AppStatus status;
 
+    @Schema(description = "创建者ID")
+    @TableField(fill = FieldFill.INSERT)
+    private Long creatorId;
+
     @Schema(description = "创建时间")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    @Schema(description = "更新者ID")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updatorId;
 
     @Schema(description = "更新时间")
     @TableField(fill = FieldFill.INSERT_UPDATE)

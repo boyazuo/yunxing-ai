@@ -14,7 +14,9 @@ CREATE TABLE `app` (
   `logo_background` varchar(255) DEFAULT NULL COMMENT 'Logo背景色',
   `type` varchar(20) DEFAULT NULL COMMENT '应用类型',
   `status` varchar(20) DEFAULT NULL COMMENT '状态',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`app_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用表';
