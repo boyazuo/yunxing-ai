@@ -1,7 +1,7 @@
 'use client'
 
 import { type AppRequest, appService } from '@/api/apps'
-import { type EmojiObject, EmojiPickerDialog } from '@/components/emoji/picker'
+import { type EmojiObject, EmojiPicker } from '@/components/emoji/picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -221,12 +221,7 @@ export function AppFormDialog({ open, onOpenChange, app, onSuccess, tenantId }: 
         </Form>
 
         {/* 表情选择器对话框 */}
-        <EmojiPickerDialog
-          open={isEmojiPickerOpen}
-          onOpenChange={setIsEmojiPickerOpen}
-          onEmojiSelect={handleEmojiSelect}
-          title="选择应用图标"
-        />
+        <EmojiPicker open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen} onEmojiSelect={handleEmojiSelect} />
       </DialogContent>
     </Dialog>
   )

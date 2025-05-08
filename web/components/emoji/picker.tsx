@@ -3,33 +3,14 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import type { EmojiMartData } from '@emoji-mart/data'
 import data from '@emoji-mart/data'
+import { init } from 'emoji-mart'
 import { useMemo, useState } from 'react'
 
-// 为 emoji-mart data 类型定义接口
-interface EmojiMartCategory {
-  id: string
-  emojis: string[]
-}
+init({ data })
 
-interface EmojiMartEmoji {
-  name: string
-  native: string
-  keywords: string[]
-  skins?: Array<{
-    native: string
-  }>
-}
-
-interface EmojiMartData {
-  categories: EmojiMartCategory[]
-  emojis: {
-    [key: string]: EmojiMartEmoji
-  }
-}
-
-// 将导入的数据转换为定义的类型
-const emojiData = data as unknown as EmojiMartData
+const emojiData = data as EmojiMartData
 
 // emoji-mart 分类列表（与 data.categories 对应）
 const emojiCategories = [
@@ -40,7 +21,7 @@ const emojiCategories = [
   { id: 'places', name: '地点', icon: '🏠' },
   { id: 'objects', name: '物品', icon: '💡' },
   { id: 'symbols', name: '符号', icon: '❤️' },
-  { id: 'flags', name: '旗帜', icon: '🏳️' },
+  { id: 'flags', name: '旗帜', icon: '🏁' },
 ]
 
 // 推荐的8种背景色（参考设计色彩搭配）
@@ -68,19 +49,15 @@ export interface EmojiObject {
   bgColor: string
 }
 
-interface PickerProps {
-  onConfirm: (emoji: string, bgColor: string) => void
-}
-
 // 为 AppFormDialog 提供的选择器组件接口
-export interface EmojiPickerDialogProps {
+export interface EmojiPickerProps {
+  title?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onEmojiSelect: (emoji: EmojiObject) => void
-  title?: string
 }
 
-export function EmojiPickerDialog({ open, onOpenChange, onEmojiSelect, title = '选择 Emoji' }: EmojiPickerDialogProps) {
+export function EmojiPicker({ open, onOpenChange, onEmojiSelect, title = '选择图标' }: EmojiPickerProps) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<string>('people')
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null)
@@ -96,10 +73,14 @@ export function EmojiPickerDialog({ open, onOpenChange, onEmojiSelect, title = '
       .map((id: string) => {
         const e = emojiData.emojis[id]
         if (!e) return null
+
+        // 从skin中获取native值
+        const nativeValue = e.skins?.[0]?.native || ''
+
         return {
           id,
           name: e.name,
-          native: e.skins?.[0]?.native || e.native || '',
+          native: nativeValue,
           keywords: e.keywords || [],
         } as Emoji
       })
