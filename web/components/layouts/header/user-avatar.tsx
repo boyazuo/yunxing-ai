@@ -60,7 +60,7 @@ export default function UserAvatar() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
             <BadgeCheck className="mr-2 h-4 w-4" />
             <span>账号设置</span>
           </DropdownMenuItem>
