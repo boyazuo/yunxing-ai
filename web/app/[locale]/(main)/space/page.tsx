@@ -51,7 +51,9 @@ export default function SpacePage() {
 
       setIsLoading(true)
       const data = await appService.getApps(tenantId.toString())
-      setApps(data)
+      if (data.length > 0) {
+        setApps(data)
+      }
     } catch (error) {
       console.error('加载应用失败', error)
     } finally {
