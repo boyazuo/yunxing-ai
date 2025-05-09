@@ -14,12 +14,51 @@ CREATE TABLE `app` (
   `logo_background` varchar(255) DEFAULT NULL COMMENT 'Logo背景色',
   `type` varchar(20) DEFAULT NULL COMMENT '应用类型',
   `status` varchar(20) DEFAULT NULL COMMENT '状态',
-  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者 ID',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
-  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者 ID',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`app_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用表';
+
+-- ----------------------------
+-- Table structure for model
+-- ----------------------------
+DROP TABLE IF EXISTS `model`;
+CREATE TABLE `model` (
+  `model_id` bigint(20) NOT NULL COMMENT '模型 ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `provider_id` bigint(20) DEFAULT NULL COMMENT '提供商ID',
+  `model_name` varchar(255) DEFAULT NULL COMMENT '模型名称',
+  `display_name` varchar(255) DEFAULT NULL COMMENT '显示名称',
+  `model_type` varchar(20) DEFAULT NULL COMMENT '模型类型(枚举：chat:对话模型 reason:推理模型)',
+  `context_length` int(11) DEFAULT NULL COMMENT '上下文长度',
+  `max_tokens` int(11) DEFAULT NULL COMMENT '最大输出token',
+  `input_price` decimal(10,2) DEFAULT NULL COMMENT '输入价格',
+  `output_price` decimal(10,2) DEFAULT NULL COMMENT '输出价格',
+  `status` varchar(20) DEFAULT NULL COMMENT '状态(枚举：active:激活 disabled:禁用)',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`model_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+-- Table structure for provider
+-- ----------------------------
+DROP TABLE IF EXISTS `provider`;
+CREATE TABLE `provider` (
+  `provider_id` bigint(20) NOT NULL COMMENT '提供商ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `provider_name` varchar(255) DEFAULT NULL COMMENT '提供商名称',
+  `logo` varchar(255) DEFAULT NULL COMMENT 'Logo',
+  `api_key` varchar(255) DEFAULT NULL COMMENT 'API密钥',
+  `endpoint` varchar(255) DEFAULT NULL COMMENT '终端地址',
+  `last_used_time` datetime DEFAULT NULL COMMENT '最后使用时间',
+  `status` varchar(20) DEFAULT NULL COMMENT '状态(枚举：active:激活 disabled:禁用)',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`provider_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Table structure for tenant
