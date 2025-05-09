@@ -26,7 +26,7 @@ const settingsMenuItems = [
     icon: Users,
   },
   {
-    name: '模型供应商',
+    name: '模型提供商',
     href: '/settings/providers',
     icon: Sparkles,
   },
