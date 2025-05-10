@@ -110,7 +110,9 @@ public class ModelController {
         // 更新模型
         boolean updated = modelService.updateModel(
                 modelId,
+                modelRequest.getModelName(),
                 modelRequest.getDisplayName(),
+                modelRequest.getModelType(),
                 modelRequest.getContextLength(),
                 modelRequest.getMaxTokens(),
                 modelRequest.getInputPrice(),

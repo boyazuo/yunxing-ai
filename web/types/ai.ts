@@ -1,12 +1,16 @@
 /**
  * 模型类型枚举
  */
+
 export enum ModelType {
   CHAT = 'chat', // 聊天模型
-  TEXT = 'text', // 文本生成
-  EMBEDDING = 'embedding', // 向量嵌入
-  IMAGE = 'image', // 图像生成
-  REASONING = 'reasoning', // 推理增强
+  REASON = 'reason', // 推理模型
+  EMBEDDING = 'embedding', // 向量模型
+  AUDIO = 'audio', // 语音模型
+  IMAGE = 'image', // 图像模型
+  VIDEO = 'video', // 视频模型
+  CODE = 'code', // 代码模型
+  RERANK = 'rerank', // 重排序模型
 }
 
 /**

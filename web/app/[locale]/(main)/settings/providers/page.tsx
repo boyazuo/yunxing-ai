@@ -1,5 +1,6 @@
 'use client'
 
+import { modelService } from '@/api/model'
 import { providerService } from '@/api/provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,12 +8,31 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Model, Provider } from '@/types/ai'
-import { CommonStatus } from '@/types/ai'
-import { BadgeCheck, Eye, EyeOff, Loader2, Plus, Search, Settings, Zap } from 'lucide-react'
+import { CommonStatus, ModelType } from '@/types/ai'
+import type { LucideIcon } from 'lucide-react'
+import { BadgeCheck, Eye, EyeOff, Loader2, Plus, Search, Settings } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ProviderFormDialog, type ProviderFormValues, ProviderLogo } from './_components'
+import {
+  ModelFormDialog,
+  type ModelFormValues,
+  ProviderFormDialog,
+  type ProviderFormValues,
+  ProviderLogo,
+} from './_components'
+
+// 模型类型样式和标签映射
+const MODEL_TYPE_CONFIG: Record<ModelType, { color: string; label: string; icon: LucideIcon | null }> = {
+  [ModelType.CHAT]: { color: 'bg-blue-100 text-blue-700 hover:bg-blue-200', label: '对话模型', icon: null },
+  [ModelType.REASON]: { color: 'bg-orange-100 text-orange-700 hover:bg-orange-200', label: '推理模型', icon: null },
+  [ModelType.EMBEDDING]: { color: 'bg-purple-100 text-purple-700 hover:bg-purple-200', label: '向量模型', icon: null },
+  [ModelType.AUDIO]: { color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200', label: '语音模型', icon: null },
+  [ModelType.IMAGE]: { color: 'bg-green-100 text-green-700 hover:bg-green-200', label: '图像模型', icon: null },
+  [ModelType.VIDEO]: { color: 'bg-pink-100 text-pink-700 hover:bg-pink-200', label: '视频模型', icon: null },
+  [ModelType.CODE]: { color: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', label: '代码模型', icon: null },
+  [ModelType.RERANK]: { color: 'bg-red-100 text-red-700 hover:bg-red-200', label: '重排序模型', icon: null },
+}
 
 export default function ModelProvidersPage() {
   const { data: session } = useSession()
@@ -20,6 +40,8 @@ export default function ModelProvidersPage() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false)
+  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [providerModels, setProviderModels] = useState<Model[]>([])
@@ -53,7 +75,7 @@ export default function ModelProvidersPage() {
   const loadModelsByProvider = async (providerId: string) => {
     try {
       setLoadingModels(true)
-      const models = await providerService.getModelsByProviderId(providerId)
+      const models = await modelService.getModelsByProviderId(providerId)
       setProviderModels(Array.isArray(models) ? models : [])
     } catch (error) {
       console.error('加载模型列表失败', error)
@@ -108,11 +130,66 @@ export default function ModelProvidersPage() {
     }
   }
 
+  // 处理模型表单提交
+  const handleModelFormSubmit = async (values: ModelFormValues) => {
+    if (!selectedProvider) return
+
+    try {
+      if (selectedModel && isModelDialogOpen) {
+        // 更新模型
+        await modelService.updateModel(selectedModel.modelId, {
+          tenantId,
+          modelName: values.modelName,
+          displayName: values.displayName,
+          modelType: values.modelType as ModelType,
+          contextLength: values.contextLength,
+          maxTokens: values.maxTokens,
+          inputPrice: values.inputPrice,
+          outputPrice: values.outputPrice,
+        })
+        toast.success('模型更新成功')
+      } else {
+        // 创建新模型
+        await modelService.createModel({
+          tenantId,
+          providerId: selectedProvider.providerId,
+          modelName: values.modelName,
+          displayName: values.displayName,
+          modelType: values.modelType as ModelType,
+          contextLength: values.contextLength,
+          maxTokens: values.maxTokens,
+          inputPrice: values.inputPrice,
+          outputPrice: values.outputPrice,
+        })
+        toast.success('模型添加成功')
+      }
+
+      setIsModelDialogOpen(false)
+      if (selectedProvider) {
+        loadModelsByProvider(selectedProvider.providerId)
+      }
+    } catch (error) {
+      toast.error(selectedModel ? '模型更新失败，请稍后重试' : '模型添加失败，请稍后重试')
+    }
+  }
+
+  // 添加模型
+  const handleAddModel = () => {
+    setSelectedModel(null)
+    setIsModelDialogOpen(true)
+  }
+
+  // 编辑模型
+  const handleEditModel = (model: Model) => {
+    setSelectedModel(model)
+    setIsModelDialogOpen(true)
+  }
+
   // 更新模型状态
   const handleToggleModelStatus = async (model: Model, active: boolean) => {
     try {
       const newStatus = active ? CommonStatus.ACTIVE : CommonStatus.DISABLED
-      await providerService.updateModelStatus(model.modelId, newStatus)
+      await modelService.updateModel(model.modelId, { status: newStatus })
 
       // 更新本地状态
       setProviderModels((prev) => prev.map((m) => (m.modelId === model.modelId ? { ...m, status: newStatus } : m)))
@@ -335,6 +412,7 @@ export default function ModelProvidersPage() {
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-1 h-7 shadow-sm hover:shadow transition-all text-xs"
+                  onClick={handleAddModel}
                 >
                   <Plus className="h-3 w-3" />
                   <span>添加模型</span>
@@ -363,16 +441,27 @@ export default function ModelProvidersPage() {
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-medium">{model.displayName}</span>
                             <Badge
-                              className={`${
-                                model.modelType === 'reasoning'
-                                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                              } border-0 text-[10px] py-0 px-1.5`}
+                              className={`${MODEL_TYPE_CONFIG[model.modelType as ModelType]?.color || 'bg-blue-100 text-blue-700 hover:bg-blue-200'} border-0 text-[10px] py-0 px-1.5`}
                             >
-                              {model.modelType === 'reasoning' && <Zap className="h-2.5 w-2.5 mr-0.5" />}
-                              {model.modelType === 'chat' ? '通用对话' : '推理增强'}
+                              {MODEL_TYPE_CONFIG[model.modelType as ModelType]?.icon && (
+                                <span className="mr-0.5 inline-flex items-center">
+                                  {React.createElement(
+                                    MODEL_TYPE_CONFIG[model.modelType as ModelType].icon as React.ComponentType<{
+                                      className: string
+                                    }>,
+                                    {
+                                      className: 'h-2.5 w-2.5',
+                                    },
+                                  )}
+                                </span>
+                              )}
+                              {MODEL_TYPE_CONFIG[model.modelType as ModelType]?.label || model.modelType}
                             </Badge>
                           </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {model.modelName} · {model.contextLength.toLocaleString()}K /{' '}
+                            {model.maxTokens.toLocaleString()}K
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -383,7 +472,12 @@ export default function ModelProvidersPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-full">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-full"
+                                onClick={() => handleEditModel(model)}
+                              >
                                 <Settings className="h-3.5 w-3.5" />
                               </Button>
                             </TooltipTrigger>
@@ -410,6 +504,17 @@ export default function ModelProvidersPage() {
         onSubmit={handleProviderFormSubmit}
         tenantId={tenantId}
       />
+
+      {/* 模型表单对话框 */}
+      {selectedProvider && (
+        <ModelFormDialog
+          open={isModelDialogOpen}
+          onOpenChange={setIsModelDialogOpen}
+          initialData={selectedModel}
+          onSubmit={handleModelFormSubmit}
+          providerId={selectedProvider.providerId}
+        />
+      )}
     </div>
   )
 }

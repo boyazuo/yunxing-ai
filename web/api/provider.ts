@@ -71,34 +71,10 @@ export const deleteProvider = async (providerId: string) => {
   }
 }
 
-// 获取提供商下的模型列表
-export const getModelsByProviderId = async (providerId: string) => {
-  try {
-    const response = await api.get(`/models/provider/${providerId}`)
-    return response.data || []
-  } catch (error) {
-    console.error('获取模型列表失败', error)
-    throw error
-  }
-}
-
-// 更新模型状态
-export const updateModelStatus = async (modelId: string, status: CommonStatus) => {
-  try {
-    const response = await api.put(`/models/${modelId}/status`, { status })
-    return response.data
-  } catch (error) {
-    console.error('更新模型状态失败', error)
-    throw error
-  }
-}
-
 export const providerService = {
   getProviders,
   getProviderById,
   createProvider,
   updateProvider,
   deleteProvider,
-  getModelsByProviderId,
-  updateModelStatus,
 }

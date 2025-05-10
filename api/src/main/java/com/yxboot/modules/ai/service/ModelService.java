@@ -73,7 +73,9 @@ public class ModelService extends ServiceImpl<ModelMapper, Model> {
      * 更新模型信息
      * 
      * @param modelId       模型ID
+     * @param modelName     模型名称
      * @param displayName   显示名称
+     * @param modelType     模型类型
      * @param contextLength 上下文长度
      * @param maxTokens     最大输出token
      * @param inputPrice    输入价格
@@ -81,15 +83,22 @@ public class ModelService extends ServiceImpl<ModelMapper, Model> {
      * @param status        状态
      * @return 是否成功
      */
-    public boolean updateModel(Long modelId, String displayName, Integer contextLength, Integer maxTokens,
-            BigDecimal inputPrice, BigDecimal outputPrice, CommonStatus status) {
+    public boolean updateModel(Long modelId, String modelName, String displayName, ModelType modelType,
+            Integer contextLength, Integer maxTokens, BigDecimal inputPrice, BigDecimal outputPrice,
+            CommonStatus status) {
         Model model = getById(modelId);
         if (model == null) {
             return false;
         }
 
+        if (modelName != null) {
+            model.setModelName(modelName);
+        }
         if (displayName != null) {
             model.setDisplayName(displayName);
+        }
+        if (modelType != null) {
+            model.setModelType(modelType);
         }
         if (contextLength != null) {
             model.setContextLength(contextLength);
