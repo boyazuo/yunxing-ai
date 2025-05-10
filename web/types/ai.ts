@@ -13,8 +13,8 @@ export enum ModelType {
  * 通用状态枚举
  */
 export enum CommonStatus {
-  ACTIVE = 'active', // 活跃
-  INACTIVE = 'inactive', // 非活跃
+  ACTIVE = 'active', // 激活
+  DISABLED = 'disabled', // 禁用
 }
 
 /**

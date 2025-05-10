@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import type { CommonStatus } from '@/types/ai'
 
 // 获取提供商列表
 export const getProviders = async (tenantId: string) => {
@@ -47,7 +48,7 @@ export const updateProvider = async (
     logo?: string
     apiKey?: string
     endpoint?: string
-    status?: string
+    status?: CommonStatus
   },
 ) => {
   try {
@@ -81,6 +82,17 @@ export const getModelsByProviderId = async (providerId: string) => {
   }
 }
 
+// 更新模型状态
+export const updateModelStatus = async (modelId: string, status: CommonStatus) => {
+  try {
+    const response = await api.put(`/models/${modelId}/status`, { status })
+    return response.data
+  } catch (error) {
+    console.error('更新模型状态失败', error)
+    throw error
+  }
+}
+
 export const providerService = {
   getProviders,
   getProviderById,
@@ -88,4 +100,5 @@ export const providerService = {
   updateProvider,
   deleteProvider,
   getModelsByProviderId,
+  updateModelStatus,
 }

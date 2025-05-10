@@ -4,10 +4,10 @@ import { providerService } from '@/api/provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Model, Provider } from '@/types/ai'
+import { CommonStatus } from '@/types/ai'
 import { BadgeCheck, Eye, EyeOff, Loader2, Plus, Search, Settings, Zap } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'
@@ -108,52 +108,54 @@ export default function ModelProvidersPage() {
     }
   }
 
-  // 更新提供商API密钥
-  const handleUpdateApiKey = async (apiKey: string) => {
-    if (!selectedProvider) return
-
-    try {
-      await providerService.updateProvider(selectedProvider.providerId, {
-        apiKey,
-      })
-
-      toast.success('API密钥更新成功')
-
-      // 刷新提供商信息
-      loadProviders()
-    } catch (error) {
-      toast.error('API密钥更新失败，请稍后重试')
-    }
-  }
-
-  // 更新提供商API地址
-  const handleUpdateEndpoint = async (endpoint: string) => {
-    if (!selectedProvider) return
-
-    try {
-      await providerService.updateProvider(selectedProvider.providerId, {
-        endpoint,
-      })
-
-      toast.success('API地址更新成功')
-
-      // 刷新提供商信息
-      loadProviders()
-    } catch (error) {
-      toast.error('API地址更新失败，请稍后重试')
-    }
-  }
-
   // 更新模型状态
   const handleToggleModelStatus = async (model: Model, active: boolean) => {
-    // 实际项目中需要添加更新模型状态的接口
-    toast.info('模型状态更新功能正在开发中')
+    try {
+      const newStatus = active ? CommonStatus.ACTIVE : CommonStatus.DISABLED
+      await providerService.updateModelStatus(model.modelId, newStatus)
+
+      // 更新本地状态
+      setProviderModels((prev) => prev.map((m) => (m.modelId === model.modelId ? { ...m, status: newStatus } : m)))
+
+      toast.success(`模型 ${model.displayName} ${active ? '已启用' : '已禁用'}`)
+    } catch (error) {
+      console.error('更新模型状态失败', error)
+      toast.error('更新模型状态失败，请稍后重试')
+    }
+  }
+
+  // 更新提供商状态
+  const handleToggleProviderStatus = async (provider: Provider, active: boolean) => {
+    try {
+      const newStatus = active ? CommonStatus.ACTIVE : CommonStatus.DISABLED
+      await providerService.updateProvider(provider.providerId, { status: newStatus })
+
+      // 更新本地状态
+      setProviders((prev) => prev.map((p) => (p.providerId === provider.providerId ? { ...p, status: newStatus } : p)))
+
+      if (selectedProvider?.providerId === provider.providerId) {
+        setSelectedProvider({ ...selectedProvider, status: newStatus })
+      }
+
+      toast.success(`提供商 ${provider.providerName} ${active ? '已启用' : '已禁用'}`)
+    } catch (error) {
+      console.error('更新提供商状态失败', error)
+      toast.error('更新提供商状态失败，请稍后重试')
+    }
   }
 
   // 过滤供应商列表
   const filteredProviders = providers.filter((provider) =>
     provider.providerName.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  // 格式化API密钥，展示部分字符（首尾字符和中间掩码）
+  const formatApiKey = (apiKey: string) => {
+    if (!apiKey) return '未设置'
+    const length = apiKey.length
+    if (length <= 8) return '********'
+    return `${apiKey.substring(0, 4)}${'*'.repeat(Math.min(12, length - 8))}${apiKey.substring(length - 4)}`
+  }
 
   return (
     <div className="flex h-full">
@@ -209,9 +211,16 @@ export default function ModelProvidersPage() {
                   </div>
                 </div>
                 <div>
-                  {provider.status === 'active' && (
+                  {provider.status === CommonStatus.ACTIVE ? (
                     <Badge variant="outline" className="bg-primary/10 text-primary border-0 text-[10px] px-1.5 py-0">
-                      活跃
+                      激活
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="bg-destructive/10 text-destructive border-0 text-[10px] px-1.5 py-0"
+                    >
+                      禁用
                     </Badge>
                   )}
                 </div>
@@ -249,10 +258,9 @@ export default function ModelProvidersPage() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium">启用</span>
                   <Switch
-                    checked={selectedProvider.status === 'active'}
+                    checked={selectedProvider.status === CommonStatus.ACTIVE}
                     onCheckedChange={(checked) => {
-                      // 这里应该调用后端API更新状态
-                      toast.info('提供商状态更新功能正在开发中')
+                      handleToggleProviderStatus(selectedProvider, checked)
                     }}
                   />
                 </div>
@@ -277,24 +285,18 @@ export default function ModelProvidersPage() {
             </div>
 
             <div className="bg-card rounded-md border shadow-sm p-4 mb-5">
-              {/* API 密钥区域 */}
-              <div className="mb-4">
-                <div className="mb-2">
-                  <Label className="text-sm font-medium">API 密钥</Label>
-                </div>
-                <div className="relative mb-1 group">
-                  <Input
-                    placeholder="API 密钥"
-                    type={showApiKey ? 'text' : 'password'}
-                    defaultValue={selectedProvider.apiKey}
-                    className="pr-16 h-8 text-xs transition-all focus-visible:ring-1 focus-visible:ring-primary/30"
-                    onBlur={(e) => {
-                      if (e.target.value !== selectedProvider.apiKey) {
-                        handleUpdateApiKey(e.target.value)
-                      }
-                    }}
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <h3 className="text-sm font-medium mb-3">连接信息</h3>
+
+              <div className="space-y-3">
+                {/* API 密钥展示 */}
+                <div className="flex items-start">
+                  <div className="w-24 shrink-0">
+                    <span className="text-xs font-medium text-muted-foreground">API 密钥</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <p className="text-xs font-mono bg-muted/30 px-2 py-1 rounded flex-1 break-all">
+                      {showApiKey ? selectedProvider.apiKey : formatApiKey(selectedProvider.apiKey)}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
@@ -304,24 +306,21 @@ export default function ModelProvidersPage() {
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* API 地址区域 */}
-              <div>
-                <div className="mb-2">
-                  <Label className="text-sm font-medium">API 基础URL</Label>
-                </div>
-                <div className="mb-1">
-                  <Input
-                    placeholder="API 地址"
-                    defaultValue={selectedProvider.endpoint}
-                    className="h-8 text-xs transition-all focus-visible:ring-1 focus-visible:ring-primary/30"
-                    onBlur={(e) => {
-                      if (e.target.value !== selectedProvider.endpoint) {
-                        handleUpdateEndpoint(e.target.value)
-                      }
-                    }}
-                  />
+                {/* API 基础URL展示 */}
+                <div className="flex items-start">
+                  <div className="w-24 shrink-0">
+                    <span className="text-xs font-medium text-muted-foreground">API 端点</span>
+                  </div>
+                  <div className="flex-1">
+                    {selectedProvider.endpoint ? (
+                      <p className="text-xs font-mono bg-muted/30 px-2 py-1 rounded break-all">
+                        {selectedProvider.endpoint}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic px-2 py-1">默认端点</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -378,7 +377,7 @@ export default function ModelProvidersPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
-                          checked={model.status === 'active'}
+                          checked={model.status === CommonStatus.ACTIVE}
                           onCheckedChange={(checked) => handleToggleModelStatus(model, checked)}
                         />
                         <TooltipProvider>
