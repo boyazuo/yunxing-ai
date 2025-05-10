@@ -24,7 +24,7 @@ const data = {
     },
     {
       title: '工作空间',
-      url: '/space',
+      url: '/app',
       icon: MessageCircle,
     },
     {

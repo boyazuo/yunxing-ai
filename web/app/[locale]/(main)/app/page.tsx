@@ -1,7 +1,7 @@
 'use client'
 
 import { appService } from '@/api/apps'
-import { AppFormDialog } from '@/components/app/AppFormDialog'
+import { AppFormDialog } from '@/app/[locale]/(main)/app/_components/AppFormDialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +23,11 @@ import type { App } from '@/types/app'
 import { AppType } from '@/types/app'
 import { Bot, Edit, GitBranch, MessageSquare, MoreHorizontal, Plus, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 export default function SpacePage() {
+  const router = useRouter()
   const { data: session, status } = useSession()
   const [apps, setApps] = useState<App[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -132,6 +134,11 @@ export default function SpacePage() {
     return searchMatch && typeMatch
   })
 
+  // 跳转到应用配置页面
+  const navigateToAppConfig = (appId: string) => {
+    router.push(`/app/${appId}/config`)
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* 顶部筛选和搜索区 */}
@@ -189,6 +196,7 @@ export default function SpacePage() {
             <Card
               key={app.appId}
               className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden border-muted p-0 gap-3"
+              onClick={() => navigateToAppConfig(app.appId)}
             >
               {/* 卡片头部 */}
               <div className="px-4 pt-4 pb-0 flex items-start justify-between">
@@ -226,16 +234,32 @@ export default function SpacePage() {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 -mt-0.5 -mr-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 -mt-0.5 -mr-0.5"
+                      onClick={(e) => e.stopPropagation()} // 防止点击触发卡片的点击事件
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEditApp(app)}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation() // 防止点击触发卡片的点击事件
+                        handleEditApp(app)
+                      }}
+                    >
                       <Edit className="mr-2 h-4 w-4" />
                       <span>编辑信息</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => confirmDeleteApp(app)}>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation() // 防止点击触发卡片的点击事件
+                        confirmDeleteApp(app)
+                      }}
+                    >
                       <Trash className="mr-2 h-4 w-4" />
                       <span>删除应用</span>
                     </DropdownMenuItem>

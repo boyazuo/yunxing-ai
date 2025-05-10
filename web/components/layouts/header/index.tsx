@@ -12,7 +12,7 @@ import { usePathname } from 'next/navigation'
 // 导航菜单
 const navigation = [
   { name: '首页', href: '/home' },
-  { name: '工作空间', href: '/space' },
+  { name: '工作空间', href: '/app' },
   { name: '知识库', href: '/dataset' },
 ]
 
