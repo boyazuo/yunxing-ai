@@ -22,6 +22,25 @@ CREATE TABLE `app` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用表';
 
 -- ----------------------------
+-- Table structure for app_config
+-- ----------------------------
+DROP TABLE IF EXISTS `app_config`;
+CREATE TABLE `app_config` (
+    `id` bigint(20) NOT NULL COMMENT 'ID',
+    `app_id` bigint(20) DEFAULT NULL COMMENT '应用ID',
+    `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+    `sys_prompt` text COMMENT '系统提示词',
+    `models` text COMMENT 'AI模型配置',
+    `variables` text COMMENT '变量配置',
+    `datasets` text COMMENT '知识库配置',
+    `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用配置表';
+
+-- ----------------------------
 -- Table structure for model
 -- ----------------------------
 DROP TABLE IF EXISTS `model`;
