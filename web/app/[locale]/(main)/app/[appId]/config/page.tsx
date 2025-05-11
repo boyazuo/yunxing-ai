@@ -14,7 +14,7 @@ import {
   Save,
 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import KnowledgebaseConfig from '@/app/[locale]/(main)/app/_components/config/KnowledgebaseConfig'
 import ModelConfig from '@/app/[locale]/(main)/app/_components/config/ModelConfig'
@@ -35,12 +35,16 @@ export default function AppConfigPage() {
     knowledgebaseSection: false,
   })
 
-  // 切换某一部分的展开/折叠状态
+  // 切换某一部分的展开/折叠状态，确保每次只有一个部分展开
   const toggleSection = (section: keyof typeof sectionState) => {
-    setSectionState((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+    setSectionState(
+      Object.fromEntries(
+        Object.keys(sectionState).map((key) => [
+          key,
+          key === section ? !sectionState[key as keyof typeof sectionState] : false,
+        ]),
+      ) as typeof sectionState,
+    )
   }
 
   // 调试预览区域的模拟对话
@@ -52,6 +56,13 @@ export default function AppConfigPage() {
       content: '您好！我是您的AI助手。请问有什么我可以帮助您的？',
     },
   ])
+
+  // 确保页面加载时默认展开一个部分
+  useEffect(() => {
+    if (!Object.values(sectionState).some((v) => v)) {
+      setSectionState((prev) => ({ ...prev, promptSection: true }))
+    }
+  }, [sectionState])
 
   // 返回应用列表页
   const handleBack = () => {
@@ -89,9 +100,9 @@ export default function AppConfigPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden">
       {/* 顶部导航 */}
-      <div className="p-4 border-b border-border flex justify-between items-center">
+      <div className="p-4 border-b border-border flex justify-between items-center shrink-0">
         <div className="flex items-center">
           <Button variant="ghost" size="icon" className="mr-2" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
@@ -104,9 +115,9 @@ export default function AppConfigPage() {
         </Button>
       </div>
 
-      <div className="flex flex-1 h-[calc(100%-57px)]">
+      <div className="flex flex-1 overflow-hidden">
         {/* 左侧配置区域 */}
-        <div className="w-[450px] border-r border-border h-full overflow-y-auto">
+        <div className="w-[450px] min-h-0 border-r border-border overflow-y-auto">
           <div className="p-4 space-y-2">
             {/* 提示词设置部分 */}
             <div className="bg-background rounded-lg overflow-hidden">
@@ -207,9 +218,9 @@ export default function AppConfigPage() {
         </div>
 
         {/* 右侧调试预览区域 */}
-        <div className="flex-1 flex flex-col h-full">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* 调试预览标题栏 */}
-          <div className="flex justify-between items-center px-6 py-4 border-b border-border">
+          <div className="flex justify-between items-center px-6 py-3 border-b border-border bg-white shrink-0">
             <h2 className="font-medium">调试预览</h2>
             <Button variant="outline" size="sm" className="flex items-center gap-1 px-3 text-xs">
               <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -217,16 +228,15 @@ export default function AppConfigPage() {
             </Button>
           </div>
 
-          {/* 聊天容器 - 使用flex布局让输入框固定在底部 */}
-          <div className="flex-1 flex flex-col">
-            {/* 消息列表区域 - 使用flex-1让它占据所有可用空间 */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+          {/* 聊天消息区域 */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 bg-gray-50">
+            <div className="flex flex-col space-y-4">
               {chatMessages.map((msg) => (
-                <div key={msg.id} className={`flex mb-4 ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                <div key={msg.id} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
+                    className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
                       msg.role === 'assistant'
-                        ? 'bg-white border border-gray-200 text-foreground'
+                        ? 'bg-white border border-gray-100'
                         : 'bg-primary text-primary-foreground'
                     }`}
                   >
@@ -235,24 +245,24 @@ export default function AppConfigPage() {
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* 输入区域 - 固定在底部 */}
-            <div className="px-6 py-4 border-t border-border bg-white">
-              <form onSubmit={handleSendMessage} className="flex gap-2">
-                <Input
-                  placeholder="输入问题，按Enter键执行 [Ctrl(Alt/Shift) + Enter]"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 border-gray-200"
-                />
-                <Button
-                  type="submit"
-                  className="bg-primary text-primary-foreground rounded-full w-10 h-10 p-0 flex items-center justify-center"
-                >
-                  <PlusCircle className="h-5 w-5" />
-                </Button>
-              </form>
-            </div>
+          {/* 输入区域 */}
+          <div className="px-6 py-3 border-t border-border bg-white shrink-0">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Input
+                placeholder="输入问题，按Enter键执行 [Ctrl(Alt/Shift) + Enter]"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="flex-1 border-gray-200"
+              />
+              <Button
+                type="submit"
+                className="bg-primary text-primary-foreground rounded-full w-10 h-10 p-0 flex items-center justify-center"
+              >
+                <PlusCircle className="h-5 w-5" />
+              </Button>
+            </form>
           </div>
         </div>
       </div>
