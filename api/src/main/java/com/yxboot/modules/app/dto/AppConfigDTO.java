@@ -13,7 +13,7 @@ public class AppConfigDTO {
     /**
      * ID
      */
-    private Long id;
+    private Long configId;
 
     /**
      * 应用ID

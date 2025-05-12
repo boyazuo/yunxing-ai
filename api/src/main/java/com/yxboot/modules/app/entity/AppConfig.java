@@ -25,8 +25,8 @@ public class AppConfig implements Serializable {
     /**
      * ID
      */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
+    @TableId(value = "config_id", type = IdType.ASSIGN_ID)
+    private Long configId;
 
     /**
      * 应用ID

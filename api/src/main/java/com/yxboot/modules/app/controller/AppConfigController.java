@@ -43,7 +43,7 @@ public class AppConfigController {
 
         // 转换为DTO
         AppConfigDTO dto = new AppConfigDTO();
-        dto.setId(config.getId());
+        dto.setConfigId(config.getConfigId());
         dto.setAppId(config.getAppId());
         dto.setTenantId(config.getTenantId());
         dto.setSysPrompt(config.getSysPrompt());
@@ -77,7 +77,7 @@ public class AppConfigController {
 
         // 转换为DTO
         AppConfigDTO dto = new AppConfigDTO();
-        dto.setId(config.getId());
+        dto.setConfigId(config.getConfigId());
         dto.setAppId(config.getAppId());
         dto.setTenantId(config.getTenantId());
         dto.setSysPrompt(config.getSysPrompt());
@@ -90,12 +90,12 @@ public class AppConfigController {
         return Result.success("创建成功", dto);
     }
 
-    @PutMapping("/{configId}")
+    @PutMapping("/{appId}")
     @Operation(summary = "更新应用配置", description = "更新现有应用配置")
-    public Result<AppConfigDTO> updateConfig(@PathVariable Long configId,
+    public Result<AppConfigDTO> updateConfig(@PathVariable Long appId,
             @Valid @RequestBody AppConfigRequest request) {
         // 验证配置是否存在
-        AppConfig existingConfig = appConfigService.getById(configId);
+        AppConfig existingConfig = appConfigService.getByAppId(appId);
         if (existingConfig == null) {
             return Result.error(ResultCode.NOT_FOUND, "应用配置不存在");
         }
@@ -118,7 +118,7 @@ public class AppConfigController {
 
         // 转换为DTO
         AppConfigDTO dto = new AppConfigDTO();
-        dto.setId(existingConfig.getId());
+        dto.setConfigId(existingConfig.getConfigId());
         dto.setAppId(existingConfig.getAppId());
         dto.setTenantId(existingConfig.getTenantId());
         dto.setSysPrompt(existingConfig.getSysPrompt());

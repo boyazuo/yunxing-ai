@@ -1,38 +1,61 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { useState } from 'react'
+import type { VariableConfig as VariableConfigType } from '@/types/appConfig'
+import { useEffect, useState } from 'react'
 
 interface VariableConfigProps {
   appId: string
+  variables?: VariableConfigType[]
+  onChange?: (variables: VariableConfigType[]) => void
 }
 
-export default function VariableConfig({ appId }: VariableConfigProps) {
-  const [variables, setVariables] = useState<
-    Array<{
-      id: string
-      key: string
-      name: string
-      description: string
-      required: boolean
-    }>
-  >([])
+interface Variable extends VariableConfigType {
+  id: string
+}
+
+export default function VariableConfig({ appId, variables = [], onChange }: VariableConfigProps) {
+  const [variableList, setVariableList] = useState<Variable[]>([])
+
+  // 初始化和同步外部传入的变量配置
+  useEffect(() => {
+    if (variables.length > 0) {
+      setVariableList(
+        variables.map((variable) => ({
+          ...variable,
+          id: variable.id || `var-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        })),
+      )
+    }
+  }, [variables])
+
+  // 将内部状态转换为外部变量配置并通知父组件
+  const updateParent = (newVariables: Variable[]) => {
+    setVariableList(newVariables)
+
+    if (onChange) {
+      onChange(newVariables)
+    }
+  }
 
   const addVariable = () => {
-    setVariables((prev) => [
-      ...prev,
-      {
-        id: `var-${Date.now()}`,
-        key: `var_${prev.length + 1}`,
-        name: `变量 ${prev.length + 1}`,
-        description: '',
-        required: false,
-      },
-    ])
+    const newVariable = {
+      id: `var-${Date.now()}`,
+      key: `var_${variableList.length + 1}`,
+      name: `变量 ${variableList.length + 1}`,
+      description: '',
+      required: false,
+    }
+
+    updateParent([...variableList, newVariable])
   }
 
   const removeVariable = (id: string) => {
-    setVariables((prev) => prev.filter((variable) => variable.id !== id))
+    updateParent(variableList.filter((variable) => variable.id !== id))
+  }
+
+  const updateVariable = (id: string, field: keyof VariableConfigType, value: string | boolean) => {
+    updateParent(variableList.map((variable) => (variable.id === id ? { ...variable, [field]: value } : variable)))
   }
 
   return (
@@ -42,11 +65,11 @@ export default function VariableConfig({ appId }: VariableConfigProps) {
           添加变量
         </Button>
       </div>
-      {variables.length > 0 ? (
-        variables.map((variable) => (
+      {variableList.length > 0 ? (
+        variableList.map((variable) => (
           <div key={variable.id} className="border border-border rounded-md p-3">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm font-medium">变量 {variables.indexOf(variable) + 1}</h4>
+              <h4 className="text-sm font-medium">变量 {variableList.indexOf(variable) + 1}</h4>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeVariable(variable.id)}>
                 ×
               </Button>
@@ -60,7 +83,8 @@ export default function VariableConfig({ appId }: VariableConfigProps) {
                   id={`varKey-${variable.id}`}
                   className="h-8"
                   placeholder="user_name"
-                  defaultValue={variable.key}
+                  value={variable.key}
+                  onChange={(e) => updateVariable(variable.id, 'key', e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground mt-1">系统内部使用的唯一标识符</p>
               </div>
@@ -68,7 +92,13 @@ export default function VariableConfig({ appId }: VariableConfigProps) {
                 <label htmlFor={`varName-${variable.id}`} className="text-xs font-medium mb-1 block">
                   显示名称
                 </label>
-                <Input id={`varName-${variable.id}`} className="h-8" placeholder="姓名" defaultValue={variable.name} />
+                <Input
+                  id={`varName-${variable.id}`}
+                  className="h-8"
+                  placeholder="姓名"
+                  value={variable.name}
+                  onChange={(e) => updateVariable(variable.id, 'name', e.target.value)}
+                />
                 <p className="text-xs text-muted-foreground mt-1">用户看到的变量名称</p>
               </div>
               <div>
@@ -79,7 +109,8 @@ export default function VariableConfig({ appId }: VariableConfigProps) {
                   id={`varDesc-${variable.id}`}
                   className="h-8"
                   placeholder="请填写您的真实姓名"
-                  defaultValue={variable.description}
+                  value={variable.description}
+                  onChange={(e) => updateVariable(variable.id, 'description', e.target.value)}
                 />
               </div>
               <div className="flex items-center pt-5 justify-between">
@@ -89,9 +120,7 @@ export default function VariableConfig({ appId }: VariableConfigProps) {
                 <Switch
                   id={`varRequired-${variable.id}`}
                   checked={variable.required}
-                  onCheckedChange={(checked) => {
-                    setVariables((prev) => prev.map((v) => (v.id === variable.id ? { ...v, required: checked } : v)))
-                  }}
+                  onCheckedChange={(checked) => updateVariable(variable.id, 'required', checked)}
                 />
               </div>
             </div>
