@@ -1,4 +1,5 @@
 import { authService } from '@/api/auth'
+import { getUserById } from '@/api/user'
 import type { Tenant, User } from '@/types/account'
 import type { AuthOptions } from 'next-auth'
 import NextAuth from 'next-auth'
@@ -50,7 +51,7 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30天
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, session, trigger }) {
       // 首次登录时，user对象中包含accessToken和其他信息
       if (user) {
         // 使用扩展运算符将所有用户属性复制到token中
@@ -59,6 +60,17 @@ export const authOptions: AuthOptions = {
           ...user,
         }
       }
+
+      if (trigger === 'update') {
+        if (session.user) {
+          const user = session.user
+          return {
+            ...token,
+            user
+          }
+        }
+      }
+
       return token
     },
     async session({ session, token }) {

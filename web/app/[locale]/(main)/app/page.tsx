@@ -53,7 +53,7 @@ export default function SpacePage() {
 
       setIsLoading(true)
       const data = await appService.getApps(tenantId.toString())
-      if (data.length > 0) {
+      if (data && data.length > 0) {
         setApps(data)
       }
     } catch (error) {

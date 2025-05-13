@@ -10,15 +10,23 @@ import * as z from 'zod'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { updateCurrentUser } from '@/api/user'
 
 // 基本信息表单验证
 const profileFormSchema = z.object({
-  name: z.string().min(2, {
+  username: z.string().min(2, {
     message: '姓名至少需要 2 个字符',
   }),
 })
@@ -52,7 +60,7 @@ export default function AccountSettingsPage() {
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: '',
+      username: session?.user?.username || '',
     },
   })
 
@@ -70,7 +78,7 @@ export default function AccountSettingsPage() {
   useEffect(() => {
     if (session?.user) {
       profileForm.reset({
-        name: session.user.name || '',
+        username: session.user.username || '',
       })
     }
   }, [session, profileForm])
@@ -129,17 +137,17 @@ export default function AccountSettingsPage() {
   const onProfileSubmit = async (data: z.infer<typeof profileFormSchema>) => {
     setIsUpdating(true)
     try {
-      // 这里添加更新用户信息的API调用
-      console.log('更新用户信息:', data)
 
-      // 更新session (实际实现需替换)
-      // await update({
-      //   ...session,
-      //   user: {
-      //     ...session?.user,
-      //     name: data.name,
-      //   }
-      // })
+      // 更新后台数据库数据
+      await updateCurrentUser({ username: data.username })
+
+      await update({
+        ...session,
+        user: {
+          ...session?.user,
+          username: data.username,
+        },
+      })
 
       toast.success('个人信息更新成功')
     } catch (error) {
@@ -195,8 +203,12 @@ export default function AccountSettingsPage() {
                 <Separator />
                 <div className="flex items-center gap-6">
                   <Avatar className="w-20 h-20">
-                    <AvatarImage src={avatarPreview || session?.user?.image || undefined} />
-                    <AvatarFallback className="text-lg">{userInitials}</AvatarFallback>
+                    <AvatarImage
+                      src={avatarPreview || session?.user?.image || undefined}
+                    />
+                    <AvatarFallback className="text-lg">
+                      {userInitials}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -215,12 +227,18 @@ export default function AccountSettingsPage() {
                         </Label>
                       </div>
                       {avatarFile && (
-                        <Button onClick={handleAvatarSubmit} disabled={isUpdating} className="h-9">
+                        <Button
+                          onClick={handleAvatarSubmit}
+                          disabled={isUpdating}
+                          className="h-9"
+                        >
                           {isUpdating ? '上传中...' : '上传头像'}
                         </Button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">支持JPG, PNG格式, 建议尺寸 400x400 像素</p>
+                    <p className="text-xs text-muted-foreground">
+                      支持JPG, PNG格式, 建议尺寸 400x400 像素
+                    </p>
                   </div>
                 </div>
               </div>
@@ -230,10 +248,13 @@ export default function AccountSettingsPage() {
                 <h3 className="text-lg font-medium">个人信息</h3>
                 <Separator />
                 <Form {...profileForm}>
-                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <form
+                    onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={profileForm.control}
-                      name="name"
+                      name="username"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>用户名</FormLabel>
@@ -252,10 +273,16 @@ export default function AccountSettingsPage() {
                         disabled
                         className="bg-muted/30 text-muted-foreground"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">邮箱地址不可修改</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        邮箱地址不可修改
+                      </p>
                     </div>
 
-                    <Button type="submit" disabled={isUpdating} className="mt-2">
+                    <Button
+                      type="submit"
+                      disabled={isUpdating}
+                      className="mt-2"
+                    >
                       {isUpdating ? '保存中...' : '保存更改'}
                     </Button>
                   </form>
@@ -271,7 +298,10 @@ export default function AccountSettingsPage() {
               <h3 className="text-lg font-medium">修改密码</h3>
               <Separator />
               <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                <form
+                  onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={passwordForm.control}
                     name="currentPassword"
@@ -311,7 +341,11 @@ export default function AccountSettingsPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isChangingPassword} className="mt-2">
+                  <Button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="mt-2"
+                  >
                     {isChangingPassword ? '更新中...' : '更新密码'}
                   </Button>
                 </form>

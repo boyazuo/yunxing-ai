@@ -48,6 +48,11 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
         })
 
         if (result?.error) {
+          if (result.status === 401) {
+            setError(t('loginFailed'))
+            toast.error(t('loginFailed'))
+            return
+          }
           setError(result.error)
           toast.error(result.error || t('loginFailed'))
           return

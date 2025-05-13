@@ -34,6 +34,7 @@ class ApiClient {
         if (session?.accessToken) {
           config.headers.Authorization = `${session.accessToken}`
         }
+
         return config
       } catch (error) {
         return config

@@ -53,8 +53,8 @@ export interface Tenant {
  * 用户类型
  */
 export interface User {
-  userId: string
-  username: string
-  email: string
-  avatar: string
+  userId?: string
+  username?: string
+  email?: string
+  avatar?: string
 }
