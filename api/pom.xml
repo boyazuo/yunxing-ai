@@ -146,6 +146,34 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.8.6</version>
         </dependency>
+
+        <!-- OkHttp依赖 -->
+        <dependency>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+          <version>4.12.0</version>
+        </dependency>
+        
+        <!-- Retrofit依赖 -->
+        <dependency>
+          <groupId>com.squareup.retrofit2</groupId>
+          <artifactId>retrofit</artifactId>
+          <version>2.9.0</version>
+        </dependency>
+        
+        <!-- Retrofit Jackson转换器依赖 -->
+        <dependency>
+          <groupId>com.squareup.retrofit2</groupId>
+          <artifactId>converter-jackson</artifactId>
+          <version>2.9.0</version>
+        </dependency>
+        
+        <!-- Retrofit Gson转换器依赖 -->
+        <dependency>
+          <groupId>com.squareup.retrofit2</groupId>
+          <artifactId>converter-gson</artifactId>
+          <version>2.9.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
