@@ -1,6 +1,5 @@
 import { api } from '@/lib/api'
 import type { User } from '@/types/account'
-import { AxiosRequestConfig } from 'axios'
 
 export const updateCurrentUser = async (data: User) => {
   try {

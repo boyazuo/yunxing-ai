@@ -5,14 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.yxboot.config.security.SecurityUser;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
@@ -132,6 +131,28 @@ public class AuthController {
         return Result.success("注册成功");
     }
 
+    @PutMapping("/password")
+    @Operation(summary = "修改密码", description = "修改当前登录用户密码")
+    public Result<Void> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest,
+                                       @AuthenticationPrincipal SecurityUser securityUser) {
+        // 判断 新密码 和 确认密码 是否相同
+        if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
+            return Result.error(ResultCode.VALIDATE_FAILED, "新密码和确认密码不一致");
+        }
+
+        // 判断 旧密码 是否正确
+        String passwordInDB = securityUser.getPassword();
+        if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), passwordInDB)) {
+            return Result.error(ResultCode.VALIDATE_FAILED, "旧密码错误");
+        }
+
+        // 修改密码
+        User user = userService.getById(securityUser.getUserId());
+        user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+        userService.updateById(user);
+        return Result.success("修改密码成功");
+    }
+
     @Data
     public static class LoginRequest {
 
@@ -155,5 +176,18 @@ public class AuthController {
 
         @NotBlank(message = "密码不能为空")
         private String password;
+    }
+
+    /**
+     * 修改密码接口请求参数
+     */
+    @Data
+    public static class ChangePasswordRequest {
+        @NotBlank(message = "原密码不能为空")
+        private String currentPassword;
+        @NotBlank(message = "确认密码不能为空")
+        private String confirmPassword;
+        @NotBlank(message = "新密码不能为空")
+        private String newPassword;
     }
 }

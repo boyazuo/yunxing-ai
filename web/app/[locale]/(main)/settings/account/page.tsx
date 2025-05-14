@@ -23,6 +23,8 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { updateCurrentUser } from '@/api/user'
+import { authService } from '@/api/auth'
+import { signOut } from 'next-auth/react'
 
 // 基本信息表单验证
 const profileFormSchema = z.object({
@@ -137,7 +139,6 @@ export default function AccountSettingsPage() {
   const onProfileSubmit = async (data: z.infer<typeof profileFormSchema>) => {
     setIsUpdating(true)
     try {
-
       // 更新后台数据库数据
       await updateCurrentUser({ username: data.username })
 
@@ -162,10 +163,17 @@ export default function AccountSettingsPage() {
   const onPasswordSubmit = async (data: z.infer<typeof passwordFormSchema>) => {
     setIsChangingPassword(true)
     try {
-      // 这里添加修改密码的API调用
-      console.log('修改密码:', data)
-      toast.success('密码修改成功')
-      passwordForm.reset()
+      // 调用 API
+      const res: any = await authService.changePassword(data)
+      if (res.code === 0) {
+        toast.success('密码修改成功')
+        passwordForm.reset()
+
+        // 退出登录
+        signOut({callbackUrl: '/login'})
+      } else {
+        toast.error(res.msg)
+      }
     } catch (error) {
       toast.error('密码修改失败')
       console.error(error)

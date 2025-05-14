@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { BadgeCheck, Bell, CreditCard, LogOut, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 export default function UserAvatar() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -24,8 +24,7 @@ export default function UserAvatar() {
   }
 
   const handleLogout = () => {
-    // 在实际项目中应该调用 signOut
-    router.replace('/login')
+    signOut({callbackUrl: '/login'})
   }
  
   return (
