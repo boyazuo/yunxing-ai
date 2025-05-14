@@ -1,21 +1,19 @@
 import { api } from '@/lib/api'
 
 interface ChatRequest {
-  tenantId: string
-  userId: string
   appId: string
   conversationId?: string
   modelId: string
-  question: string
+  prompt: string
 }
 
 /**
  * 聊天响应
  */
 interface ChatResponse {
+  conversationId: string
   content: string
   messageId: string
-  conversationId: string
 }
 
 /**

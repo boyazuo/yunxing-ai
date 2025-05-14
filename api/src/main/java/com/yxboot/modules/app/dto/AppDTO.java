@@ -23,7 +23,7 @@ public class AppDTO {
     private Long appId;
 
     @Schema(description = "所属租户ID")
-    private String tenantId;
+    private Long tenantId;
 
     @Schema(description = "应用名称")
     private String appName;

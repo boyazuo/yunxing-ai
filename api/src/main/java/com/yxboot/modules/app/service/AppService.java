@@ -33,7 +33,7 @@ public class AppService extends ServiceImpl<AppMapper, App> {
      * @param type           应用类型
      * @return 应用ID
      */
-    public App createApp(String tenantId, String appName, String intro, String logo, String logoBackground,
+    public App createApp(Long tenantId, String appName, String intro, String logo, String logoBackground,
             AppType type) {
         App app = new App();
         app.setTenantId(tenantId);

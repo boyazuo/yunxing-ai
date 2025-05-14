@@ -62,7 +62,7 @@ public class AppController {
     @Operation(summary = "创建应用", description = "创建新的应用")
     public Result<App> createApp(@RequestBody AppRequest appRequest) {
         // 参数验证
-        String tenantId = appRequest.getTenantId();
+        Long tenantId = appRequest.getTenantId();
         String appName = appRequest.getAppName();
         String intro = appRequest.getIntro();
         String logo = appRequest.getLogo();
@@ -133,6 +133,7 @@ public class AppController {
 
     @Data
     public static class AppRequest {
+        private Long tenantId;
         private Long appId;
         private String appName;
         private String intro;
@@ -140,6 +141,5 @@ public class AppController {
         private String logoBackground;
         private AppType type;
         private AppStatus status;
-        private String tenantId;
     }
 }

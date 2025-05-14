@@ -27,6 +27,8 @@ import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
 import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
+import com.yxboot.modules.app.entity.App;
+import com.yxboot.modules.app.service.AppService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +50,7 @@ public class AiController {
     private final ProviderService providerService;
     private final ConversationService conversationService;
     private final MessageService messageService;
+    private final AppService appService;
 
     /**
      * 创建聊天完成
@@ -78,19 +81,22 @@ public class AiController {
             throw new ApiException("模型提供商不存在");
         }
 
-        // 获取问题内容
-        String question = extractQuestionContent(request);
-
         // 处理会话和消息
-        Long conversationId = request.getConversationId();
         Long userId = securityUser.getUserId();
-        Long tenantId = request.getTenantId();
         Long appId = request.getAppId();
+        Long conversationId = request.getConversationId();
+        String prompt = request.getPrompt();
+
+        App app = appService.getById(appId);
+        if (app == null) {
+            throw new ApiException("应用不存在");
+        }
+        Long tenantId = app.getTenantId();
 
         // 创建或更新会话
         if (conversationId == null) {
             // 创建新会话
-            String title = generateConversationTitle(question);
+            String title = generateConversationTitle(prompt);
             Conversation conversation = conversationService.createConversation(tenantId, userId, appId, title);
             conversationId = conversation.getConversationId();
         } else {
@@ -105,7 +111,7 @@ public class AiController {
         }
 
         // 创建消息记录
-        Message message = messageService.createMessage(tenantId, userId, appId, conversationId, question);
+        Message message = messageService.createMessage(tenantId, userId, appId, conversationId, prompt);
 
         // 调用模型接口
         ModelResponseDTO response = aiService.chatCompletion(provider, model, request);
@@ -151,19 +157,22 @@ public class AiController {
                     throw new ApiException("模型提供商不存在");
                 }
 
-                // 获取问题内容
-                String question = extractQuestionContent(request);
-
                 // 处理会话和消息
-                Long conversationId = request.getConversationId();
                 Long userId = securityUser.getUserId();
-                Long tenantId = request.getTenantId();
                 Long appId = request.getAppId();
+                Long conversationId = request.getConversationId();
+                String prompt = request.getPrompt();
+
+                App app = appService.getById(appId);
+                if (app == null) {
+                    throw new ApiException("应用不存在");
+                }
+                Long tenantId = app.getTenantId();
 
                 // 创建或更新会话
                 if (conversationId == null) {
                     // 创建新会话
-                    String title = generateConversationTitle(question);
+                    String title = generateConversationTitle(prompt);
                     Conversation conversation = conversationService.createConversation(tenantId, userId, appId, title);
                     conversationId = conversation.getConversationId();
                 } else {
@@ -178,7 +187,7 @@ public class AiController {
                 }
 
                 // 创建消息记录（初始状态为处理中）
-                Message message = messageService.createMessage(tenantId, userId, appId, conversationId, question);
+                Message message = messageService.createMessage(tenantId, userId, appId, conversationId, prompt);
 
                 // 创建消息内容收集器（用于收集流式响应内容）
                 StringBuilder contentCollector = new StringBuilder();
@@ -286,32 +295,6 @@ public class AiController {
         }).start();
 
         return emitter;
-    }
-
-    /**
-     * 从请求中提取问题内容
-     * 
-     * @param request 请求参数
-     * @return 问题内容
-     */
-    private String extractQuestionContent(ModelRequestDTO request) {
-        // 优先使用prompt字段作为问题
-        if (request.getPrompt() != null && !request.getPrompt().isEmpty()) {
-            return request.getPrompt();
-        }
-
-        // 如果没有prompt，则从messages中提取最后一条用户消息
-        if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-            for (int i = request.getMessages().size() - 1; i >= 0; i--) {
-                var message = request.getMessages().get(i);
-                if ("user".equals(message.getRole())) {
-                    return message.getContent();
-                }
-            }
-        }
-
-        // 没有找到问题内容，返回默认值
-        return "新的对话";
     }
 
     /**

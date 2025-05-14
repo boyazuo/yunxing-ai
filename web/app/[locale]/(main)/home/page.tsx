@@ -1,60 +1,28 @@
 'use client'
 
+import { ChevronLeft, ChevronRight, Loader2, Plus, Search } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
+
 import { appConfigService } from '@/api/appConfig'
 import { appService } from '@/api/apps'
 import { chatService } from '@/api/chat'
 import { conversationService } from '@/api/conversation'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ChatInterface, type ChatMessage, type ChatModel } from '@/components/chat/chat-interface'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/lib/utils'
 import type { App } from '@/types/app'
 import { type Conversation, MessageRole } from '@/types/chat'
-import {
-  ArrowRight,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Loader2,
-  MessageSquare,
-  Search,
-  Send,
-  Settings,
-  User,
-} from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import { useCallback, useEffect, useState } from 'react'
-
-// 定义UI消息类型
-interface ChatMessage {
-  id: string
-  role: MessageRole
-  content: string
-  time: string
-}
 
 // 定义内部应用配置类型
 interface UIAppConfig {
   sysPrompt?: string
-  models: {
-    id: string
-    modelId: string
-    name: string
-    provider: string
-    temperature: number
-    topP: number
-    maxTokens: number
-    isActive: boolean
-  }[]
+  models: ChatModel[]
 }
 
-export default function AppsPage() {
+export default function HomePage() {
   const { data: session } = useSession()
-  const [userInput, setUserInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   // 应用与会话状态
@@ -78,6 +46,28 @@ export default function AppsPage() {
   // 从会话中获取用户和租户信息
   const tenantId = session?.tenant?.tenantId || ''
   const userId = session?.user?.userId?.toString() || ''
+
+  // 格式化时间
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // 根据日期返回相对时间
+  const getRelativeTime = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      const hours = now.getHours() - date.getHours()
+      if (hours < 1) return '刚刚'
+      return `${hours}小时前`
+    }
+    if (diffDays === 1) return '昨天'
+    if (diffDays < 7) return `${diffDays}天前`
+    return formatDate(date, 'yyyy-MM-dd')
+  }
 
   // 加载应用列表
   const loadApps = useCallback(async () => {
@@ -110,21 +100,22 @@ export default function AppsPage() {
       const config = await appConfigService.getAppConfig(appId)
 
       // 处理 models 字符串转为 JSON 对象
-      if (config && typeof config.models === 'string') {
+      const parsedConfig = { ...config }
+      if (parsedConfig && typeof parsedConfig.models === 'string') {
         try {
-          config.models = JSON.parse(config.models)
+          parsedConfig.models = JSON.parse(parsedConfig.models)
         } catch (parseError) {
           console.error('解析 models JSON 字符串失败', parseError)
-          config.models = []
+          parsedConfig.models = []
         }
       }
 
-      setAppConfig(config as UIAppConfig)
+      setAppConfig(parsedConfig as UIAppConfig)
 
       // 默认选择第一个模型
-      if (config?.models && config.models.length > 0) {
+      if (parsedConfig?.models && parsedConfig.models.length > 0) {
         // 优先选择 isActive 为 true 的第一个模型
-        const activeModel = config.models.find((model) => model.isActive) || config.models[0]
+        const activeModel = parsedConfig.models.find((model) => model.isActive) || parsedConfig.models[0]
         setSelectedModelId(activeModel.modelId)
         setDefaultModelId(activeModel.modelId)
       }
@@ -168,26 +159,22 @@ export default function AppsPage() {
       const data = await conversationService.getConversationMessages(conversationId)
 
       // 将后端消息格式转换为前端UI格式
-      const formattedMessages: ChatMessage[] = []
-
-      // 遍历消息，每条消息包含问题(user)和回答(assistant)
-      for (const message of data) {
+      const formattedMessages: ChatMessage[] = data.flatMap((message) => [
         // 添加用户问题
-        formattedMessages.push({
+        {
           id: `${message.messageId}-q`,
           role: MessageRole.USER,
           content: message.question,
           time: formatTime(message.createTime),
-        })
-
+        },
         // 添加助手回答
-        formattedMessages.push({
+        {
           id: `${message.messageId}-a`,
           role: MessageRole.ASSISTANT,
           content: message.answer,
           time: formatTime(message.createTime),
-        })
-      }
+        },
+      ])
 
       setMessages(formattedMessages)
     } catch (error) {
@@ -219,17 +206,19 @@ export default function AppsPage() {
     loadMessages(conversation.conversationId)
   }
 
-  // 选择模型
-  const handleModelSelect = (modelId: string) => {
-    setSelectedModelId(modelId)
+  // 创建新会话
+  const handleNewConversation = () => {
+    if (!activeApp) return
+
+    // 清空当前选中的会话和消息
+    setActiveConversation(null)
+    setMessages([])
   }
 
   // 发送消息
-  const handleSendMessage = async () => {
-    if (!userInput.trim() || !activeApp || !selectedModelId) return
+  const handleSendMessage = async (question: string, modelId: string) => {
+    if (!question || !activeApp || !modelId || !tenantId || !userId) return
 
-    // 准备发送数据
-    const question = userInput.trim()
     const now = new Date()
     const currentTime = formatTime(now.toISOString())
 
@@ -245,19 +234,13 @@ export default function AppsPage() {
       },
     ])
 
-    // 清空输入框和设置加载状态
-    setUserInput('')
-    setIsLoading(true)
-
     try {
       // 准备请求数据
       const chatRequest = {
-        tenantId,
-        userId,
         appId: activeApp.appId,
         conversationId: activeConversation?.conversationId,
-        modelId: selectedModelId,
-        question,
+        modelId,
+        prompt: question,
       }
 
       // 发送消息
@@ -281,9 +264,6 @@ export default function AppsPage() {
       }
     } catch (error) {
       console.error('发送消息失败', error)
-      // 可以在这里添加错误提示
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -292,129 +272,169 @@ export default function AppsPage() {
     setIsSidebarCollapsed(!isSidebarCollapsed)
   }
 
-  // 格式化时间
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-  }
-
-  // 根据日期返回相对时间
-  const getRelativeTime = (dateString: string) => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) {
-      const hours = now.getHours() - date.getHours()
-      if (hours < 1) return '刚刚'
-      return `${hours}小时前`
-    }
-    if (diffDays === 1) {
-      return '昨天'
-    }
-    if (diffDays < 7) {
-      return `${diffDays}天前`
-    }
-    return formatDate(date, 'yyyy-MM-dd')
-  }
-
-  // 获取当前选中的模型名称
-  const getSelectedModelName = () => {
-    if (!appConfig) return '选择模型'
-
-    // 确保 models 是对象数组而非字符串
-    let models = appConfig.models
-    if (typeof models === 'string') {
-      try {
-        models = JSON.parse(models)
-      } catch (error) {
-        console.error('解析 models JSON 字符串失败', error)
-        return '选择模型'
-      }
-    }
-
-    if (!models || !Array.isArray(models) || models.length === 0) return '选择模型'
-
-    const model = models.find((m) => m.modelId === selectedModelId)
-    return model ? model.name : '选择模型'
-  }
-
   return (
     <div className="flex h-[calc(100vh-60px)]">
       {/* 左侧应用列表 */}
-      <div
-        className={`border-r bg-card flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}
-      >
-        <div className="p-4 flex items-center justify-between border-b">
-          {!isSidebarCollapsed && <h2 className="font-semibold text-foreground">应用列表</h2>}
-          <Button
-            size="icon"
-            variant="ghost"
-            className={`h-8 w-8 ${isSidebarCollapsed ? 'mx-auto' : 'ml-auto'}`}
-            onClick={toggleSidebar}
-          >
-            {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        {!isSidebarCollapsed && (
-          <div className="relative px-4 pt-4 pb-2">
-            <Search className="absolute left-6.5 top-6.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="搜索应用..." className="pl-9" />
-          </div>
-        )}
-
-        <nav className="overflow-auto flex-1 p-2">
-          {loadingApps ? (
-            <div className="flex justify-center items-center h-20">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : apps.length === 0 ? (
-            <div className="text-center p-4 text-muted-foreground text-sm">暂无应用</div>
-          ) : (
-            apps.map((app) => (
-              <button
-                key={app.appId}
-                type="button"
-                className={`flex items-center rounded-md cursor-pointer transition-colors mb-1 ${
-                  app.appId === activeApp?.appId ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                } ${isSidebarCollapsed ? 'justify-center py-3 px-2' : 'px-3 py-2'}`}
-                onClick={() => handleAppClick(app)}
-                aria-pressed={app.appId === activeApp?.appId}
-              >
-                <div className={`text-xl flex-shrink-0 ${isSidebarCollapsed ? '' : 'mr-3'}`}>{app.logo || '🤖'}</div>
-                {!isSidebarCollapsed && <div className="font-medium text-sm truncate">{app.appName}</div>}
-              </button>
-            ))
-          )}
-        </nav>
-      </div>
+      <AppsSidebar
+        isSidebarCollapsed={isSidebarCollapsed}
+        toggleSidebar={toggleSidebar}
+        apps={apps}
+        loadingApps={loadingApps}
+        activeApp={activeApp}
+        handleAppClick={handleAppClick}
+      />
 
       {/* 右侧聊天区域 */}
       <div className="flex-1 flex">
         {/* 会话历史 */}
-        <div className="w-72 border-r flex flex-col bg-muted/10">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">会话历史</h2>
-            </div>
-          </div>
+        <ConversationList
+          conversations={conversations}
+          loadingConversations={loadingConversations}
+          activeApp={activeApp}
+          activeConversation={activeConversation}
+          handleConversationClick={handleConversationClick}
+          handleNewConversation={handleNewConversation}
+          getRelativeTime={getRelativeTime}
+        />
 
-          <div className="space-y-1 overflow-auto flex-1 p-2">
-            {loadingConversations ? (
-              <div className="flex justify-center items-center h-20">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : !activeApp ? (
-              <div className="text-center p-4 text-muted-foreground text-sm">请选择一个应用</div>
-            ) : conversations.length === 0 ? (
-              <div className="text-center p-4 text-muted-foreground text-sm">暂无会话记录</div>
-            ) : (
-              conversations.map((conversation) => (
+        {/* 聊天界面组件 */}
+        <ChatInterface
+          activeApp={activeApp}
+          messages={messages}
+          loadingMessages={loadingMessages}
+          onSendMessage={handleSendMessage}
+          models={appConfig?.models || []}
+          defaultModelId={defaultModelId}
+          hasActiveConversation={!!activeConversation}
+        />
+      </div>
+    </div>
+  )
+}
+
+// 应用侧边栏组件
+interface AppsSidebarProps {
+  isSidebarCollapsed: boolean
+  toggleSidebar: () => void
+  apps: App[]
+  loadingApps: boolean
+  activeApp: App | null
+  handleAppClick: (app: App) => void
+}
+
+function AppsSidebar({
+  isSidebarCollapsed,
+  toggleSidebar,
+  apps,
+  loadingApps,
+  activeApp,
+  handleAppClick,
+}: AppsSidebarProps) {
+  return (
+    <div
+      className={`border-r bg-card flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}
+    >
+      <div className="p-4 flex items-center justify-between border-b">
+        {!isSidebarCollapsed && <h2 className="font-semibold text-foreground">应用列表</h2>}
+        <Button
+          size="icon"
+          variant="ghost"
+          className={`h-8 w-8 ${isSidebarCollapsed ? 'mx-auto' : 'ml-auto'}`}
+          onClick={toggleSidebar}
+        >
+          {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {!isSidebarCollapsed && (
+        <div className="relative px-4 pt-4 pb-2">
+          <Search className="absolute left-6.5 top-6.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="搜索应用..." className="pl-9" />
+        </div>
+      )}
+
+      <nav className="overflow-auto flex-1 p-2">
+        {loadingApps ? (
+          <div className="flex justify-center items-center h-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : apps.length === 0 ? (
+          <div className="text-center p-4 text-muted-foreground text-sm">暂无应用</div>
+        ) : (
+          apps.map((app) => (
+            <button
+              key={app.appId}
+              type="button"
+              className={`flex items-center rounded-md cursor-pointer transition-colors mb-1 ${
+                app.appId === activeApp?.appId ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+              } ${isSidebarCollapsed ? 'justify-center py-3 px-2' : 'px-3 py-2'}`}
+              onClick={() => handleAppClick(app)}
+              aria-pressed={app.appId === activeApp?.appId}
+            >
+              <div className={`text-xl flex-shrink-0 ${isSidebarCollapsed ? '' : 'mr-3'}`}>{app.logo || '🤖'}</div>
+              {!isSidebarCollapsed && <div className="font-medium text-sm truncate">{app.appName}</div>}
+            </button>
+          ))
+        )}
+      </nav>
+    </div>
+  )
+}
+
+// 会话列表组件
+interface ConversationListProps {
+  conversations: Conversation[]
+  loadingConversations: boolean
+  activeApp: App | null
+  activeConversation: Conversation | null
+  handleConversationClick: (conversation: Conversation) => void
+  handleNewConversation: () => void
+  getRelativeTime: (dateString: string) => string
+}
+
+function ConversationList({
+  conversations,
+  loadingConversations,
+  activeApp,
+  activeConversation,
+  handleConversationClick,
+  handleNewConversation,
+  getRelativeTime,
+}: ConversationListProps) {
+  return (
+    <div className="w-72 border-r flex flex-col bg-muted/10">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">会话历史</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2"
+            disabled={!activeApp}
+            onClick={handleNewConversation}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            新建会话
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <ul className="space-y-1 p-2">
+          {loadingConversations ? (
+            <div className="flex justify-center items-center h-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !activeApp ? (
+            <div className="text-center p-4 text-muted-foreground text-sm">请选择一个应用</div>
+          ) : conversations.length === 0 ? (
+            <div className="text-center p-4 text-muted-foreground text-sm">暂无会话记录</div>
+          ) : (
+            conversations.map((conversation) => (
+              <li key={conversation.conversationId}>
                 <button
-                  key={conversation.conversationId}
                   type="button"
-                  className={`px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
+                  className={`w-full px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
                     conversation.conversationId === activeConversation?.conversationId
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent/50'
@@ -444,169 +464,10 @@ export default function AppsPage() {
                     {conversation.lastMessage || '无消息记录'}
                   </p>
                 </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* 对话区域 */}
-        <div className="flex-1 flex flex-col bg-background">
-          {/* 对话头部 */}
-          <div className="border-b p-4 flex items-center justify-between bg-card">
-            <div className="flex items-center">
-              <Avatar className="h-9 w-9 mr-3">
-                <AvatarFallback>{activeApp?.logo || '🤖'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-medium">{activeApp?.appName || '请选择应用'}</h3>
-                <p className="text-xs text-muted-foreground flex items-center">
-                  <span className="bg-green-500 h-1.5 w-1.5 rounded-full inline-block mr-1.5" />
-                  在线
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1" disabled={!appConfig}>
-                    {loadingConfig ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <>
-                        {getSelectedModelName()}
-                        <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                      </>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {(() => {
-                    // 处理models可能是字符串的情况
-                    let models = appConfig?.models
-                    if (typeof models === 'string') {
-                      try {
-                        models = JSON.parse(models)
-                      } catch (error) {
-                        console.error('解析 models JSON 字符串失败', error)
-                        return null
-                      }
-                    }
-
-                    if (!models || !Array.isArray(models)) return null
-
-                    return models.map((model) => (
-                      <DropdownMenuItem
-                        key={model.modelId}
-                        onClick={() => handleModelSelect(model.modelId)}
-                        className={selectedModelId === model.modelId ? 'bg-muted' : ''}
-                      >
-                        {model.name}
-                      </DropdownMenuItem>
-                    ))
-                  })()}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="outline" size="icon" className="h-8 w-8">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                分享会话
-              </Button>
-            </div>
-          </div>
-
-          {/* 消息区域 */}
-          <div className="flex-1 overflow-auto p-4 space-y-6">
-            {loadingMessages ? (
-              <div className="flex justify-center items-center h-20">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : !activeConversation && (!activeApp || messages.length === 0) ? (
-              <div className="text-center p-4 text-muted-foreground">
-                {activeApp ? '开始新的对话，或选择一个已有会话' : '请先选择一个应用'}
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="text-center p-4 text-muted-foreground">暂无消息记录</div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`flex gap-3 max-w-[85%] ${message.role === MessageRole.USER ? 'flex-row-reverse' : ''}`}
-                  >
-                    <Avatar className={`h-8 w-8 ${message.role === MessageRole.USER ? 'mt-1' : ''}`}>
-                      {message.role === MessageRole.USER ? (
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      ) : (
-                        <AvatarFallback className="bg-muted">{activeApp?.logo || '🤖'}</AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div>
-                      <div
-                        className={`px-4 py-3 rounded-lg ${
-                          message.role === MessageRole.USER
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'bg-muted shadow-sm'
-                        }`}
-                      >
-                        <div className="whitespace-pre-line text-sm">{message.content}</div>
-                      </div>
-                      <div
-                        className={`text-xs mt-1 text-muted-foreground ${message.role === MessageRole.USER ? 'text-right' : ''}`}
-                      >
-                        {message.time}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* 输入区域 */}
-          <div className="border-t p-4 bg-card">
-            <div className="flex items-center gap-2 relative">
-              <Textarea
-                placeholder="输入消息..."
-                className="flex-1 pr-24 min-h-[4.5rem] resize-none"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
-                }}
-                disabled={!activeApp || isLoading}
-              />
-              <div className="absolute right-2 bottom-2 flex gap-1.5">
-                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="rounded-full h-7 w-7"
-                  onClick={handleSendMessage}
-                  disabled={!userInput.trim() || isLoading || !activeApp || !selectedModelId}
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="flex justify-between mt-2 text-xs">
-              <div className="text-muted-foreground">支持 Markdown 格式</div>
-              <div className="text-muted-foreground flex items-center hover:text-foreground cursor-pointer">
-                <span>开启知识库增强</span>
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </div>
-            </div>
-          </div>
-        </div>
+              </li>
+            ))
+          )}
+        </ul>
       </div>
     </div>
   )
