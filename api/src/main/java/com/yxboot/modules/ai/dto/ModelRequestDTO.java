@@ -26,6 +26,9 @@ public class ModelRequestDTO {
     @Schema(description = "模型ID")
     private Long modelId;
 
+    @Schema(description = "会话ID")
+    private Long conversationId;
+
     @Schema(description = "提示内容")
     private String prompt;
 

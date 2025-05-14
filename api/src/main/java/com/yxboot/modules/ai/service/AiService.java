@@ -90,7 +90,7 @@ public class AiService {
      * @return 模型提供商策略
      * @throws ApiException 如果找不到支持的策略
      */
-    private ModelProvider findSupportedProvider(Provider provider, Model model) {
+    public ModelProvider findSupportedProvider(Provider provider, Model model) {
         return providers.stream()
                 .filter(p -> p.supports(provider, model))
                 .findFirst()
