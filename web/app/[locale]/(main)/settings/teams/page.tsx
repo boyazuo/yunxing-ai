@@ -1,9 +1,16 @@
 'use client'
 
+import { teamService } from '@/api/team'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -13,11 +20,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { Tenant } from '@/types/account'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   CheckCircle2,
@@ -64,36 +90,41 @@ const teamNameFormSchema = z.object({
 // 角色信息
 const roles = [
   { value: 'owner', label: '所有者', icon: <Crown className="mr-2 h-4 w-4" /> },
-  { value: 'admin', label: '管理员', icon: <ShieldCheck className="mr-2 h-4 w-4" /> },
+  {
+    value: 'admin',
+    label: '管理员',
+    icon: <ShieldCheck className="mr-2 h-4 w-4" />,
+  },
   { value: 'normal', label: '成员', icon: <Users className="mr-2 h-4 w-4" /> },
 ]
 
 // 测试数据 - 多个团队信息
-const initialTeams = [
-  {
-    id: '1',
-    name: '云行科技',
-    plan: 'free',
-    role: 'owner',
-    memberCount: 5,
-    isActive: true,
-  },
-  {
-    id: '2',
-    name: '智能应用团队',
-    plan: 'basic',
-    role: 'admin',
-    memberCount: 8,
-    isActive: false,
-  },
-  {
-    id: '3',
-    name: '研发中心',
-    plan: 'pro',
-    role: 'normal',
-    memberCount: 12,
-    isActive: false,
-  },
+const initialTeams: Tenant[] = [
+  { tenantName: '' },
+  // {
+  //   tenantId: '1',
+  //   tenantName: '云行科技',
+  //   plan: 'free',
+  //   role: 'owner',
+  //   memberCount: 5,
+  //   isActive: true,
+  // },
+  // {
+  //   tenantId: '2',
+  //   tenantName: '智能应用团队',
+  //   plan: 'basic',
+  //   role: 'admin',
+  //   memberCount: 8,
+  //   isActive: false,
+  // },
+  // {
+  //   tenantId: '3',
+  //   tenantName: '研发中心',
+  //   plan: 'pro',
+  //   role: 'normal',
+  //   memberCount: 12,
+  //   isActive: false,
+  // },
 ]
 
 // 测试数据 - 团队成员
@@ -146,10 +177,23 @@ export default function TeamsPage() {
   const [isTeamSwitcherOpen, setIsTeamSwitcherOpen] = useState(false)
   const [members, setMembers] = useState(initialMembers)
   const [teams, setTeams] = useState(initialTeams)
-  const [currentTeam, setCurrentTeam] = useState(initialTeams.find((team) => team.isActive) || initialTeams[0])
+  const [currentTeam, setCurrentTeam] = useState(
+    initialTeams.find((team) => team.isActive) || initialTeams[0]
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
+
+  // 加载当前用户所涉及的团队
+  useEffect(() => {
+    // 这里添加获取当前用户所涉及的团队的API调用
+    teamService.getTeams().then((data) => {
+      setTeams(data)
+      setCurrentTeam(data.find((team) => team.isActive) || data[0])
+    })
+
+    console.log('获取当前用户所涉及的团队')
+  }, [])
 
   // 成员邀请表单
   const memberForm = useForm<z.infer<typeof memberFormSchema>>({
@@ -165,13 +209,13 @@ export default function TeamsPage() {
   const teamNameForm = useForm<z.infer<typeof teamNameFormSchema>>({
     resolver: zodResolver(teamNameFormSchema),
     defaultValues: {
-      teamName: currentTeam.name,
+      teamName: currentTeam.tenantName,
     },
   })
 
   // 设置团队名称表单默认值
   useEffect(() => {
-    teamNameForm.reset({ teamName: currentTeam.name })
+    teamNameForm.reset({ teamName: currentTeam.tenantName })
   }, [currentTeam, teamNameForm])
 
   // 处理添加团队成员提交
@@ -207,16 +251,26 @@ export default function TeamsPage() {
   const onSubmitTeamName = async (data: z.infer<typeof teamNameFormSchema>) => {
     setIsSubmitting(true)
     try {
-      // 这里添加修改团队名称的API调用
-      console.log('修改团队名称:', data)
+      // 修改团队名称的API调用
+      const res: any = await teamService.updateTeam({
+        tenantId: currentTeam.tenantId,
+        tenantName: data.teamName,
+      })
 
-      // 模拟修改团队名称
-      const updatedTeams = teams.map((team) => (team.id === currentTeam.id ? { ...team, name: data.teamName } : team))
-      setTeams(updatedTeams)
-      setCurrentTeam({ ...currentTeam, name: data.teamName })
+      if (res.code === 0) {
+        const updatedTeams = teams.map((team) =>
+          team.tenantId === currentTeam.tenantId
+            ? { ...team, tenantName: data.teamName }
+            : team
+        )
 
-      toast.success('团队名称已更新')
-      setIsOpenEditNameDialog(false)
+        setTeams(updatedTeams)
+        setCurrentTeam({ ...currentTeam, tenantName: data.teamName })
+        toast.success('团队名称已更新')
+        setIsOpenEditNameDialog(false)
+      } else {
+        toast.error(res.msg)
+      }
     } catch (error) {
       toast.error('更新团队名称失败')
       console.error(error)
@@ -226,13 +280,13 @@ export default function TeamsPage() {
   }
 
   // 处理团队切换
-  const handleTeamChange = (teamId: string) => {
-    const selectedTeam = teams.find((team) => team.id === teamId)
+  const handleTeamChange = (teamId: number) => {
+    const selectedTeam = teams.find((team) => team.tenantId === teamId)
     if (selectedTeam) {
       // 更新所有团队的活跃状态
       const updatedTeams = teams.map((team) => ({
         ...team,
-        isActive: team.id === teamId,
+        isActive: team.tenantId === teamId,
       }))
 
       setTeams(updatedTeams)
@@ -257,10 +311,17 @@ export default function TeamsPage() {
   }
 
   // 处理修改团队成员角色
-  const handleChangeRole = (id: string, newRole: 'owner' | 'admin' | 'normal') => {
+  const handleChangeRole = (
+    id: string,
+    newRole: 'owner' | 'admin' | 'normal'
+  ) => {
     try {
       // 这里添加修改团队成员角色的API调用
-      setMembers(members.map((member) => (member.id === id ? { ...member, role: newRole } : member)))
+      setMembers(
+        members.map((member) =>
+          member.id === id ? { ...member, role: newRole } : member
+        )
+      )
       toast.success('团队成员角色已更新')
     } catch (error) {
       toast.error('更新团队成员角色失败')
@@ -308,7 +369,8 @@ export default function TeamsPage() {
     const matchesTab =
       activeTab === 'all' ||
       (activeTab === 'active' && member.isActive) ||
-      (activeTab === 'admin' && (member.role === 'admin' || member.role === 'owner'))
+      (activeTab === 'admin' &&
+        (member.role === 'admin' || member.role === 'owner'))
 
     return matchesSearch && matchesTab
   })
@@ -332,10 +394,12 @@ export default function TeamsPage() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(currentTeam.name)}
+                            {getInitials(currentTeam.tenantName)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{currentTeam.name}</span>
+                        <span className="text-sm font-medium">
+                          {currentTeam.tenantName}
+                        </span>
                       </div>
                       <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
@@ -353,28 +417,34 @@ export default function TeamsPage() {
 
                   {isTeamSwitcherOpen && (
                     <div className="absolute top-full left-0 z-10 mt-1 w-full md:w-[240px] rounded-md border bg-popover p-1 shadow-md">
-                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground">团队列表</div>
+                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground">
+                        团队列表
+                      </div>
                       {teams.map((team) => (
                         <button
                           type="button"
-                          key={team.id}
-                          onClick={() => handleTeamChange(team.id)}
+                          key={team.tenantId}
+                          onClick={() => handleTeamChange(team.tenantName)}
                           className={cn(
                             'flex items-center gap-2 w-full rounded-md p-2 text-left text-sm transition-colors',
                             'hover:bg-accent',
-                            team.isActive ? 'bg-accent' : '',
+                            team.isActive ? 'bg-accent' : ''
                           )}
                         >
                           <Avatar className="h-5 w-5">
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {getInitials(team.name)}
+                              {getInitials(team.tenantName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 truncate">
-                            <p className="font-medium">{team.name}</p>
-                            <p className="text-xs text-muted-foreground">{getRoleLabel(team.role)}</p>
+                            <p className="font-medium">{team.tenantName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {getRoleLabel(team.role)}
+                            </p>
                           </div>
-                          {team.isActive && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                          {team.isActive && (
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -405,10 +475,15 @@ export default function TeamsPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>邀请新团队成员</DialogTitle>
-                    <DialogDescription>输入团队成员信息并发送邀请。团队成员将收到邀请邮件。</DialogDescription>
+                    <DialogDescription>
+                      输入团队成员信息并发送邀请。团队成员将收到邀请邮件。
+                    </DialogDescription>
                   </DialogHeader>
                   <Form {...memberForm}>
-                    <form onSubmit={memberForm.handleSubmit(onSubmitMember)} className="space-y-4">
+                    <form
+                      onSubmit={memberForm.handleSubmit(onSubmitMember)}
+                      className="space-y-4"
+                    >
                       <FormField
                         control={memberForm.control}
                         name="name"
@@ -441,7 +516,10 @@ export default function TeamsPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>角色</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="选择角色" />
@@ -449,7 +527,10 @@ export default function TeamsPage() {
                               </FormControl>
                               <SelectContent>
                                 {roles.map((role) => (
-                                  <SelectItem key={role.value} value={role.value}>
+                                  <SelectItem
+                                    key={role.value}
+                                    value={role.value}
+                                  >
                                     <div className="flex items-center">
                                       {role.icon}
                                       {role.label}
@@ -473,14 +554,22 @@ export default function TeamsPage() {
               </Dialog>
 
               {/* 修改团队名称对话框 */}
-              <Dialog open={isOpenEditNameDialog} onOpenChange={setIsOpenEditNameDialog}>
+              <Dialog
+                open={isOpenEditNameDialog}
+                onOpenChange={setIsOpenEditNameDialog}
+              >
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>修改团队名称</DialogTitle>
-                    <DialogDescription>更新您的团队名称，这将显示在所有成员的界面中。</DialogDescription>
+                    <DialogDescription>
+                      更新您的团队名称，这将显示在所有成员的界面中。
+                    </DialogDescription>
                   </DialogHeader>
                   <Form {...teamNameForm}>
-                    <form onSubmit={teamNameForm.handleSubmit(onSubmitTeamName)} className="space-y-4">
+                    <form
+                      onSubmit={teamNameForm.handleSubmit(onSubmitTeamName)}
+                      className="space-y-4"
+                    >
                       <FormField
                         control={teamNameForm.control}
                         name="teamName"
@@ -514,7 +603,9 @@ export default function TeamsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle>团队成员</CardTitle>
-              <CardDescription className="text-[12px]">管理团队中的成员及其权限。</CardDescription>
+              <CardDescription className="text-[12px]">
+                管理团队中的成员及其权限。
+              </CardDescription>
             </div>
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -533,7 +624,9 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
+                  activeTab === 'all'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'hover:bg-background/50'
                 )}
                 onClick={() => setActiveTab('all')}
               >
@@ -543,7 +636,9 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'active' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
+                  activeTab === 'active'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'hover:bg-background/50'
                 )}
                 onClick={() => setActiveTab('active')}
               >
@@ -553,7 +648,9 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'admin' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
+                  activeTab === 'admin'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'hover:bg-background/50'
                 )}
                 onClick={() => setActiveTab('admin')}
               >
@@ -568,9 +665,15 @@ export default function TeamsPage() {
             {filteredMembers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-2" />
-                <p className="text-muted-foreground mb-2">{searchQuery ? '没有找到匹配的成员' : '还没有团队成员'}</p>
+                <p className="text-muted-foreground mb-2">
+                  {searchQuery ? '没有找到匹配的成员' : '还没有团队成员'}
+                </p>
                 {searchQuery && (
-                  <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                  >
                     清除搜索
                   </Button>
                 )}
@@ -581,30 +684,43 @@ export default function TeamsPage() {
                   key={member.id}
                   className={cn(
                     'flex items-center justify-between p-2 rounded-lg transition-colors',
-                    'hover:bg-accent/50 group',
+                    'hover:bg-accent/50 group'
                   )}
                 >
                   <div className="flex items-center space-x-4">
                     <Avatar className="border">
                       <AvatarImage src={member.avatar} alt={member.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary">{getInitials(member.name)}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
                         <div className="font-medium">{member.name}</div>
-                        {member.isActive && <CheckCircle2 className="text-green-500 h-3.5 w-3.5" />}
+                        {member.isActive && (
+                          <CheckCircle2 className="text-green-500 h-3.5 w-3.5" />
+                        )}
                       </div>
-                      <div className="text-sm text-muted-foreground">{member.email}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {member.email}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="hidden md:flex items-center gap-1 px-2">
+                    <Badge
+                      variant="outline"
+                      className="hidden md:flex items-center gap-1 px-2"
+                    >
                       {getRoleIcon(member.role)}
                       <span>{getRoleLabel(member.role)}</span>
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-70 group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-70 group-hover:opacity-100"
+                        >
                           <MoreVertical className="h-4 w-4" />
                           <span className="sr-only">操作</span>
                         </Button>

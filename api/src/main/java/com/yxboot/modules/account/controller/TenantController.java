@@ -49,6 +49,16 @@ public class TenantController {
     public Result<List<TenantUserDTO>> getTenants(@AuthenticationPrincipal SecurityUser securityUser) {
         Long userId = securityUser.getUserId();
         List<TenantUserDTO> tenants = tenantService.getTenantsByUserId(userId);
+
+        // 获取每个租户的成员数量
+        tenants.parallelStream().forEach(item -> {
+            Long count = tenantUserService
+                    .lambdaQuery()
+                    .eq(TenantUser::getTenantId, item.getTenantId())
+                    .count();
+            item.setMemberCount(count);
+        });
+
         return Result.success("获取租户列表成功", tenants);
     }
 

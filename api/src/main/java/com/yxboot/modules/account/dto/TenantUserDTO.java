@@ -44,4 +44,7 @@ public class TenantUserDTO {
     @Schema(description = "更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
+
+    @Schema(description = "成员数量")
+    private Long memberCount;
 }
