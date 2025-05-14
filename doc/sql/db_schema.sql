@@ -26,19 +26,51 @@ CREATE TABLE `app` (
 -- ----------------------------
 DROP TABLE IF EXISTS `app_config`;
 CREATE TABLE `app_config` (
-    `id` bigint(20) NOT NULL COMMENT 'ID',
-    `app_id` bigint(20) DEFAULT NULL COMMENT '应用ID',
-    `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
-    `sys_prompt` text COMMENT '系统提示词',
-    `models` text COMMENT 'AI模型配置',
-    `variables` text COMMENT '变量配置',
-    `datasets` text COMMENT '知识库配置',
-    `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
-    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
-    `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
-    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用配置表';
+  `config_id` bigint(20) NOT NULL COMMENT 'ID',
+  `app_id` bigint(20) DEFAULT NULL COMMENT '应用ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `sys_prompt` text COMMENT '系统提示词',
+  `models` text COMMENT 'AI模型配置',
+  `variables` text COMMENT '变量配置',
+  `datasets` text COMMENT '知识库配置',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`config_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+-- Table structure for conversation
+-- ----------------------------
+DROP TABLE IF EXISTS `conversation`;
+CREATE TABLE `conversation` (
+  `conversation_id` bigint(20) NOT NULL COMMENT '会话ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `user_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `app_id` bigint(20) DEFAULT NULL COMMENT '应用 ID',
+  `title` varchar(1000) DEFAULT NULL COMMENT '会话标题',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`conversation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+-- Table structure for message
+-- ----------------------------
+DROP TABLE IF EXISTS `message`;
+CREATE TABLE `message` (
+  `message_id` bigint(20) NOT NULL COMMENT '消息ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `user_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `app_id` bigint(20) DEFAULT NULL COMMENT '应用 ID',
+  `conversation_id` bigint(20) DEFAULT NULL COMMENT '会话 ID',
+  `question` text COMMENT '问题',
+  `answer` text COMMENT '回复',
+  `status` varchar(20) DEFAULT NULL COMMENT '状态',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (`message_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Table structure for model
@@ -69,6 +101,7 @@ CREATE TABLE `provider` (
   `provider_id` bigint(20) NOT NULL COMMENT '提供商ID',
   `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
   `provider_name` varchar(255) DEFAULT NULL COMMENT '提供商名称',
+  `display_name` varchar(255) DEFAULT NULL COMMENT '显示名称',
   `logo` varchar(255) DEFAULT NULL COMMENT 'Logo',
   `api_key` varchar(255) DEFAULT NULL COMMENT 'API密钥',
   `endpoint` varchar(255) DEFAULT NULL COMMENT '终端地址',

@@ -11,7 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yxboot.modules.ai.dto.MessageDTO;
+import com.yxboot.modules.ai.dto.ChatMessageDTO;
 import com.yxboot.modules.ai.dto.ModelRequestDTO;
 import com.yxboot.modules.ai.dto.ModelResponseDTO;
 import com.yxboot.modules.ai.entity.Model;
@@ -146,7 +146,7 @@ public class ZhipuAIProvider implements ModelProvider {
 
         // 添加聊天历史
         if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-            for (MessageDTO msg : request.getMessages()) {
+            for (ChatMessageDTO msg : request.getMessages()) {
                 messages.add(new ZhipuMessage(msg.getRole(), msg.getContent()));
             }
         } else if (request.getPrompt() != null && !request.getPrompt().isEmpty()) {

@@ -30,7 +30,7 @@ public class ModelRequestDTO {
     private String prompt;
 
     @Schema(description = "聊天消息列表")
-    private List<MessageDTO> messages;
+    private List<ChatMessageDTO> messages;
 
     @Schema(description = "系统消息")
     private String systemMessage;
