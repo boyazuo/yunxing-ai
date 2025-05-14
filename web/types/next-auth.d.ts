@@ -10,6 +10,7 @@ declare module 'next-auth' {
   }
 
   interface User {
+    id: string | undefined
     accessToken: string
     user: UserType & DefaultSession['user']
     tenant: Tenant

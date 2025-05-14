@@ -1,5 +1,4 @@
 import { authService } from '@/api/auth'
-import { getUserById } from '@/api/user'
 import type { Tenant, User } from '@/types/account'
 import type { AuthOptions } from 'next-auth'
 import NextAuth from 'next-auth'
@@ -66,7 +65,7 @@ export const authOptions: AuthOptions = {
           const user = session.user
           return {
             ...token,
-            user
+            user,
           }
         }
       }
