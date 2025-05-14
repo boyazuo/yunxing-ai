@@ -36,3 +36,20 @@ export interface App {
   updateTime?: string
   updatorId?: number
 }
+
+// 应用配置类型
+export interface AppConfig {
+  configId?: string
+  appId?: string
+  tenantId?: string
+  sysPrompt?: string
+  models: AppModel[]
+}
+
+// 应用模型配置
+export interface AppModel {
+  modelId: string
+  modelName: string
+  isDefault: boolean
+  // 其他模型相关配置
+}

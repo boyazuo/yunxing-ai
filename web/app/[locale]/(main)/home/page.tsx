@@ -1,11 +1,20 @@
 'use client'
 
+import { appConfigService } from '@/api/appConfig'
+import { appService } from '@/api/apps'
+import { chatService } from '@/api/chat'
+import { conversationService } from '@/api/conversation'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { formatDate } from '@/lib/utils'
+import type { App } from '@/types/app'
+import { type Conversation, MessageRole } from '@/types/chat'
 import {
   ArrowRight,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -16,125 +25,318 @@ import {
   Settings,
   User,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
 
-// 模拟应用数据
-const mockApps = [
-  {
-    id: 1,
-    name: '客户服务助手',
-    description: '智能客服系统，提供7*24小时服务',
-    icon: '🤖',
-    updatedAt: '2023-12-01',
-    active: true,
-  },
-  {
-    id: 2,
-    name: '营销文案生成器',
-    description: '自动生成符合品牌调性的营销文案',
-    icon: '📝',
-    updatedAt: '2023-12-05',
-    active: false,
-  },
-  {
-    id: 3,
-    name: '数据分析助手',
-    description: '快速分析业务数据，生成洞察报告',
-    icon: '📊',
-    updatedAt: '2023-12-10',
-    active: false,
-  },
-  {
-    id: 4,
-    name: '知识库问答',
-    description: '基于企业知识库的智能问答系统',
-    icon: '🔍',
-    updatedAt: '2023-12-15',
-    active: false,
-  },
-]
+// 定义UI消息类型
+interface ChatMessage {
+  id: string
+  role: MessageRole
+  content: string
+  time: string
+}
 
-// 模拟会话历史
-const mockConversations = [
-  {
-    id: 1,
-    title: '如何优化网站SEO',
-    time: '10分钟前',
-    excerpt: '我想了解如何提高我的网站在搜索引擎中的排名...',
-    isActive: true,
-  },
-  {
-    id: 2,
-    title: '市场营销策略咨询',
-    time: '1小时前',
-    excerpt: '我需要为一个新产品制定营销策略...',
-    isActive: false,
-  },
-  {
-    id: 3,
-    title: '数据分析报告生成',
-    time: '昨天',
-    excerpt: '请帮我分析这份销售数据并生成报告...',
-    isActive: false,
-  },
-  {
-    id: 4,
-    title: '客户反馈分析',
-    time: '3天前',
-    excerpt: '我有一批客户反馈数据需要分析...',
-    isActive: false,
-  },
-]
-
-// 模拟聊天消息
-const mockMessages = [
-  {
-    id: 1,
-    role: 'user',
-    content: '我想了解如何提高我的网站在搜索引擎中的排名？',
-    time: '10:30',
-  },
-  {
-    id: 2,
-    role: 'assistant',
-    content:
-      '提高网站SEO排名需要从多个方面入手：\n\n1. 优质内容：创建原创、有价值且与用户搜索意图相关的内容\n2. 关键词优化：研究并使用相关关键词，包括长尾关键词\n3. 网站结构：确保网站有清晰的结构和导航\n4. 技术SEO：优化网站加载速度、移动友好性、HTTPS安全等\n5. 反向链接：获取高质量的外部链接\n6. 用户体验：提高页面停留时间和降低跳出率\n\n您希望我详细解释其中的哪个方面？',
-    time: '10:32',
-  },
-  {
-    id: 3,
-    role: 'user',
-    content: '请详细解释一下关键词优化的策略。',
-    time: '10:35',
-  },
-  {
-    id: 4,
-    role: 'assistant',
-    content:
-      '关键词优化是SEO的基础，以下是详细的关键词优化策略：\n\n1. 关键词研究：\n   - 使用Google关键词规划师、SEMrush等工具找到相关关键词\n   - 分析竞争对手使用的关键词\n   - 关注搜索量和竞争度的平衡\n\n2. 长尾关键词：\n   - 定位更具体的长尾关键词，它们竞争较小但转化率高\n   - 围绕问题和特定需求构建长尾关键词\n\n3. 关键词布局：\n   - 在标题标签(H1)中使用主关键词\n   - 在URL中包含关键词\n   - 在前100词中自然地使用主关键词\n   - 在副标题(H2,H3)中使用相关关键词\n   - 在图片alt文本中使用关键词\n\n4. 语义SEO：\n   - 使用LSI关键词(潜在语义索引)补充主关键词\n   - 围绕主题而非单个关键词构建内容\n\n5. 关键词密度：\n   - 保持自然，避免关键词堆砌\n   - 一般建议密度在1-2%之间\n\n6. 内容更新：\n   - 定期更新内容以保持关键词相关性\n   - 跟踪关键词排名变化并调整策略\n\n您想了解这些策略中的哪些具体实施方法？',
-    time: '10:40',
-  },
-]
+// 定义内部应用配置类型
+interface UIAppConfig {
+  sysPrompt?: string
+  models: {
+    id: string
+    modelId: string
+    name: string
+    provider: string
+    temperature: number
+    topP: number
+    maxTokens: number
+    isActive: boolean
+  }[]
+}
 
 export default function AppsPage() {
+  const { data: session } = useSession()
   const [userInput, setUserInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
-  // 模拟发送消息
-  const handleSendMessage = () => {
-    if (!userInput.trim()) return
+  // 应用与会话状态
+  const [apps, setApps] = useState<App[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [activeApp, setActiveApp] = useState<App | null>(null)
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+  const [defaultModelId, setDefaultModelId] = useState<string>('')
+
+  // 应用配置
+  const [appConfig, setAppConfig] = useState<UIAppConfig | null>(null)
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
+
+  // 加载状态
+  const [loadingApps, setLoadingApps] = useState(true)
+  const [loadingConfig, setLoadingConfig] = useState(false)
+  const [loadingConversations, setLoadingConversations] = useState(false)
+  const [loadingMessages, setLoadingMessages] = useState(false)
+
+  // 从会话中获取用户和租户信息
+  const tenantId = session?.tenant?.tenantId || ''
+  const userId = session?.user?.userId?.toString() || ''
+
+  // 加载应用列表
+  const loadApps = useCallback(async () => {
+    if (!tenantId) return
+
+    try {
+      setLoadingApps(true)
+      const data = await appService.getApps(tenantId)
+      setApps(data || [])
+
+      // 如果有应用，默认选中第一个
+      if (data && data.length > 0) {
+        setActiveApp(data[0])
+        loadAppConfig(data[0].appId)
+        loadConversations(data[0].appId)
+      }
+    } catch (error) {
+      console.error('加载应用失败', error)
+    } finally {
+      setLoadingApps(false)
+    }
+  }, [tenantId])
+
+  // 加载应用配置
+  const loadAppConfig = async (appId: string) => {
+    if (!tenantId || !appId) return
+
+    try {
+      setLoadingConfig(true)
+      const config = await appConfigService.getAppConfig(appId)
+
+      // 处理 models 字符串转为 JSON 对象
+      if (config && typeof config.models === 'string') {
+        try {
+          config.models = JSON.parse(config.models)
+        } catch (parseError) {
+          console.error('解析 models JSON 字符串失败', parseError)
+          config.models = []
+        }
+      }
+
+      setAppConfig(config as UIAppConfig)
+
+      // 默认选择第一个模型
+      if (config?.models && config.models.length > 0) {
+        // 优先选择 isActive 为 true 的第一个模型
+        const activeModel = config.models.find((model) => model.isActive) || config.models[0]
+        setSelectedModelId(activeModel.modelId)
+        setDefaultModelId(activeModel.modelId)
+      }
+    } catch (error) {
+      console.error('加载应用配置失败', error)
+    } finally {
+      setLoadingConfig(false)
+    }
+  }
+
+  // 加载会话列表
+  const loadConversations = async (appId: string) => {
+    if (!tenantId || !userId || !appId) return
+
+    try {
+      setLoadingConversations(true)
+      const data = await conversationService.getConversations(tenantId, userId, appId)
+      setConversations(data || [])
+
+      // 如果有会话，默认选中第一个
+      if (data && data.length > 0) {
+        setActiveConversation(data[0])
+        loadMessages(data[0].conversationId)
+      } else {
+        setActiveConversation(null)
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('加载会话失败', error)
+    } finally {
+      setLoadingConversations(false)
+    }
+  }
+
+  // 加载会话消息
+  const loadMessages = async (conversationId: string) => {
+    if (!conversationId) return
+
+    try {
+      setLoadingMessages(true)
+      const data = await conversationService.getConversationMessages(conversationId)
+
+      // 将后端消息格式转换为前端UI格式
+      const formattedMessages: ChatMessage[] = []
+
+      // 遍历消息，每条消息包含问题(user)和回答(assistant)
+      for (const message of data) {
+        // 添加用户问题
+        formattedMessages.push({
+          id: `${message.messageId}-q`,
+          role: MessageRole.USER,
+          content: message.question,
+          time: formatTime(message.createTime),
+        })
+
+        // 添加助手回答
+        formattedMessages.push({
+          id: `${message.messageId}-a`,
+          role: MessageRole.ASSISTANT,
+          content: message.answer,
+          time: formatTime(message.createTime),
+        })
+      }
+
+      setMessages(formattedMessages)
+    } catch (error) {
+      console.error('加载消息失败', error)
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  // 首次加载
+  useEffect(() => {
+    if (tenantId && userId) {
+      loadApps()
+    }
+  }, [tenantId, userId, loadApps])
+
+  // 选择应用时加载会话
+  const handleAppClick = (app: App) => {
+    if (app.appId === activeApp?.appId) return
+    setActiveApp(app)
+    loadAppConfig(app.appId)
+    loadConversations(app.appId)
+  }
+
+  // 选择会话时加载消息
+  const handleConversationClick = (conversation: Conversation) => {
+    if (conversation.conversationId === activeConversation?.conversationId) return
+    setActiveConversation(conversation)
+    loadMessages(conversation.conversationId)
+  }
+
+  // 选择模型
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModelId(modelId)
+  }
+
+  // 发送消息
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || !activeApp || !selectedModelId) return
+
+    // 准备发送数据
+    const question = userInput.trim()
+    const now = new Date()
+    const currentTime = formatTime(now.toISOString())
+
+    // 添加用户消息到UI
+    const tempUserId = `temp-${Date.now()}`
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempUserId,
+        role: MessageRole.USER,
+        content: question,
+        time: currentTime,
+      },
+    ])
+
+    // 清空输入框和设置加载状态
+    setUserInput('')
     setIsLoading(true)
-    // 模拟API调用延迟
-    setTimeout(() => {
-      setUserInput('')
+
+    try {
+      // 准备请求数据
+      const chatRequest = {
+        tenantId,
+        userId,
+        appId: activeApp.appId,
+        conversationId: activeConversation?.conversationId,
+        modelId: selectedModelId,
+        question,
+      }
+
+      // 发送消息
+      const response = await chatService.sendMessage(chatRequest)
+
+      // 添加回复到UI
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${response.messageId}-a`,
+          role: MessageRole.ASSISTANT,
+          content: response.content,
+          time: formatTime(new Date().toISOString()),
+        },
+      ])
+
+      // 如果是新会话，更新当前活动会话
+      if (!activeConversation && response.conversationId) {
+        // 刷新会话列表
+        loadConversations(activeApp.appId)
+      }
+    } catch (error) {
+      console.error('发送消息失败', error)
+      // 可以在这里添加错误提示
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   // 切换侧边栏
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed)
+  }
+
+  // 格式化时间
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // 根据日期返回相对时间
+  const getRelativeTime = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      const hours = now.getHours() - date.getHours()
+      if (hours < 1) return '刚刚'
+      return `${hours}小时前`
+    }
+    if (diffDays === 1) {
+      return '昨天'
+    }
+    if (diffDays < 7) {
+      return `${diffDays}天前`
+    }
+    return formatDate(date, 'yyyy-MM-dd')
+  }
+
+  // 获取当前选中的模型名称
+  const getSelectedModelName = () => {
+    if (!appConfig) return '选择模型'
+
+    // 确保 models 是对象数组而非字符串
+    let models = appConfig.models
+    if (typeof models === 'string') {
+      try {
+        models = JSON.parse(models)
+      } catch (error) {
+        console.error('解析 models JSON 字符串失败', error)
+        return '选择模型'
+      }
+    }
+
+    if (!models || !Array.isArray(models) || models.length === 0) return '选择模型'
+
+    const model = models.find((m) => m.modelId === selectedModelId)
+    return model ? model.name : '选择模型'
   }
 
   return (
@@ -163,17 +365,28 @@ export default function AppsPage() {
         )}
 
         <nav className="overflow-auto flex-1 p-2">
-          {mockApps.map((app) => (
-            <div
-              key={app.id}
-              className={`flex items-center rounded-md cursor-pointer transition-colors mb-1 ${
-                app.active ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-              } ${isSidebarCollapsed ? 'justify-center py-3 px-2' : 'px-3 py-2'}`}
-            >
-              <div className={`text-xl flex-shrink-0 ${isSidebarCollapsed ? '' : 'mr-3'}`}>{app.icon}</div>
-              {!isSidebarCollapsed && <div className="font-medium text-sm truncate">{app.name}</div>}
+          {loadingApps ? (
+            <div className="flex justify-center items-center h-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ))}
+          ) : apps.length === 0 ? (
+            <div className="text-center p-4 text-muted-foreground text-sm">暂无应用</div>
+          ) : (
+            apps.map((app) => (
+              <button
+                key={app.appId}
+                type="button"
+                className={`flex items-center rounded-md cursor-pointer transition-colors mb-1 ${
+                  app.appId === activeApp?.appId ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                } ${isSidebarCollapsed ? 'justify-center py-3 px-2' : 'px-3 py-2'}`}
+                onClick={() => handleAppClick(app)}
+                aria-pressed={app.appId === activeApp?.appId}
+              >
+                <div className={`text-xl flex-shrink-0 ${isSidebarCollapsed ? '' : 'mr-3'}`}>{app.logo || '🤖'}</div>
+                {!isSidebarCollapsed && <div className="font-medium text-sm truncate">{app.appName}</div>}
+              </button>
+            ))
+          )}
         </nav>
       </div>
 
@@ -188,28 +401,51 @@ export default function AppsPage() {
           </div>
 
           <div className="space-y-1 overflow-auto flex-1 p-2">
-            {mockConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                className={`px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
-                  conversation.isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent/50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-sm">{conversation.title}</h3>
-                  <span
-                    className={`text-xs ${conversation.isActive ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}
-                  >
-                    {conversation.time}
-                  </span>
-                </div>
-                <p
-                  className={`text-xs mt-1 line-clamp-1 ${conversation.isActive ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}
-                >
-                  {conversation.excerpt}
-                </p>
+            {loadingConversations ? (
+              <div className="flex justify-center items-center h-20">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ))}
+            ) : !activeApp ? (
+              <div className="text-center p-4 text-muted-foreground text-sm">请选择一个应用</div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center p-4 text-muted-foreground text-sm">暂无会话记录</div>
+            ) : (
+              conversations.map((conversation) => (
+                <button
+                  key={conversation.conversationId}
+                  type="button"
+                  className={`px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
+                    conversation.conversationId === activeConversation?.conversationId
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent/50'
+                  }`}
+                  onClick={() => handleConversationClick(conversation)}
+                  aria-pressed={conversation.conversationId === activeConversation?.conversationId}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
+                    <span
+                      className={`text-xs ${
+                        conversation.conversationId === activeConversation?.conversationId
+                          ? 'text-primary-foreground/70'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {getRelativeTime(conversation.updateTime)}
+                    </span>
+                  </div>
+                  <p
+                    className={`text-xs mt-1 line-clamp-1 ${
+                      conversation.conversationId === activeConversation?.conversationId
+                        ? 'text-primary-foreground/90'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    {conversation.lastMessage || '无消息记录'}
+                  </p>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -219,10 +455,10 @@ export default function AppsPage() {
           <div className="border-b p-4 flex items-center justify-between bg-card">
             <div className="flex items-center">
               <Avatar className="h-9 w-9 mr-3">
-                <AvatarFallback>🤖</AvatarFallback>
+                <AvatarFallback>{activeApp?.logo || '🤖'}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-medium">客户服务助手</h3>
+                <h3 className="font-medium">{activeApp?.appName || '请选择应用'}</h3>
                 <p className="text-xs text-muted-foreground flex items-center">
                   <span className="bg-green-500 h-1.5 w-1.5 rounded-full inline-block mr-1.5" />
                   在线
@@ -230,6 +466,46 @@ export default function AppsPage() {
               </div>
             </div>
             <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1" disabled={!appConfig}>
+                    {loadingConfig ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        {getSelectedModelName()}
+                        <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {(() => {
+                    // 处理models可能是字符串的情况
+                    let models = appConfig?.models
+                    if (typeof models === 'string') {
+                      try {
+                        models = JSON.parse(models)
+                      } catch (error) {
+                        console.error('解析 models JSON 字符串失败', error)
+                        return null
+                      }
+                    }
+
+                    if (!models || !Array.isArray(models)) return null
+
+                    return models.map((model) => (
+                      <DropdownMenuItem
+                        key={model.modelId}
+                        onClick={() => handleModelSelect(model.modelId)}
+                        className={selectedModelId === model.modelId ? 'bg-muted' : ''}
+                      >
+                        {model.name}
+                      </DropdownMenuItem>
+                    ))
+                  })()}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" size="icon" className="h-8 w-8">
                 <Settings className="h-4 w-4" />
               </Button>
@@ -242,35 +518,54 @@ export default function AppsPage() {
 
           {/* 消息区域 */}
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            {mockMessages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex gap-3 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <Avatar className={`h-8 w-8 ${message.role === 'user' ? 'mt-1' : ''}`}>
-                    {message.role === 'user' ? (
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    ) : (
-                      <AvatarFallback className="bg-muted">🤖</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <div
-                      className={`px-4 py-3 rounded-lg ${
-                        message.role === 'user' ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted shadow-sm'
-                      }`}
-                    >
-                      <div className="whitespace-pre-line text-sm">{message.content}</div>
-                    </div>
-                    <div
-                      className={`text-xs mt-1 text-muted-foreground ${message.role === 'user' ? 'text-right' : ''}`}
-                    >
-                      {message.time}
+            {loadingMessages ? (
+              <div className="flex justify-center items-center h-20">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !activeConversation && (!activeApp || messages.length === 0) ? (
+              <div className="text-center p-4 text-muted-foreground">
+                {activeApp ? '开始新的对话，或选择一个已有会话' : '请先选择一个应用'}
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center p-4 text-muted-foreground">暂无消息记录</div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`flex gap-3 max-w-[85%] ${message.role === MessageRole.USER ? 'flex-row-reverse' : ''}`}
+                  >
+                    <Avatar className={`h-8 w-8 ${message.role === MessageRole.USER ? 'mt-1' : ''}`}>
+                      {message.role === MessageRole.USER ? (
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      ) : (
+                        <AvatarFallback className="bg-muted">{activeApp?.logo || '🤖'}</AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div>
+                      <div
+                        className={`px-4 py-3 rounded-lg ${
+                          message.role === MessageRole.USER
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-muted shadow-sm'
+                        }`}
+                      >
+                        <div className="whitespace-pre-line text-sm">{message.content}</div>
+                      </div>
+                      <div
+                        className={`text-xs mt-1 text-muted-foreground ${message.role === MessageRole.USER ? 'text-right' : ''}`}
+                      >
+                        {message.time}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* 输入区域 */}
@@ -287,6 +582,7 @@ export default function AppsPage() {
                     handleSendMessage()
                   }
                 }}
+                disabled={!activeApp || isLoading}
               />
               <div className="absolute right-2 bottom-2 flex gap-1.5">
                 <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full">
@@ -296,7 +592,7 @@ export default function AppsPage() {
                   variant="ghost"
                   className="rounded-full h-7 w-7"
                   onClick={handleSendMessage}
-                  disabled={!userInput.trim() || isLoading}
+                  disabled={!userInput.trim() || isLoading || !activeApp || !selectedModelId}
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
