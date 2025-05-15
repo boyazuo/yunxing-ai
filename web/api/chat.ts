@@ -12,8 +12,8 @@ interface ChatRequest {
  */
 interface ChatResponse {
   conversationId: string
-  content: string
   messageId: string
+  content: string
 }
 
 /**

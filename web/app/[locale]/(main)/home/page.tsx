@@ -231,7 +231,7 @@ export default function HomePage() {
 
       // 发送消息
       const response = await chatService.sendMessage(chatRequest)
-
+      console.log('response', response)
       // 添加回复到UI
       setMessages((prev) => [
         ...prev,

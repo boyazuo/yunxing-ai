@@ -1,11 +1,7 @@
 package com.yxboot.modules.ai.controller;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.function.Consumer;
 
-import org.springframework.http.MediaType;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,8 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.yxboot.common.api.Result;
-import com.yxboot.common.exception.ApiException;
-import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.ai.dto.ModelRequestDTO;
 import com.yxboot.modules.ai.dto.ModelResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
@@ -27,7 +21,6 @@ import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
 import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
-import com.yxboot.modules.app.service.AppService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,261 +38,109 @@ import lombok.RequiredArgsConstructor;
 public class AiController {
 
     private final AiService aiService;
-    private final ModelService modelService;
     private final ProviderService providerService;
+    private final ModelService modelService;
     private final ConversationService conversationService;
     private final MessageService messageService;
-    private final AppService appService;
 
-    /**
-     * 创建聊天完成
-     * 
-     * @param request      请求参数
-     * @param securityUser 当前用户
-     * @return 响应结果
-     * @throws IOException 请求异常
-     */
     @PostMapping("/chat")
-    @Operation(summary = "创建聊天完成", description = "使用指定的模型创建聊天完成")
-    public Result<ModelResponseDTO> createChatCompletion(
-            @RequestBody ModelRequestDTO request,
-            @AuthenticationPrincipal SecurityUser securityUser) throws IOException {
-
-        // 验证必要参数
-        if (request.getModelId() == null) {
-            throw new ApiException("模型ID不能为空");
-        }
-
-        // 获取模型和提供商
+    @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天")
+    public Result<ModelResponseDTO> chatCompletion(@RequestBody ModelRequestDTO request) throws Exception {
+        // 获取提供商和模型信息
         Model model = modelService.getById(request.getModelId());
-        if (model == null) {
-            throw new ApiException("模型不存在");
-        }
         Provider provider = providerService.getById(model.getProviderId());
-        if (provider == null) {
-            throw new ApiException("模型提供商不存在");
-        }
 
-        // 处理会话和消息
-        Long userId = securityUser.getUserId();
-        Long appId = request.getAppId();
-        Long conversationId = request.getConversationId();
-        String prompt = request.getPrompt();
-
-        // 创建或更新会话
-        if (conversationId == null) {
-            // 创建新会话
-            String title = generateConversationTitle(prompt);
-            Conversation conversation = conversationService.createConversation(userId, appId, title);
-            conversationId = conversation.getConversationId();
-        } else {
-            // 更新已有会话
-            Conversation conversation = conversationService.getById(conversationId);
-            if (conversation == null) {
-                throw new ApiException("会话不存在");
-            }
-            // 更新会话时间
-            conversation.setUpdateTime(LocalDateTime.now());
-            conversationService.updateById(conversation);
-        }
+        // 处理会话
+        Long conversationId = handleConversation(request);
 
         // 创建消息记录
-        Message message = messageService.createMessage(userId, appId, conversationId, prompt);
+        Message message = messageService.createMessage(
+                request.getUserId(),
+                request.getAppId(),
+                conversationId,
+                request.getPrompt());
 
-        // 调用模型接口
+        // 调用AI服务进行聊天
         ModelResponseDTO response = aiService.chatCompletion(provider, model, request);
 
         // 更新消息回复
-        String answer = response.getContent();
-        messageService.updateMessageAnswer(message.getMessageId(), answer, MessageStatus.COMPLETED);
+        messageService.updateMessageAnswer(message.getMessageId(), response.getContent(), MessageStatus.COMPLETED);
 
-        return Result.success("模型调用成功", response);
+        response.setConversationId(conversationId);
+        response.setMessageId(message.getMessageId());
+        return Result.success("请求成功。", response);
+    }
+
+    @PostMapping("/stream")
+    @Operation(summary = "流式聊天模型调用", description = "以流式方式调用大模型进行聊天")
+    public void streamingChatCompletion(@RequestBody ModelRequestDTO request,
+            SseEmitter emitter) throws Exception {
+        // 获取提供商和模型信息
+        Model model = modelService.getById(request.getModelId());
+        Provider provider = providerService.getById(model.getProviderId());
+
+        // 处理会话
+        Long conversationId = handleConversation(request);
+
+        // 创建消息记录
+        Message message = messageService.createMessage(
+                request.getUserId(),
+                request.getAppId(),
+                conversationId,
+                request.getPrompt());
+
+        // 调用AI服务进行流式聊天
+        try {
+            // 传递messageId参数
+            aiService.streamingChatCompletion(provider, model, request, emitter, message.getMessageId());
+            // 消息状态更新将在流处理完成时由AiService处理
+        } catch (Exception e) {
+            // 异常处理已在AiService中完成
+            throw e;
+        }
     }
 
     /**
-     * 创建流式聊天完成
+     * 处理会话逻辑
+     * 如果conversationId为空，创建新会话
+     * 如果conversationId存在，更新会话时间
      * 
-     * @param request      请求参数
-     * @param securityUser 当前用户
-     * @return 流式响应
+     * @param request 请求参数
+     * @return 会话ID
      */
-    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "创建流式聊天完成", description = "使用指定的模型创建流式聊天完成，使用SSE进行响应")
-    public SseEmitter createStreamingChatCompletion(
-            @RequestBody ModelRequestDTO request,
-            @AuthenticationPrincipal SecurityUser securityUser) {
+    private Long handleConversation(ModelRequestDTO request) {
+        Long conversationId = null;
 
-        // 创建SSE发射器，设置超时时间为5分钟
-        SseEmitter emitter = new SseEmitter(300000L);
-
-        // 在单独的线程中处理流式响应
-        new Thread(() -> {
+        // 检查是否存在会话ID
+        if (request.getConversationId() != null && !request.getConversationId().isEmpty()) {
             try {
-                // 验证必要参数
-                if (request.getModelId() == null) {
-                    throw new ApiException("模型ID不能为空");
-                }
+                conversationId = Long.parseLong(request.getConversationId());
 
-                // 获取模型和提供商
-                Model model = modelService.getById(request.getModelId());
-                if (model == null) {
-                    throw new ApiException("模型不存在");
-                }
-                Provider provider = providerService.getById(model.getProviderId());
-                if (provider == null) {
-                    throw new ApiException("模型提供商不存在");
-                }
-
-                // 处理会话和消息
-                Long userId = securityUser.getUserId();
-                Long appId = request.getAppId();
-                Long conversationId = request.getConversationId();
-                String prompt = request.getPrompt();
-
-                // 创建或更新会话
-                if (conversationId == null) {
-                    // 创建新会话
-                    String title = generateConversationTitle(prompt);
-                    Conversation conversation = conversationService.createConversation(userId, appId, title);
-                    conversationId = conversation.getConversationId();
-                } else {
-                    // 更新已有会话
-                    Conversation conversation = conversationService.getById(conversationId);
-                    if (conversation == null) {
-                        throw new ApiException("会话不存在");
-                    }
-                    // 更新会话时间
+                // 检查会话是否存在
+                Conversation conversation = conversationService.getById(conversationId);
+                if (conversation != null) {
+                    // 更新会话的更新时间
                     conversation.setUpdateTime(LocalDateTime.now());
                     conversationService.updateById(conversation);
+                    return conversationId;
                 }
-
-                // 创建消息记录（初始状态为处理中）
-                Message message = messageService.createMessage(userId, appId, conversationId, prompt);
-
-                // 创建消息内容收集器（用于收集流式响应内容）
-                StringBuilder contentCollector = new StringBuilder();
-
-                // 设置流式响应完成回调
-                emitter.onCompletion(() -> {
-                    // 更新消息状态为已完成
-                    messageService.updateMessageAnswer(message.getMessageId(), contentCollector.toString(),
-                            MessageStatus.COMPLETED);
-                });
-
-                // 设置流式响应错误回调
-                emitter.onError(e -> {
-                    // 更新消息状态为失败
-                    messageService.updateMessageAnswer(message.getMessageId(), e.getMessage(), MessageStatus.FAILED);
-                });
-
-                // 设置流式响应标志
-                request.setStream(true);
-
-                // 重写SSEStreamHandler实现以收集内容（匿名内部类）
-                class ContentCollectingStreamHandler implements com.yxboot.modules.ai.provider.SSEStreamHandler {
-                    private final com.yxboot.modules.ai.provider.SSEStreamHandler delegate;
-
-                    public ContentCollectingStreamHandler(com.yxboot.modules.ai.provider.SSEStreamHandler delegate) {
-                        this.delegate = delegate;
-                    }
-
-                    @Override
-                    public void handle(SseEmitter emitter) {
-                        try {
-                            delegate.handle(new SseEmitter(300000L) {
-                                @Override
-                                public void send(Object object) throws IOException {
-                                    // 收集内容
-                                    if (object instanceof SseEmitter.SseEventBuilder) {
-                                        // 无法直接获取内容，忽略
-                                    } else if (object != null) {
-                                        String content = object.toString();
-                                        if (content.contains("content\":\"")) {
-                                            int start = content.indexOf("content\":\"") + 10;
-                                            int end = content.indexOf("\"", start);
-                                            if (start > 0 && end > start) {
-                                                String chunk = content.substring(start, end);
-                                                contentCollector.append(chunk);
-                                            }
-                                        }
-                                    }
-
-                                    // 转发到真正的emitter
-                                    emitter.send(object);
-                                }
-
-                                @Override
-                                public void complete() {
-                                    emitter.complete();
-                                }
-
-                                @Override
-                                public void completeWithError(Throwable ex) {
-                                    emitter.completeWithError(ex);
-                                }
-                            });
-                        } catch (Exception e) {
-                            emitter.completeWithError(e);
-                        }
-                    }
-
-                    @Override
-                    public void handle(Consumer<String> onMessage, Runnable onComplete, Consumer<Throwable> onError) {
-                        delegate.handle(
-                                message -> {
-                                    // 收集内容
-                                    if (message != null && message.contains("content\":\"")) {
-                                        int start = message.indexOf("content\":\"") + 10;
-                                        int end = message.indexOf("\"", start);
-                                        if (start > 0 && end > start) {
-                                            String chunk = message.substring(start, end);
-                                            contentCollector.append(chunk);
-                                        }
-                                    }
-                                    // 转发消息
-                                    onMessage.accept(message);
-                                },
-                                onComplete,
-                                onError);
-                    }
-
-                    @Override
-                    public void close() throws IOException {
-                        delegate.close();
-                    }
-                }
-
-                // 获取流式处理器
-                com.yxboot.modules.ai.provider.SSEStreamHandler streamHandler = new ContentCollectingStreamHandler(
-                        aiService.findSupportedProvider(provider, model)
-                                .streamingChatCompletion(provider, model, request));
-
-                // 处理流式响应
-                streamHandler.handle(emitter);
-            } catch (Exception e) {
-                emitter.completeWithError(e);
+            } catch (NumberFormatException e) {
+                // conversationId不是有效的Long，忽略并创建新会话
             }
-        }).start();
-
-        return emitter;
-    }
-
-    /**
-     * 根据问题生成会话标题
-     * 
-     * @param question 问题内容
-     * @return 会话标题
-     */
-    private String generateConversationTitle(String question) {
-        // 限制标题长度，最多取问题的前30个字符
-        int maxLength = Math.min(question.length(), 30);
-        String title = question.substring(0, maxLength);
-
-        // 如果问题超过30个字符，添加省略号
-        if (question.length() > 30) {
-            title += "...";
         }
 
-        return title;
+        // 创建新会话
+        String title = request.getPrompt();
+        // 限制标题长度
+        if (title.length() > 50) {
+            title = title.substring(0, 47) + "...";
+        }
+
+        Conversation conversation = conversationService.createConversation(
+                request.getUserId(),
+                request.getAppId(),
+                title);
+
+        return conversation.getConversationId();
     }
 }

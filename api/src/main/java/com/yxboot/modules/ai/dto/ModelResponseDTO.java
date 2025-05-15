@@ -1,49 +1,48 @@
 package com.yxboot.modules.ai.dto;
 
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
 /**
- * 模型响应通用DTO
+ * 模型响应DTO
  * 
  * @author Boya
  */
 @Data
 @Builder
-@Schema(description = "模型响应结果")
+@Schema(description = "模型响应数据")
 public class ModelResponseDTO {
 
-    @Schema(description = "响应内容")
+    @Schema(description = "生成ID")
+    private Long id;
+
+    @Schema(description = "会话ID")
+    private Long conversationId;
+
+    @Schema(description = "消息ID")
+    private Long messageId;
+
+    @Schema(description = "生成的内容")
     private String content;
-
-    @Schema(description = "消息列表")
-    private List<MessageDTO> messages;
-
-    @Schema(description = "请求ID")
-    private String requestId;
 
     @Schema(description = "模型名称")
     private String model;
 
-    @Schema(description = "完成原因")
-    private String finishReason;
+    @Schema(description = "提供商名称")
+    private String provider;
 
-    @Schema(description = "输入token数")
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
+
+    @Schema(description = "输入token数量")
     private Integer promptTokens;
 
-    @Schema(description = "输出token数")
+    @Schema(description = "输出token数量")
     private Integer completionTokens;
 
-    @Schema(description = "总token数")
+    @Schema(description = "总token数量")
     private Integer totalTokens;
-
-    @Schema(description = "错误信息")
-    private String errorMessage;
-
-    @Schema(description = "额外数据")
-    private Map<String, Object> extraData;
 }
