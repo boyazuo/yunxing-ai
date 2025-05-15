@@ -146,11 +146,11 @@ export default function HomePage() {
   // 加载会话列表
   const loadConversations = useCallback(
     async (appId: string) => {
-      if (!tenantId || !userId || !appId) return
+      if (!userId || !appId) return
 
       try {
         setLoadingConversations(true)
-        const data = await conversationService.getConversations(tenantId, userId, appId)
+        const data = await conversationService.getConversations(userId, appId)
         setConversations(data || [])
 
         // 如果有会话，默认选中第一个
@@ -167,7 +167,7 @@ export default function HomePage() {
         setLoadingConversations(false)
       }
     },
-    [tenantId, userId, loadMessages],
+    [userId, loadMessages],
   )
 
   // 首次加载

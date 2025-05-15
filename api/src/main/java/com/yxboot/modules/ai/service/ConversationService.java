@@ -25,15 +25,13 @@ public class ConversationService extends ServiceImpl<ConversationMapper, Convers
     /**
      * 创建会话
      * 
-     * @param tenantId 租户ID
-     * @param userId   用户ID
-     * @param appId    应用ID
-     * @param title    会话标题
+     * @param userId 用户ID
+     * @param appId  应用ID
+     * @param title  会话标题
      * @return 会话
      */
-    public Conversation createConversation(Long tenantId, Long userId, Long appId, String title) {
+    public Conversation createConversation(Long userId, Long appId, String title) {
         Conversation conversation = new Conversation();
-        conversation.setTenantId(tenantId);
         conversation.setUserId(userId);
         conversation.setAppId(appId);
         conversation.setTitle(title);
@@ -44,15 +42,13 @@ public class ConversationService extends ServiceImpl<ConversationMapper, Convers
     /**
      * 获取用户在指定应用下的会话列表
      * 
-     * @param tenantId 租户ID
-     * @param userId   用户ID
-     * @param appId    应用ID
+     * @param userId 用户ID
+     * @param appId  应用ID
      * @return 会话列表
      */
-    public List<ConversationDTO> getUserAppConversations(Long tenantId, Long userId, Long appId) {
+    public List<ConversationDTO> getUserAppConversations(Long userId, Long appId) {
         LambdaQueryWrapper<Conversation> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Conversation::getTenantId, tenantId)
-                .eq(Conversation::getUserId, userId)
+        queryWrapper.eq(Conversation::getUserId, userId)
                 .eq(Conversation::getAppId, appId)
                 .orderByDesc(Conversation::getUpdateTime);
         List<Conversation> conversations = list(queryWrapper);

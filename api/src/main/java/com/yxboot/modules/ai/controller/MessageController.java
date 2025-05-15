@@ -57,9 +57,6 @@ public class MessageController {
     @Operation(summary = "创建消息", description = "创建新的消息")
     public Result<MessageDTO> createMessage(@RequestBody MessageRequest request) {
         // 参数验证
-        if (request.getTenantId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
-        }
         if (request.getUserId() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "用户ID不能为空");
         }
@@ -81,7 +78,6 @@ public class MessageController {
 
         // 创建消息
         Message message = messageService.createMessage(
-                request.getTenantId(),
                 request.getUserId(),
                 request.getAppId(),
                 request.getConversationId(),
@@ -138,7 +134,6 @@ public class MessageController {
 
     @Data
     public static class MessageRequest {
-        private Long tenantId;
         private Long userId;
         private Long appId;
         private Long conversationId;

@@ -42,10 +42,9 @@ public class ConversationController {
     @GetMapping
     @Operation(summary = "获取会话列表", description = "获取用户的会话列表")
     public Result<List<ConversationDTO>> getConversations(
-            @RequestParam @Parameter(description = "租户ID") Long tenantId,
             @RequestParam @Parameter(description = "用户ID") Long userId,
             @RequestParam @Parameter(description = "应用ID") Long appId) {
-        List<ConversationDTO> conversations = conversationService.getUserAppConversations(tenantId, userId, appId);
+        List<ConversationDTO> conversations = conversationService.getUserAppConversations(userId, appId);
         return Result.success("查询成功", conversations);
     }
 
@@ -53,9 +52,6 @@ public class ConversationController {
     @Operation(summary = "创建会话", description = "创建新的会话")
     public Result<ConversationDTO> createConversation(@RequestBody ConversationRequest request) {
         // 参数验证
-        if (request.getTenantId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
-        }
         if (request.getUserId() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "用户ID不能为空");
         }
@@ -65,7 +61,6 @@ public class ConversationController {
 
         // 创建会话
         Conversation conversation = conversationService.createConversation(
-                request.getTenantId(),
                 request.getUserId(),
                 request.getAppId(),
                 request.getTitle());
@@ -122,7 +117,6 @@ public class ConversationController {
 
     @Data
     public static class ConversationRequest {
-        private Long tenantId;
         private Long userId;
         private Long appId;
         private String title;

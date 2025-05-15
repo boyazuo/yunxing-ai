@@ -27,7 +27,6 @@ import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
 import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
-import com.yxboot.modules.app.entity.App;
 import com.yxboot.modules.app.service.AppService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -87,17 +86,11 @@ public class AiController {
         Long conversationId = request.getConversationId();
         String prompt = request.getPrompt();
 
-        App app = appService.getById(appId);
-        if (app == null) {
-            throw new ApiException("应用不存在");
-        }
-        Long tenantId = app.getTenantId();
-
         // 创建或更新会话
         if (conversationId == null) {
             // 创建新会话
             String title = generateConversationTitle(prompt);
-            Conversation conversation = conversationService.createConversation(tenantId, userId, appId, title);
+            Conversation conversation = conversationService.createConversation(userId, appId, title);
             conversationId = conversation.getConversationId();
         } else {
             // 更新已有会话
@@ -111,7 +104,7 @@ public class AiController {
         }
 
         // 创建消息记录
-        Message message = messageService.createMessage(tenantId, userId, appId, conversationId, prompt);
+        Message message = messageService.createMessage(userId, appId, conversationId, prompt);
 
         // 调用模型接口
         ModelResponseDTO response = aiService.chatCompletion(provider, model, request);
@@ -163,17 +156,11 @@ public class AiController {
                 Long conversationId = request.getConversationId();
                 String prompt = request.getPrompt();
 
-                App app = appService.getById(appId);
-                if (app == null) {
-                    throw new ApiException("应用不存在");
-                }
-                Long tenantId = app.getTenantId();
-
                 // 创建或更新会话
                 if (conversationId == null) {
                     // 创建新会话
                     String title = generateConversationTitle(prompt);
-                    Conversation conversation = conversationService.createConversation(tenantId, userId, appId, title);
+                    Conversation conversation = conversationService.createConversation(userId, appId, title);
                     conversationId = conversation.getConversationId();
                 } else {
                     // 更新已有会话
@@ -187,7 +174,7 @@ public class AiController {
                 }
 
                 // 创建消息记录（初始状态为处理中）
-                Message message = messageService.createMessage(tenantId, userId, appId, conversationId, prompt);
+                Message message = messageService.createMessage(userId, appId, conversationId, prompt);
 
                 // 创建消息内容收集器（用于收集流式响应内容）
                 StringBuilder contentCollector = new StringBuilder();

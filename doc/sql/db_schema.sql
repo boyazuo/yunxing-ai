@@ -7,7 +7,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `app`;
 CREATE TABLE `app` (
   `app_id` bigint(20) NOT NULL COMMENT '应用ID',
-  `tenant_id` varchar(255) DEFAULT NULL COMMENT '所属租户ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
   `app_name` varchar(255) DEFAULT NULL COMMENT '应用名称',
   `intro` varchar(2000) DEFAULT NULL COMMENT '应用介绍',
   `logo` varchar(255) DEFAULT NULL COMMENT '应用Logo',
@@ -38,7 +38,7 @@ CREATE TABLE `app_config` (
   `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`config_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用配置表';
 
 -- ----------------------------
 -- Table structure for conversation
@@ -46,14 +46,13 @@ CREATE TABLE `app_config` (
 DROP TABLE IF EXISTS `conversation`;
 CREATE TABLE `conversation` (
   `conversation_id` bigint(20) NOT NULL COMMENT '会话ID',
-  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
   `user_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
   `app_id` bigint(20) DEFAULT NULL COMMENT '应用 ID',
   `title` varchar(1000) DEFAULT NULL COMMENT '会话标题',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`conversation_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
 
 -- ----------------------------
 -- Table structure for message
@@ -61,7 +60,6 @@ CREATE TABLE `conversation` (
 DROP TABLE IF EXISTS `message`;
 CREATE TABLE `message` (
   `message_id` bigint(20) NOT NULL COMMENT '消息ID',
-  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
   `user_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
   `app_id` bigint(20) DEFAULT NULL COMMENT '应用 ID',
   `conversation_id` bigint(20) DEFAULT NULL COMMENT '会话 ID',
@@ -70,7 +68,7 @@ CREATE TABLE `message` (
   `status` varchar(20) DEFAULT NULL COMMENT '状态',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`message_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
 
 -- ----------------------------
 -- Table structure for model
@@ -91,7 +89,7 @@ CREATE TABLE `model` (
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`model_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型表';
 
 -- ----------------------------
 -- Table structure for provider
@@ -110,7 +108,7 @@ CREATE TABLE `provider` (
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`provider_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型提供商表';
 
 -- ----------------------------
 -- Table structure for tenant

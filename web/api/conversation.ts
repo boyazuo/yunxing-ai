@@ -7,16 +7,13 @@ import type { Conversation, Message } from '@/types/chat'
 export const conversationService = {
   /**
    * 获取用户在指定应用下的会话列表
-   * @param tenantId 租户ID
    * @param userId 用户ID
    * @param appId 应用ID
    * @returns 会话列表
    */
-  async getConversations(tenantId: string, userId: string, appId: string): Promise<Conversation[]> {
+  async getConversations(userId: string, appId: string): Promise<Conversation[]> {
     try {
-      const response = await api.get<Conversation[]>(
-        `/conversations?tenantId=${tenantId}&userId=${userId}&appId=${appId}`,
-      )
+      const response = await api.get<Conversation[]>(`/conversations?userId=${userId}&appId=${appId}`)
       return response.data
     } catch (error) {
       console.error('获取会话列表失败', error)

@@ -26,16 +26,14 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
     /**
      * 创建消息
      * 
-     * @param tenantId       租户ID
      * @param userId         用户ID
      * @param appId          应用ID
      * @param conversationId 会话ID
      * @param question       问题
      * @return 消息
      */
-    public Message createMessage(Long tenantId, Long userId, Long appId, Long conversationId, String question) {
+    public Message createMessage(Long userId, Long appId, Long conversationId, String question) {
         Message message = new Message();
-        message.setTenantId(tenantId);
         message.setUserId(userId);
         message.setAppId(appId);
         message.setConversationId(conversationId);

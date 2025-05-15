@@ -26,9 +26,6 @@ public class Message {
     @Schema(description = "消息ID")
     private Long messageId;
 
-    @Schema(description = "所属租户ID")
-    private Long tenantId;
-
     @Schema(description = "用户ID")
     private Long userId;
 
