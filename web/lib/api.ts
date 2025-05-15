@@ -1,6 +1,7 @@
 import type { AxiosInstance, AxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { getSession } from 'next-auth/react'
+import { toast } from 'sonner'
 
 interface ApiResponse<T> {
   code: number
@@ -42,13 +43,17 @@ class ApiClient {
     })
 
     this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
+      (response) => {
+        if (response.data.code === 401) {
           if (typeof window !== 'undefined') {
+            // 提示用户重新登录
+            toast.error('您尚未登录或登录已过期，请重新登录')
             window.location.href = '/login'
           }
         }
+        return response
+      },
+      (error) => {
         return Promise.reject(error)
       },
     )
