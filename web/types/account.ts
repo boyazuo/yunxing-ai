@@ -39,7 +39,7 @@ export enum UserStatus {
  * 租户类型
  */
 export interface Tenant {
-  tenantId?: number
+  tenantId: number
   tenantName: string
   plan?: TenantPlan
   status?: TenantStatus

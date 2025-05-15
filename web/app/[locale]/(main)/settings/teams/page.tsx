@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { Tenant } from '@/types/account'
+import { Tenant, TenantUserRole } from '@/types/account'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   CheckCircle2,
@@ -100,9 +100,7 @@ const roles = [
 ]
 
 // 测试数据 - 多个团队信息
-const initialTeams: Tenant[] = [
-  { tenantName: '' },
-]
+const initialTeams: Tenant[] = [{ tenantName: '' }]
 
 // 团队成员
 const initialMembers: UserInTenant[] = []
@@ -121,7 +119,10 @@ export default function TeamsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
 
-  const [ currentUserInTenant, setCurrentUserInTenant ] = useState<UserInTenant | null>() 
+  const [
+    currentUserInTenant,
+    setCurrentUserInTenant,
+  ] = useState<UserInTenant | null>()
   // 加载当前用户所涉及的团队
   useEffect(() => {
     // 这里添加获取当前用户所涉及的团队的API调用
@@ -135,7 +136,7 @@ export default function TeamsPage() {
   useEffect(() => {
     if (currentTeam.tenantId) {
       teamService.getUserInTeam(currentTeam.tenantId).then((data) => {
-        data.find(userInTenant => {
+        data.find((userInTenant) => {
           if (userInTenant.userId === session?.user.userId) {
             setCurrentUserInTenant(userInTenant)
           }
@@ -261,18 +262,19 @@ export default function TeamsPage() {
   }
 
   // 处理修改团队成员角色
-  const handleChangeRole = (
-    id: number,
-    newRole: 'owner' | 'admin' | 'normal'
-  ) => {
+  const handleChangeRole = (userId: number, newRole: TenantUserRole) => {
     try {
       // 这里添加修改团队成员角色的API调用
-      setMembers(
-        members.map((member) =>
-          member.userId === id ? { ...member, role: newRole } : member
-        )
-      )
-      toast.success('团队成员角色已更新')
+      teamService
+        .updupdateTenantUserRole(newRole, currentTeam.tenantId, userId)
+        .then((res) => {
+          setMembers(
+            members.map((member) =>
+              member.userId === userId ? { ...member, role: newRole } : member
+            )
+          )
+          toast.success('团队成员角色已更新')
+        })
     } catch (error) {
       toast.error('更新团队成员角色失败')
       console.error(error)
@@ -355,16 +357,19 @@ export default function TeamsPage() {
                       <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
 
-                    { currentUserInTenant?.role === 'owner' ? <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => setIsOpenEditNameDialog(true)}
-                    >
-                      <PencilIcon className="h-3.5 w-3.5" />
-                      <span className="sr-only">编辑团队名称</span>
-                    </Button> : ''
-                    }
+                    {currentUserInTenant?.role === 'owner' ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => setIsOpenEditNameDialog(true)}
+                      >
+                        <PencilIcon className="h-3.5 w-3.5" />
+                        <span className="sr-only">编辑团队名称</span>
+                      </Button>
+                    ) : (
+                      ''
+                    )}
                   </div>
 
                   {isTeamSwitcherOpen && (
@@ -666,42 +671,51 @@ export default function TeamsPage() {
                       {getRoleIcon(member.role)}
                       <span>{getRoleLabel(member.role)}</span>
                     </Badge>
-                    { (currentUserInTenant?.role === 'owner' ||  currentUserInTenant?.role === 'admin') && currentUserInTenant.userId != member.userId ?
-                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-70 group-hover:opacity-100"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">操作</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.userId, 'admin')}
-                          className="flex items-center"
-                        >
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-                          设为管理员
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.userId, 'normal')}
-                          className="flex items-center"
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          设为成员
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive flex items-center"
-                          onClick={() => handleDeleteMember(member.userId)}
-                        >
-                          <UserX className="mr-2 h-4 w-4" />
-                          移除团队成员
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>: '' }
+                    {(currentUserInTenant?.role === 'owner' ||
+                      currentUserInTenant?.role === 'admin') &&
+                    currentUserInTenant.userId != member.userId ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-70 group-hover:opacity-100"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">操作</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleChangeRole(member.userId, 'admin')
+                            }
+                            className="flex items-center"
+                          >
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            设为管理员
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleChangeRole(member.userId, 'normal')
+                            }
+                            className="flex items-center"
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            设为成员
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive flex items-center"
+                            onClick={() => handleDeleteMember(member.userId)}
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            移除团队成员
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      ''
+                    )}
                   </div>
                 </div>
               ))

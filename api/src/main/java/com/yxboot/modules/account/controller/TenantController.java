@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.yxboot.modules.account.dto.UserInTenantDTO;
 import com.yxboot.modules.account.entity.User;
+import com.yxboot.modules.account.enums.TenantUserRole;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -138,6 +139,23 @@ public class TenantController {
         return Result.success("获取租户下的用户成功", userInTenantDTOs);
     }
 
+    @PutMapping("/{tenantId}/users/{userId}")
+    @Operation(summary = "更新租户用户角色", description = "更新租户用户角色")
+    public Result<Void> updateTenantUserRole(
+            @PathVariable Long tenantId,
+            @PathVariable Long userId,
+            @RequestBody TenantUserRoleRequest tenantUserRoleRequest) {
+
+        tenantUserService
+                .lambdaUpdate()
+                .eq(TenantUser::getTenantId, tenantId)
+                .eq(TenantUser::getUserId, userId)
+                .set(TenantUser::getRole, tenantUserRoleRequest.getRole())
+                .update();
+
+        return Result.success("更新租户用户角色成功");
+    }
+
     @Data
     public static class TenantIdRequest {
         private Long tenantId;
@@ -148,6 +166,11 @@ public class TenantController {
         private Long tenantId;
         private String tenantName;
         private TenantPlan plan;
+    }
+
+    @Data
+    public static class TenantUserRoleRequest {
+        private TenantUserRole role;
     }
 
 }

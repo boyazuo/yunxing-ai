@@ -50,5 +50,15 @@ export const teamService = {
       console.error('获取团队成员失败', error)
       throw error
     }
+  },
+
+  async updupdateTenantUserRole(role : TenantUserRole, tenantId: number, userId: number) {
+    try {
+      const response = await api.put<null>(`${this.apiRoot}/${tenantId}/users/${userId}`, { role })
+      return response
+    } catch (error) {
+      console.error('更新团队成员角色失败', error)
+      throw error
+    }
   }
 }
