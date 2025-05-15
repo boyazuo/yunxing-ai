@@ -1,5 +1,6 @@
 package com.yxboot.modules.account.service;
 
+import com.yxboot.modules.account.dto.UserInTenantDTO;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -10,6 +11,8 @@ import com.yxboot.modules.account.enums.TenantUserRole;
 import com.yxboot.modules.account.mapper.TenantUserMapper;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 
 /**
  * 租户成员服务实现类
@@ -78,5 +81,9 @@ public class TenantUserService extends ServiceImpl<TenantUserMapper, TenantUser>
         queryWrapper.eq(TenantUser::getUserId, userId)
                 .eq(TenantUser::getTenantId, tenantId);
         return getOne(queryWrapper);
+    }
+
+    public List<UserInTenantDTO> getUserInTenant(Long tenantId) {
+        return this.baseMapper.findUserInTenant(tenantId);
     }
 }

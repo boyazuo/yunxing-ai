@@ -1,10 +1,19 @@
 import { api } from '@/lib/api'
-import { Tenant, TenantPlan } from '@/types/account'
+import { Tenant, TenantPlan, TenantUserRole } from '@/types/account'
 
 export interface TenantRequest {
     tenantId?: number
     tenantName: string
     plan?: TenantPlan
+}
+
+export interface UserInTenant {
+    userId: number,
+    username: string,
+    email: string,
+    avatar: string,
+    role: TenantUserRole | string,
+    isActive: boolean,
 }
 
 export const teamService = {
@@ -32,4 +41,14 @@ export const teamService = {
       throw error
     }
   },
+
+  async getUserInTeam(tenantId: number) {
+    try {
+      const response = await api.get<UserInTenant[]>(`${this.apiRoot}/${tenantId}/users`)
+      return response.data
+    } catch (error) {
+      console.error('获取团队成员失败', error)
+      throw error
+    }
+  }
 }

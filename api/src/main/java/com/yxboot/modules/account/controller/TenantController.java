@@ -2,13 +2,11 @@ package com.yxboot.modules.account.controller;
 
 import java.util.List;
 
+import com.yxboot.modules.account.dto.UserInTenantDTO;
+import com.yxboot.modules.account.entity.User;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
@@ -131,6 +129,13 @@ public class TenantController {
         }
 
         return Result.success("更新租户信息成功", tenant);
+    }
+
+    @Operation(summary = "获取租户下的用户", description = "获取租户下所拥有的用户")
+    @GetMapping("/{tenantId}/users")
+    public Result<List<UserInTenantDTO>> getTenantUsers(@PathVariable Long tenantId) {
+        List<UserInTenantDTO> userInTenantDTOs = tenantUserService.getUserInTenant(tenantId);
+        return Result.success("获取租户下的用户成功", userInTenantDTOs);
     }
 
     @Data

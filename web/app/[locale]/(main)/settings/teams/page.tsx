@@ -1,6 +1,6 @@
 'use client'
 
-import { teamService } from '@/api/team'
+import { teamService, UserInTenant } from '@/api/team'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,7 @@ import {
   UserX,
   Users,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -101,77 +102,13 @@ const roles = [
 // 测试数据 - 多个团队信息
 const initialTeams: Tenant[] = [
   { tenantName: '' },
-  // {
-  //   tenantId: '1',
-  //   tenantName: '云行科技',
-  //   plan: 'free',
-  //   role: 'owner',
-  //   memberCount: 5,
-  //   isActive: true,
-  // },
-  // {
-  //   tenantId: '2',
-  //   tenantName: '智能应用团队',
-  //   plan: 'basic',
-  //   role: 'admin',
-  //   memberCount: 8,
-  //   isActive: false,
-  // },
-  // {
-  //   tenantId: '3',
-  //   tenantName: '研发中心',
-  //   plan: 'pro',
-  //   role: 'normal',
-  //   memberCount: 12,
-  //   isActive: false,
-  // },
 ]
 
-// 测试数据 - 团队成员
-const initialMembers = [
-  {
-    id: '1',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    role: 'owner',
-    avatar: '',
-    isActive: true,
-  },
-  {
-    id: '2',
-    name: '李四',
-    email: 'lisi@example.com',
-    role: 'admin',
-    avatar: '',
-    isActive: true,
-  },
-  {
-    id: '3',
-    name: '王五',
-    email: 'wangwu@example.com',
-    role: 'normal',
-    avatar: '',
-    isActive: true,
-  },
-  {
-    id: '4',
-    name: '赵六',
-    email: 'zhaoliu@example.com',
-    role: 'normal',
-    avatar: '',
-    isActive: false,
-  },
-  {
-    id: '5',
-    name: '孙七',
-    email: 'sunqi@example.com',
-    role: 'normal',
-    avatar: '',
-    isActive: true,
-  },
-]
+// 团队成员
+const initialMembers: UserInTenant[] = []
 
 export default function TeamsPage() {
+  const { data: session, update } = useSession()
   const [isOpenAddDialog, setIsOpenAddDialog] = useState(false)
   const [isOpenEditNameDialog, setIsOpenEditNameDialog] = useState(false)
   const [isTeamSwitcherOpen, setIsTeamSwitcherOpen] = useState(false)
@@ -184,6 +121,7 @@ export default function TeamsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
 
+  const [ currentUserInTenant, setCurrentUserInTenant ] = useState<UserInTenant | null>() 
   // 加载当前用户所涉及的团队
   useEffect(() => {
     // 这里添加获取当前用户所涉及的团队的API调用
@@ -191,9 +129,21 @@ export default function TeamsPage() {
       setTeams(data)
       setCurrentTeam(data.find((team) => team.isActive) || data[0])
     })
-
-    console.log('获取当前用户所涉及的团队')
   }, [])
+
+  // 加载当前团队所具有的人员
+  useEffect(() => {
+    if (currentTeam.tenantId) {
+      teamService.getUserInTeam(currentTeam.tenantId).then((data) => {
+        data.find(userInTenant => {
+          if (userInTenant.userId === session?.user.userId) {
+            setCurrentUserInTenant(userInTenant)
+          }
+        })
+        setMembers(data)
+      })
+    }
+  }, [currentTeam])
 
   // 成员邀请表单
   const memberForm = useForm<z.infer<typeof memberFormSchema>>({
@@ -226,9 +176,9 @@ export default function TeamsPage() {
       console.log('邀请团队成员:', data)
 
       // 模拟添加团队成员
-      const newMember = {
-        id: Date.now().toString(),
-        name: data.name,
+      const newMember: UserInTenant = {
+        userId: Date.now(),
+        username: data.name,
         email: data.email,
         role: data.role,
         avatar: '',
@@ -280,7 +230,7 @@ export default function TeamsPage() {
   }
 
   // 处理团队切换
-  const handleTeamChange = (teamId: number) => {
+  const handleTeamChange = (teamId: number | undefined) => {
     const selectedTeam = teams.find((team) => team.tenantId === teamId)
     if (selectedTeam) {
       // 更新所有团队的活跃状态
@@ -299,10 +249,10 @@ export default function TeamsPage() {
   }
 
   // 处理删除团队成员
-  const handleDeleteMember = (id: string) => {
+  const handleDeleteMember = (id: number) => {
     try {
       // 这里添加删除团队成员的API调用
-      setMembers(members.filter((member) => member.id !== id))
+      setMembers(members.filter((member) => member.userId !== id))
       toast.success('团队成员已移除')
     } catch (error) {
       toast.error('移除团队成员失败')
@@ -312,14 +262,14 @@ export default function TeamsPage() {
 
   // 处理修改团队成员角色
   const handleChangeRole = (
-    id: string,
+    id: number,
     newRole: 'owner' | 'admin' | 'normal'
   ) => {
     try {
       // 这里添加修改团队成员角色的API调用
       setMembers(
         members.map((member) =>
-          member.id === id ? { ...member, role: newRole } : member
+          member.userId === id ? { ...member, role: newRole } : member
         )
       )
       toast.success('团队成员角色已更新')
@@ -330,12 +280,12 @@ export default function TeamsPage() {
   }
 
   // 获取角色显示名称
-  const getRoleLabel = (role: string) => {
+  const getRoleLabel = (role: string | undefined) => {
     return roles.find((r) => r.value === role)?.label || role
   }
 
   // 获取角色图标
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: string | undefined) => {
     return roles.find((r) => r.value === role)?.icon
   }
 
@@ -349,7 +299,8 @@ export default function TeamsPage() {
   }
 
   // 获取计划名称显示
-  const getPlanDisplay = (plan: string) => {
+  const getPlanDisplay = (plan: string | undefined) => {
+    plan = plan || 'free'
     const planMap: Record<string, string> = {
       free: '免费版',
       basic: '基础版',
@@ -362,7 +313,7 @@ export default function TeamsPage() {
   const filteredMembers = members.filter((member) => {
     // 搜索筛选
     const matchesSearch =
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.email.toLowerCase().includes(searchQuery.toLowerCase())
 
     // 标签筛选
@@ -404,7 +355,7 @@ export default function TeamsPage() {
                       <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
 
-                    <Button
+                    { currentUserInTenant?.role === 'owner' ? <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-full"
@@ -412,7 +363,8 @@ export default function TeamsPage() {
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
                       <span className="sr-only">编辑团队名称</span>
-                    </Button>
+                    </Button> : ''
+                    }
                   </div>
 
                   {isTeamSwitcherOpen && (
@@ -424,7 +376,7 @@ export default function TeamsPage() {
                         <button
                           type="button"
                           key={team.tenantId}
-                          onClick={() => handleTeamChange(team.tenantName)}
+                          onClick={() => handleTeamChange(team.tenantId)}
                           className={cn(
                             'flex items-center gap-2 w-full rounded-md p-2 text-left text-sm transition-colors',
                             'hover:bg-accent',
@@ -681,7 +633,7 @@ export default function TeamsPage() {
             ) : (
               filteredMembers.map((member) => (
                 <div
-                  key={member.id}
+                  key={member.userId}
                   className={cn(
                     'flex items-center justify-between p-2 rounded-lg transition-colors',
                     'hover:bg-accent/50 group'
@@ -689,14 +641,14 @@ export default function TeamsPage() {
                 >
                   <div className="flex items-center space-x-4">
                     <Avatar className="border">
-                      <AvatarImage src={member.avatar} alt={member.name} />
+                      <AvatarImage src={member.avatar} alt={member.username} />
                       <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(member.name)}
+                        {getInitials(member.username)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
-                        <div className="font-medium">{member.name}</div>
+                        <div className="font-medium">{member.username}</div>
                         {member.isActive && (
                           <CheckCircle2 className="text-green-500 h-3.5 w-3.5" />
                         )}
@@ -714,7 +666,8 @@ export default function TeamsPage() {
                       {getRoleIcon(member.role)}
                       <span>{getRoleLabel(member.role)}</span>
                     </Badge>
-                    <DropdownMenu>
+                    { (currentUserInTenant?.role === 'owner' ||  currentUserInTenant?.role === 'admin') && currentUserInTenant.userId != member.userId ?
+                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -727,21 +680,14 @@ export default function TeamsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.id, 'owner')}
-                          className="flex items-center"
-                        >
-                          <Crown className="mr-2 h-4 w-4" />
-                          设为所有者
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.id, 'admin')}
+                          onClick={() => handleChangeRole(member.userId, 'admin')}
                           className="flex items-center"
                         >
                           <ShieldCheck className="mr-2 h-4 w-4" />
                           设为管理员
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.id, 'normal')}
+                          onClick={() => handleChangeRole(member.userId, 'normal')}
                           className="flex items-center"
                         >
                           <Users className="mr-2 h-4 w-4" />
@@ -749,13 +695,13 @@ export default function TeamsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive flex items-center"
-                          onClick={() => handleDeleteMember(member.id)}
+                          onClick={() => handleDeleteMember(member.userId)}
                         >
                           <UserX className="mr-2 h-4 w-4" />
                           移除团队成员
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    </DropdownMenu>: '' }
                   </div>
                 </div>
               ))
