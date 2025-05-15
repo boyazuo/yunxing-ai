@@ -1,19 +1,15 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Loader2, Plus, Search } from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import { useCallback, useEffect, useState } from 'react'
-
 import { appConfigService } from '@/api/appConfig'
 import { appService } from '@/api/apps'
 import { chatService } from '@/api/chat'
 import { conversationService } from '@/api/conversation'
 import { ChatInterface, type ChatMessage, type ChatModel } from '@/components/chat/chat-interface'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { formatDate } from '@/lib/utils'
 import type { App } from '@/types/app'
 import { type Conversation, MessageRole } from '@/types/chat'
+import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
+import { AppsSidebar, ConversationList } from './_components'
 
 // 定义内部应用配置类型
 interface UIAppConfig {
@@ -45,29 +41,13 @@ export default function HomePage() {
 
   // 从会话中获取用户和租户信息
   const tenantId = session?.tenant?.tenantId || ''
-  const userId = session?.user?.userId?.toString() || ''
+  const userId = session?.user?.userId || ''
 
   // 格式化时间
-  const formatTime = (dateString: string) => {
+  const formatTime = useCallback((dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-  }
-
-  // 根据日期返回相对时间
-  const getRelativeTime = (dateString: string) => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) {
-      const hours = now.getHours() - date.getHours()
-      if (hours < 1) return '刚刚'
-      return `${hours}小时前`
-    }
-    if (diffDays === 1) return '昨天'
-    if (diffDays < 7) return `${diffDays}天前`
-    return formatDate(date, 'yyyy-MM-dd')
-  }
+  }, [])
 
   // 加载应用列表
   const loadApps = useCallback(async () => {
@@ -126,63 +106,69 @@ export default function HomePage() {
     }
   }
 
-  // 加载会话列表
-  const loadConversations = async (appId: string) => {
-    if (!tenantId || !userId || !appId) return
-
-    try {
-      setLoadingConversations(true)
-      const data = await conversationService.getConversations(tenantId, userId, appId)
-      setConversations(data || [])
-
-      // 如果有会话，默认选中第一个
-      if (data && data.length > 0) {
-        setActiveConversation(data[0])
-        loadMessages(data[0].conversationId)
-      } else {
-        setActiveConversation(null)
-        setMessages([])
-      }
-    } catch (error) {
-      console.error('加载会话失败', error)
-    } finally {
-      setLoadingConversations(false)
-    }
-  }
-
   // 加载会话消息
-  const loadMessages = async (conversationId: string) => {
-    if (!conversationId) return
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      if (!conversationId) return
 
-    try {
-      setLoadingMessages(true)
-      const data = await conversationService.getConversationMessages(conversationId)
+      try {
+        setLoadingMessages(true)
+        const data = await conversationService.getConversationMessages(conversationId)
 
-      // 将后端消息格式转换为前端UI格式
-      const formattedMessages: ChatMessage[] = data.flatMap((message) => [
-        // 添加用户问题
-        {
-          id: `${message.messageId}-q`,
-          role: MessageRole.USER,
-          content: message.question,
-          time: formatTime(message.createTime),
-        },
-        // 添加助手回答
-        {
-          id: `${message.messageId}-a`,
-          role: MessageRole.ASSISTANT,
-          content: message.answer,
-          time: formatTime(message.createTime),
-        },
-      ])
+        // 将后端消息格式转换为前端UI格式
+        const formattedMessages: ChatMessage[] = data.flatMap((message) => [
+          // 添加用户问题
+          {
+            id: `${message.messageId}-q`,
+            role: MessageRole.USER,
+            content: message.question,
+            time: formatTime(message.createTime),
+          },
+          // 添加助手回答
+          {
+            id: `${message.messageId}-a`,
+            role: MessageRole.ASSISTANT,
+            content: message.answer,
+            time: formatTime(message.createTime),
+          },
+        ])
 
-      setMessages(formattedMessages)
-    } catch (error) {
-      console.error('加载消息失败', error)
-    } finally {
-      setLoadingMessages(false)
-    }
-  }
+        setMessages(formattedMessages)
+      } catch (error) {
+        console.error('加载消息失败', error)
+      } finally {
+        setLoadingMessages(false)
+      }
+    },
+    [formatTime],
+  )
+
+  // 加载会话列表
+  const loadConversations = useCallback(
+    async (appId: string) => {
+      if (!tenantId || !userId || !appId) return
+
+      try {
+        setLoadingConversations(true)
+        const data = await conversationService.getConversations(tenantId, userId, appId)
+        setConversations(data || [])
+
+        // 如果有会话，默认选中第一个
+        if (data && data.length > 0) {
+          setActiveConversation(data[0])
+          loadMessages(data[0].conversationId)
+        } else {
+          setActiveConversation(null)
+          setMessages([])
+        }
+      } catch (error) {
+        console.error('加载会话失败', error)
+      } finally {
+        setLoadingConversations(false)
+      }
+    },
+    [tenantId, userId, loadMessages],
+  )
 
   // 首次加载
   useEffect(() => {
@@ -272,6 +258,13 @@ export default function HomePage() {
     setIsSidebarCollapsed(!isSidebarCollapsed)
   }
 
+  // 刷新会话列表
+  const refreshConversations = useCallback(() => {
+    if (activeApp) {
+      loadConversations(activeApp.appId)
+    }
+  }, [activeApp, loadConversations])
+
   return (
     <div className="flex h-[calc(100vh-60px)]">
       {/* 左侧应用列表 */}
@@ -294,7 +287,7 @@ export default function HomePage() {
           activeConversation={activeConversation}
           handleConversationClick={handleConversationClick}
           handleNewConversation={handleNewConversation}
-          getRelativeTime={getRelativeTime}
+          refreshConversations={refreshConversations}
         />
 
         {/* 聊天界面组件 */}
@@ -307,167 +300,6 @@ export default function HomePage() {
           defaultModelId={defaultModelId}
           hasActiveConversation={!!activeConversation}
         />
-      </div>
-    </div>
-  )
-}
-
-// 应用侧边栏组件
-interface AppsSidebarProps {
-  isSidebarCollapsed: boolean
-  toggleSidebar: () => void
-  apps: App[]
-  loadingApps: boolean
-  activeApp: App | null
-  handleAppClick: (app: App) => void
-}
-
-function AppsSidebar({
-  isSidebarCollapsed,
-  toggleSidebar,
-  apps,
-  loadingApps,
-  activeApp,
-  handleAppClick,
-}: AppsSidebarProps) {
-  return (
-    <div
-      className={`border-r bg-card flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}
-    >
-      <div className="p-4 flex items-center justify-between border-b">
-        {!isSidebarCollapsed && <h2 className="font-semibold text-foreground">应用列表</h2>}
-        <Button
-          size="icon"
-          variant="ghost"
-          className={`h-8 w-8 ${isSidebarCollapsed ? 'mx-auto' : 'ml-auto'}`}
-          onClick={toggleSidebar}
-        >
-          {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
-      </div>
-
-      {!isSidebarCollapsed && (
-        <div className="relative px-4 pt-4 pb-2">
-          <Search className="absolute left-6.5 top-6.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="搜索应用..." className="pl-9" />
-        </div>
-      )}
-
-      <nav className="overflow-auto flex-1 p-2">
-        {loadingApps ? (
-          <div className="flex justify-center items-center h-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : apps.length === 0 ? (
-          <div className="text-center p-4 text-muted-foreground text-sm">暂无应用</div>
-        ) : (
-          apps.map((app) => (
-            <button
-              key={app.appId}
-              type="button"
-              className={`flex items-center rounded-md cursor-pointer transition-colors mb-1 ${
-                app.appId === activeApp?.appId ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-              } ${isSidebarCollapsed ? 'justify-center py-3 px-2' : 'px-3 py-2'}`}
-              onClick={() => handleAppClick(app)}
-              aria-pressed={app.appId === activeApp?.appId}
-            >
-              <div className={`text-xl flex-shrink-0 ${isSidebarCollapsed ? '' : 'mr-3'}`}>{app.logo || '🤖'}</div>
-              {!isSidebarCollapsed && <div className="font-medium text-sm truncate">{app.appName}</div>}
-            </button>
-          ))
-        )}
-      </nav>
-    </div>
-  )
-}
-
-// 会话列表组件
-interface ConversationListProps {
-  conversations: Conversation[]
-  loadingConversations: boolean
-  activeApp: App | null
-  activeConversation: Conversation | null
-  handleConversationClick: (conversation: Conversation) => void
-  handleNewConversation: () => void
-  getRelativeTime: (dateString: string) => string
-}
-
-function ConversationList({
-  conversations,
-  loadingConversations,
-  activeApp,
-  activeConversation,
-  handleConversationClick,
-  handleNewConversation,
-  getRelativeTime,
-}: ConversationListProps) {
-  return (
-    <div className="w-72 border-r flex flex-col bg-muted/10">
-      <div className="p-4 border-b">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">会话历史</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-2"
-            disabled={!activeApp}
-            onClick={handleNewConversation}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            新建会话
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <ul className="space-y-1 p-2">
-          {loadingConversations ? (
-            <div className="flex justify-center items-center h-20">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : !activeApp ? (
-            <div className="text-center p-4 text-muted-foreground text-sm">请选择一个应用</div>
-          ) : conversations.length === 0 ? (
-            <div className="text-center p-4 text-muted-foreground text-sm">暂无会话记录</div>
-          ) : (
-            conversations.map((conversation) => (
-              <li key={conversation.conversationId}>
-                <button
-                  type="button"
-                  className={`w-full px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
-                    conversation.conversationId === activeConversation?.conversationId
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent/50'
-                  }`}
-                  onClick={() => handleConversationClick(conversation)}
-                  aria-pressed={conversation.conversationId === activeConversation?.conversationId}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
-                    <span
-                      className={`text-xs ${
-                        conversation.conversationId === activeConversation?.conversationId
-                          ? 'text-primary-foreground/70'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {getRelativeTime(conversation.updateTime)}
-                    </span>
-                  </div>
-                  <p
-                    className={`text-xs mt-1 line-clamp-1 ${
-                      conversation.conversationId === activeConversation?.conversationId
-                        ? 'text-primary-foreground/90'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {conversation.lastMessage || '无消息记录'}
-                  </p>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
       </div>
     </div>
   )
