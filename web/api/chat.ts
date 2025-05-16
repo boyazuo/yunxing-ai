@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 
 interface ChatRequest {
   appId: string
-  conversationId?: string
+  conversationId?: string | null
   modelId: string
   prompt: string
 }

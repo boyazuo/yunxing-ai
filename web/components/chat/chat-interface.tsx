@@ -178,23 +178,16 @@ interface ChatMessagesProps {
 
 function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversation }: ChatMessagesProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const prevMessagesLengthRef = useRef<number>(0)
-
   const container = messagesContainerRef.current
 
-  // 只有当消息数量增加或初始加载时才滚动到底部
-  if (messages.length > prevMessagesLengthRef.current) {
-    // 使用 requestAnimationFrame 确保在下一帧渲染后执行滚动
-    requestAnimationFrame(() => {
-      if (container) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth',
-        })
-      }
-    })
-  }
-  prevMessagesLengthRef.current = messages.length
+  requestAnimationFrame(() => {
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  })
 
   if (loadingMessages) {
     return (

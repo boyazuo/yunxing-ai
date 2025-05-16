@@ -37,7 +37,7 @@ interface ConversationListProps {
   conversations: Conversation[]
   loadingConversations: boolean
   activeApp: App | null
-  activeConversation: Conversation | null
+  activeConversationId: string | null
   handleConversationClick: (conversation: Conversation) => void
   handleNewConversation: () => void
   refreshConversations?: () => void
@@ -47,7 +47,7 @@ export function ConversationList({
   conversations,
   loadingConversations,
   activeApp,
-  activeConversation,
+  activeConversationId,
   handleConversationClick,
   handleNewConversation,
   refreshConversations,
@@ -86,7 +86,7 @@ export function ConversationList({
       await conversationService.deleteConversation(currentConversation.conversationId)
 
       // 如果删除的是当前活动会话，创建新会话
-      if (currentConversation.conversationId === activeConversation?.conversationId) {
+      if (currentConversation.conversationId === activeConversationId) {
         handleNewConversation()
       }
 
@@ -157,7 +157,7 @@ export function ConversationList({
             <div className="text-center p-4 text-muted-foreground text-sm">暂无会话记录</div>
           ) : (
             conversations.map((conversation) => {
-              const isActive = conversation.conversationId === activeConversation?.conversationId
+              const isActive = conversation.conversationId === activeConversationId
               return (
                 <li key={conversation.conversationId}>
                   <div

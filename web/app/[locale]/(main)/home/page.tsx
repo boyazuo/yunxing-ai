@@ -26,7 +26,7 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [activeApp, setActiveApp] = useState<App | null>(null)
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [defaultModelId, setDefaultModelId] = useState<string>('')
 
   // 应用配置
@@ -145,29 +145,20 @@ export default function HomePage() {
 
   // 加载会话列表
   const loadConversations = useCallback(
-    async (appId: string) => {
+    async (appId: string, conversationId?: string) => {
       if (!userId || !appId) return
 
       try {
         setLoadingConversations(true)
         const data = await conversationService.getConversations(userId, appId)
         setConversations(data || [])
-
-        // 如果有会话，默认选中第一个
-        if (data && data.length > 0) {
-          setActiveConversation(data[0])
-          loadMessages(data[0].conversationId)
-        } else {
-          setActiveConversation(null)
-          setMessages([])
-        }
       } catch (error) {
         console.error('加载会话失败', error)
       } finally {
         setLoadingConversations(false)
       }
     },
-    [userId, loadMessages],
+    [userId],
   )
 
   // 首次加载
@@ -187,8 +178,8 @@ export default function HomePage() {
 
   // 选择会话时加载消息
   const handleConversationClick = (conversation: Conversation) => {
-    if (conversation.conversationId === activeConversation?.conversationId) return
-    setActiveConversation(conversation)
+    if (conversation.conversationId === activeConversationId) return
+    setActiveConversationId(conversation.conversationId)
     loadMessages(conversation.conversationId)
   }
 
@@ -197,7 +188,7 @@ export default function HomePage() {
     if (!activeApp) return
 
     // 清空当前选中的会话和消息
-    setActiveConversation(null)
+    setActiveConversationId(null)
     setMessages([])
   }
 
@@ -224,14 +215,13 @@ export default function HomePage() {
       // 准备请求数据
       const chatRequest = {
         appId: activeApp.appId,
-        conversationId: activeConversation?.conversationId,
+        conversationId: activeConversationId,
         modelId,
         prompt: question,
       }
 
       // 发送消息
       const response = await chatService.sendMessage(chatRequest)
-      console.log('response', response)
       // 添加回复到UI
       setMessages((prev) => [
         ...prev,
@@ -244,9 +234,10 @@ export default function HomePage() {
       ])
 
       // 如果是新会话，更新当前活动会话
-      if (!activeConversation && response.conversationId) {
+      if (!activeConversationId && response.conversationId) {
         // 刷新会话列表
         loadConversations(activeApp.appId)
+        setActiveConversationId(response.conversationId)
       }
     } catch (error) {
       console.error('发送消息失败', error)
@@ -284,7 +275,7 @@ export default function HomePage() {
           conversations={conversations}
           loadingConversations={loadingConversations}
           activeApp={activeApp}
-          activeConversation={activeConversation}
+          activeConversationId={activeConversationId}
           handleConversationClick={handleConversationClick}
           handleNewConversation={handleNewConversation}
           refreshConversations={refreshConversations}
@@ -298,7 +289,7 @@ export default function HomePage() {
           onSendMessage={handleSendMessage}
           models={appConfig?.models || []}
           defaultModelId={defaultModelId}
-          hasActiveConversation={!!activeConversation}
+          hasActiveConversation={!!activeConversationId}
         />
       </div>
     </div>
