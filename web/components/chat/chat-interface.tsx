@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
 import { ArrowRight, ChevronDown, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // 定义类型
 export interface ChatMessage {
@@ -177,9 +177,28 @@ interface ChatMessagesProps {
 }
 
 function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversation }: ChatMessagesProps) {
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const prevMessagesLengthRef = useRef<number>(0)
+
+  const container = messagesContainerRef.current
+
+  // 只有当消息数量增加或初始加载时才滚动到底部
+  if (messages.length > prevMessagesLengthRef.current) {
+    // 使用 requestAnimationFrame 确保在下一帧渲染后执行滚动
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth',
+        })
+      }
+    })
+  }
+  prevMessagesLengthRef.current = messages.length
+
   if (loadingMessages) {
     return (
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
         <div className="flex justify-center items-center h-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -189,7 +208,7 @@ function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversat
 
   if (!hasActiveConversation && (!activeApp || messages.length === 0)) {
     return (
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
         <div className="text-center p-4 text-muted-foreground">
           {activeApp ? '开始新的对话，或选择一个已有会话' : '请先选择一个应用'}
         </div>
@@ -199,14 +218,14 @@ function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversat
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
         <div className="text-center p-4 text-muted-foreground">暂无消息记录</div>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4 space-y-6">
+    <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4 space-y-6">
       {messages.map((message) => (
         <ChatMessageItem key={message.id} message={message} activeApp={activeApp} />
       ))}
