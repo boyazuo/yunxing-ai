@@ -116,6 +116,16 @@ java -jar target/yunxing-api-0.0.1-SNAPSHOT.jar
 - **国际化支持**：使用 next-intl 实现多语言本地化
 - **类型安全**：全栈 TypeScript 和严格类型检查
 
-## 贡献指南
 
-欢迎贡献代码、报告问题或提出新功能建议。请遵循项目的编码规范和贡献流程。
+## 交流协作
+
+云行AI目前处于起步阶段，我们记录了完整的开发过程和技术思考。欢迎有志于AI应用开发的同道者加入我们，一起探索AI应用开发的无限可能。无论您是前端工程师、后端开发者，还是对AI应用感兴趣的任何人，都可以通过以下方式参与:
+
+- **Star & Fork**: 在[GitHub](https://github.com/boyazuo/yunxing-ai)或[Gitee](https://gitee.com/yxboot/yunxing-ai)上关注项目
+- **贡献代码**: 提交PR，参与功能开发和问题修复
+- **技术讨论**: 分享您的想法和建议
+- **加入社区**: 扫描下方二维码添加微信 (备注: 云行AI)
+
+我们相信，通过开源协作的力量，可以共同打造更加强大和易用的AI应用构建平台。期待与您一起，见证云行AI的成长与蜕变！
+
+<img src="https://yxboot-oss.oss-cn-beijing.aliyuncs.com/images/weixin-boya.png" width="160" />
