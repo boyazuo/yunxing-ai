@@ -2,6 +2,7 @@ package com.yxboot.modules.ai.controller;
 
 import java.time.LocalDateTime;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.yxboot.common.api.Result;
+import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.ai.dto.ModelRequestDTO;
 import com.yxboot.modules.ai.dto.ModelResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
@@ -45,17 +47,21 @@ public class AiController {
 
     @PostMapping("/chat")
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天")
-    public Result<ModelResponseDTO> chatCompletion(@RequestBody ModelRequestDTO request) throws Exception {
+    public Result<ModelResponseDTO> chatCompletion(
+            @AuthenticationPrincipal SecurityUser securityUser,
+            @RequestBody ModelRequestDTO request) throws Exception {
+
+        Long userId = securityUser.getUserId();
         // 获取提供商和模型信息
         Model model = modelService.getById(request.getModelId());
         Provider provider = providerService.getById(model.getProviderId());
 
         // 处理会话
-        Long conversationId = handleConversation(request);
+        Long conversationId = handleConversation(userId, request);
 
         // 创建消息记录
         Message message = messageService.createMessage(
-                request.getUserId(),
+                userId,
                 request.getAppId(),
                 conversationId,
                 request.getPrompt());
@@ -73,18 +79,20 @@ public class AiController {
 
     @PostMapping("/stream")
     @Operation(summary = "流式聊天模型调用", description = "以流式方式调用大模型进行聊天")
-    public void streamingChatCompletion(@RequestBody ModelRequestDTO request,
+    public void streamingChatCompletion(@AuthenticationPrincipal SecurityUser securityUser,
+            @RequestBody ModelRequestDTO request,
             SseEmitter emitter) throws Exception {
+        Long userId = securityUser.getUserId();
         // 获取提供商和模型信息
         Model model = modelService.getById(request.getModelId());
         Provider provider = providerService.getById(model.getProviderId());
 
         // 处理会话
-        Long conversationId = handleConversation(request);
+        Long conversationId = handleConversation(userId, request);
 
         // 创建消息记录
         Message message = messageService.createMessage(
-                request.getUserId(),
+                userId,
                 request.getAppId(),
                 conversationId,
                 request.getPrompt());
@@ -108,7 +116,7 @@ public class AiController {
      * @param request 请求参数
      * @return 会话ID
      */
-    private Long handleConversation(ModelRequestDTO request) {
+    private Long handleConversation(Long userId, ModelRequestDTO request) {
         Long conversationId = null;
 
         // 检查是否存在会话ID
@@ -137,7 +145,7 @@ public class AiController {
         }
 
         Conversation conversation = conversationService.createConversation(
-                request.getUserId(),
+                userId,
                 request.getAppId(),
                 title);
 
