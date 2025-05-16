@@ -83,7 +83,7 @@ public class AuthController {
 
         // 获取活跃租户
         TenantUserDTO activeTenantUserDTO = tenantUserDTOs.stream()
-                .filter(tenantUserDTO -> tenantUserDTO.getIsActive())
+                .filter(TenantUserDTO::getIsActive)
                 .findFirst()
                 .orElse(null);
 

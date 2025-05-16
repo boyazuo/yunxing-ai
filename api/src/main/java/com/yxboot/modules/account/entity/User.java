@@ -15,7 +15,7 @@ import lombok.Data;
 
 /**
  * 用户表实体类
- * 
+ *
  * @author Boya
  */
 @Data
@@ -38,6 +38,9 @@ public class User {
 
     @Schema(description = "头像")
     private String avatar;
+
+    @Schema(description = "头像ID")
+    private Long avatarId;
 
     @Schema(description = "最后登录时间")
     private LocalDateTime lastLoginTime;

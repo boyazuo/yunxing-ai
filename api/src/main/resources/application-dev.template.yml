@@ -13,3 +13,19 @@ spring:
       host: localhost
       port: 6379
       password: 123456
+
+yxboot:
+  upload:
+    model: local
+    local:
+      enable: true
+      path-prefix: /Users/liangliang/IdeaProjects/zuolaoshi/yunxing-api/attrs/
+      url-prefix: http://192.168.0.72:9898/
+      rewrite-file-name: true
+    oss:
+      enable: true
+      endpoint: xxx
+      accessKey: xxx
+      secretKey: xxx
+      bucketName: xxx
+      rewrite-file-name: true

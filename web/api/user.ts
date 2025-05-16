@@ -20,3 +20,8 @@ export const getUserById = async (userId: string) => {
     throw error
   }
 }
+
+export const userService = {
+  getUserById,
+  updateCurrentUser
+}

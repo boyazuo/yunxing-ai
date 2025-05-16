@@ -57,5 +57,6 @@ export interface User {
   userId?: number
   username?: string
   email?: string
-  avatar?: string
+  avatar?: string,
+  avatarId:  number | null
 }

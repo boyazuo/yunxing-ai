@@ -25,6 +25,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { updateCurrentUser } from '@/api/user'
 import { authService } from '@/api/auth'
 import { signOut } from 'next-auth/react'
+import { fileService } from '@/api/file'
+import { SysFile } from '@/types/system'
 
 // 基本信息表单验证
 const profileFormSchema = z.object({
@@ -57,6 +59,7 @@ export default function AccountSettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarId, setAvatarId] = useState<number | null>(null)
 
   // 基本信息表单
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
@@ -87,61 +90,38 @@ export default function AccountSettingsPage() {
 
   // 处理头像上传
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.[0]) {
-      const file = event.target.files[0]
-      setAvatarFile(file)
-
-      // 生成预览
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string)
+    const file = event.target.files?.[0]
+    if (file) {
+      try {
+        // 调用上传头像的API
+        fileService.updateFile(file).then((res) => {
+          const sysFile: SysFile = res
+          setAvatarFile(file)
+          // 生成预览
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            setAvatarPreview(e.target?.result as string)
+          }
+          reader.readAsDataURL(file)
+          // 更新 头像ID
+          setAvatarId(sysFile.fileId)
+          toast.success('头像上传成功')
+        })
+      } catch (error) {
+        toast.error('头像上传失败')
       }
-      reader.readAsDataURL(file)
     }
   }
 
-  // 处理头像上传提交
-  const handleAvatarSubmit = async () => {
-    if (!avatarFile) return
-
-    setIsUpdating(true)
-    try {
-      // 这里添加上传头像的API调用
-      // const formData = new FormData()
-      // formData.append('avatar', avatarFile)
-      // const response = await fetch('/api/user/avatar', {
-      //   method: 'POST',
-      //   body: formData,
-      // })
-
-      // 模拟API调用
-      console.log('上传头像:', avatarFile)
-
-      // 更新session (实际实现需替换)
-      // await update({
-      //   ...session,
-      //   user: {
-      //     ...session?.user,
-      //     image: avatarPreview,
-      //   }
-      // })
-
-      toast.success('头像更新成功')
-    } catch (error) {
-      toast.error('头像更新失败')
-      console.error(error)
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  // 处理基本信息提交
+  // 处理基本信息提交（合并头像上传逻辑）
   const onProfileSubmit = async (data: z.infer<typeof profileFormSchema>) => {
     setIsUpdating(true)
     try {
-      // 更新后台数据库数据
-      await updateCurrentUser({ username: data.username })
 
+      // 更新用户名 和 头像 ID 到数据库
+      await updateCurrentUser({ username: data.username, avatarId: avatarId })
+
+      // 更新session中的用户名
       await update({
         ...session,
         user: {
@@ -150,12 +130,15 @@ export default function AccountSettingsPage() {
         },
       })
 
-      toast.success('个人信息更新成功')
+      toast.success('个人信息及头像更新成功')
     } catch (error) {
-      toast.error('个人信息更新失败')
+      toast.error('更新失败')
       console.error(error)
     } finally {
       setIsUpdating(false)
+      // 清空头像选择状态
+      setAvatarFile(null)
+      setAvatarPreview(null)
     }
   }
 
@@ -170,7 +153,7 @@ export default function AccountSettingsPage() {
         passwordForm.reset()
 
         // 退出登录
-        signOut({callbackUrl: '/login'})
+        signOut({ callbackUrl: '/login' })
       } else {
         toast.error(res.msg)
       }
@@ -182,8 +165,8 @@ export default function AccountSettingsPage() {
     }
   }
 
-  const userInitials = session?.user?.name
-    ? session.user.name
+  const userInitials = session?.user?.username
+    ? session.user.username
         .split(' ')
         .map((n) => n[0])
         .join('')
@@ -207,43 +190,31 @@ export default function AccountSettingsPage() {
             <CardContent className="p-6 space-y-6">
               {/* 头像设置 */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">头像设置</h3>
+                <h3 className="text-lg font-medium">个人信息</h3>
                 <Separator />
                 <div className="flex items-center gap-6">
-                  <Avatar className="w-20 h-20">
-                    <AvatarImage
-                      src={avatarPreview || session?.user?.image || undefined}
+                  <Label htmlFor="avatar" className="cursor-pointer">
+                    {' '}
+                    {/* 将 Label 包裹头像 */}
+                    <Avatar className="w-20 h-20">
+                      <AvatarImage
+                        src={avatarPreview || session?.user?.avatar || undefined}
+                      />
+                      <AvatarFallback className="text-lg">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Input
+                      id="avatar"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
                     />
-                    <AvatarFallback className="text-lg">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
+                  </Label>
+
                   <div className="space-y-2">
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <div>
-                        <Label htmlFor="avatar" className="cursor-pointer">
-                          <div className="flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground">
-                            选择图片
-                          </div>
-                          <Input
-                            id="avatar"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleAvatarChange}
-                          />
-                        </Label>
-                      </div>
-                      {avatarFile && (
-                        <Button
-                          onClick={handleAvatarSubmit}
-                          disabled={isUpdating}
-                          className="h-9"
-                        >
-                          {isUpdating ? '上传中...' : '上传头像'}
-                        </Button>
-                      )}
-                    </div>
+                    {/* 移除独立的上传按钮，仅保留格式提示 */}
                     <p className="text-xs text-muted-foreground">
                       支持JPG, PNG格式, 建议尺寸 400x400 像素
                     </p>
@@ -253,8 +224,6 @@ export default function AccountSettingsPage() {
 
               {/* 个人信息表单 */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">个人信息</h3>
-                <Separator />
                 <Form {...profileForm}>
                   <form
                     onSubmit={profileForm.handleSubmit(onProfileSubmit)}
