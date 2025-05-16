@@ -100,7 +100,7 @@ const roles = [
 ]
 
 // 测试数据 - 多个团队信息
-const initialTeams: Tenant[] = [{ tenantName: '' }]
+const initialTeams: Tenant[] = [{ tenantId: 0, tenantName: '' }]
 
 // 团队成员
 const initialMembers: UserInTenant[] = []
@@ -253,8 +253,14 @@ export default function TeamsPage() {
   const handleDeleteMember = (id: number) => {
     try {
       // 这里添加删除团队成员的API调用
-      setMembers(members.filter((member) => member.userId !== id))
-      toast.success('团队成员已移除')
+      teamService.deleteTenantUser(currentTeam.tenantId, id).then((res) => {
+        if (res.code === 0) {
+          setMembers(members.filter((member) => member.userId !== id))
+          toast.success('团队成员已移除')
+        } else {
+          toast.error('移除团队成员失败')
+        }
+      })
     } catch (error) {
       toast.error('移除团队成员失败')
       console.error(error)
@@ -688,7 +694,10 @@ export default function TeamsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() =>
-                              handleChangeRole(member.userId, 'admin')
+                              handleChangeRole(
+                                member.userId,
+                                TenantUserRole.ADMIN
+                              )
                             }
                             className="flex items-center"
                           >
@@ -697,7 +706,10 @@ export default function TeamsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
-                              handleChangeRole(member.userId, 'normal')
+                              handleChangeRole(
+                                member.userId,
+                                TenantUserRole.NORMAL
+                              )
                             }
                             className="flex items-center"
                           >

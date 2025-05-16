@@ -60,5 +60,15 @@ export const teamService = {
       console.error('更新团队成员角色失败', error)
       throw error
     }
+  },
+
+  async deleteTenantUser(tenantId: number, userId: number) {
+    try {
+      const response = await api.delete<null>(`${this.apiRoot}/${tenantId}/users/${userId}`)
+      return response
+    } catch (error) {
+      console.error('删除团队成员失败', error)
+      throw error
+    }
   }
 }

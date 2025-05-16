@@ -156,6 +156,26 @@ public class TenantController {
         return Result.success("更新租户用户角色成功");
     }
 
+    @Operation(summary = "删除租户用户", description = "删除租户用户")
+    @DeleteMapping("/{tenantId}/users/{userId}")
+    public Result<Void> deleteTenantUser(
+            @PathVariable Long tenantId,
+            @PathVariable Long userId) {
+        TenantUser deleteOne = tenantUserService
+                .lambdaQuery()
+                .eq(TenantUser::getTenantId, tenantId)
+                .eq(TenantUser::getUserId, userId)
+                .one();
+
+        if (deleteOne != null) {
+            boolean success = tenantUserService.removeById(deleteOne);
+            if (!success) {
+                return Result.error("删除租户用户失败");
+            }
+        }
+        return Result.success("删除租户用户成功");
+    }
+
     @Data
     public static class TenantIdRequest {
         private Long tenantId;
