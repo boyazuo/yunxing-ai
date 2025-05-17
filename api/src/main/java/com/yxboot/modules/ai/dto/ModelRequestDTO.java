@@ -36,7 +36,7 @@ public class ModelRequestDTO {
     private String systemPrompt;
 
     @Schema(description = "是否流式响应")
-    private Boolean stream = false;
+    private Boolean stream = true;
 
     @Schema(description = "最大输出tokens")
     private Integer maxTokens;

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -103,17 +104,31 @@ public class AiService {
             // 用于收集完整响应的StringBuilder
             StringBuilder fullResponseBuilder = new StringBuilder();
 
+            // 发送初始元数据
+            emitter.send(SseEmitter.event()
+                    .name("metadata")
+                    .data(Map.of(
+                            "conversationId", request.getConversationId(),
+                            "messageId", messageId)));
+
             // 调用流式接口
-            Flux<String> responseStream = chatModel.stream(prompt);
+            Flux<ChatResponse> responseStream = chatModel.stream(prompt);
 
             // 处理流式响应
             responseStream
-                    .doOnNext(chunk -> {
+                    .doOnNext(response -> {
                         try {
+                            // 获取响应内容
+                            String chunk = response.getContent();
+
                             // 收集完整响应
                             fullResponseBuilder.append(chunk);
-                            // 发送数据块
-                            emitter.send(chunk);
+
+                            // 确保chunk不为空
+                            if (chunk != null && !chunk.trim().isEmpty()) {
+                                // 发送数据块，格式化为SSE格式
+                                emitter.send(SseEmitter.event().data(chunk));
+                            }
                         } catch (IOException e) {
                             log.error("发送流式数据异常", e);
                         }
@@ -128,6 +143,12 @@ public class AiService {
                                         fullResponseBuilder.toString(),
                                         MessageStatus.COMPLETED);
                             }
+
+                            // 发送结束事件
+                            emitter.send(SseEmitter.event()
+                                    .name("end")
+                                    .data(""));
+
                             // 流结束
                             emitter.complete();
                         } catch (Exception e) {

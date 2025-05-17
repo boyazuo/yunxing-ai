@@ -267,7 +267,7 @@ public class ZhipuChatModel implements ChatModel {
      * 流式调用方法实现
      */
     @Override
-    public Flux<String> stream(Prompt prompt) {
+    public Flux<ChatResponse> stream(Prompt prompt) {
         // 构建知启请求
         ZhipuRequest request = buildRequest(prompt, true);
 
@@ -291,13 +291,31 @@ public class ZhipuChatModel implements ChatModel {
             return "";
         };
 
-        // 发送流式请求
-        return zhipuClient.sendStreamRequest(
+        // 发送流式请求获取字符流
+        Flux<String> contentFlux = zhipuClient.sendStreamRequest(
                 request,
                 getApiKey(),
                 config.getBaseUrl(),
                 dataProcessor,
                 error -> log.error("流式请求错误: {}", error.getMessage()));
+
+        // 将字符流转换为ChatResponse流
+        return contentFlux.map(chunk -> {
+            // 创建AI消息
+            AiMessage aiMessage = new AiMessage(chunk);
+
+            // 构建元数据
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("model", request.getModel());
+            metadata.put("streaming", true);
+
+            // 构建并返回ChatResponse对象
+            return ChatResponse.builder()
+                    .content(chunk)
+                    .message(aiMessage)
+                    .metadata(metadata)
+                    .build();
+        });
     }
 
     /**

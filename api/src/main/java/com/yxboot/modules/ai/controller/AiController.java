@@ -2,6 +2,7 @@ package com.yxboot.modules.ai.controller;
 
 import java.time.LocalDateTime;
 
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,13 +46,55 @@ public class AiController {
     private final ConversationService conversationService;
     private final MessageService messageService;
 
-    @PostMapping("/chat")
-    @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天")
-    public Result<ModelResponseDTO> chatCompletion(
+    @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
+    public SseEmitter chatCompletion(
             @AuthenticationPrincipal SecurityUser securityUser,
             @RequestBody ModelRequestDTO request) throws Exception {
 
         Long userId = securityUser.getUserId();
+        // 获取提供商和模型信息
+        Model model = modelService.getById(request.getModelId());
+        Provider provider = providerService.getById(model.getProviderId());
+
+        // 处理会话
+        Long conversationId = handleConversation(userId, request);
+        request.setConversationId(conversationId.toString());
+
+        // 创建消息记录
+        Message message = messageService.createMessage(
+                userId,
+                request.getAppId(),
+                conversationId,
+                request.getPrompt());
+
+        // 创建SSE发射器，设置超时时间为5分钟
+        SseEmitter emitter = new SseEmitter(300000L);
+
+        // 调用AI服务进行流式聊天
+        aiService.streamingChatCompletion(provider, model, request, emitter, message.getMessageId());
+
+        return emitter;
+    }
+
+    /**
+     * 非流式聊天模型调用
+     * 
+     * @param securityUser 当前用户
+     * @param request      请求参数
+     * @return 模型响应
+     * @throws Exception 调用异常
+     */
+    @PostMapping("/chat/sync")
+    @Operation(summary = "非流式聊天模型调用", description = "调用大模型进行聊天，使用同步响应方式")
+    public Result<ModelResponseDTO> chatCompletionSync(
+            @AuthenticationPrincipal SecurityUser securityUser,
+            @RequestBody ModelRequestDTO request) throws Exception {
+
+        Long userId = securityUser.getUserId();
+        // 确保使用非流式请求
+        request.setStream(false);
+
         // 获取提供商和模型信息
         Model model = modelService.getById(request.getModelId());
         Provider provider = providerService.getById(model.getProviderId());
@@ -75,37 +118,6 @@ public class AiController {
         response.setConversationId(conversationId);
         response.setMessageId(message.getMessageId());
         return Result.success("请求成功。", response);
-    }
-
-    @PostMapping("/stream")
-    @Operation(summary = "流式聊天模型调用", description = "以流式方式调用大模型进行聊天")
-    public void streamingChatCompletion(@AuthenticationPrincipal SecurityUser securityUser,
-            @RequestBody ModelRequestDTO request,
-            SseEmitter emitter) throws Exception {
-        Long userId = securityUser.getUserId();
-        // 获取提供商和模型信息
-        Model model = modelService.getById(request.getModelId());
-        Provider provider = providerService.getById(model.getProviderId());
-
-        // 处理会话
-        Long conversationId = handleConversation(userId, request);
-
-        // 创建消息记录
-        Message message = messageService.createMessage(
-                userId,
-                request.getAppId(),
-                conversationId,
-                request.getPrompt());
-
-        // 调用AI服务进行流式聊天
-        try {
-            // 传递messageId参数
-            aiService.streamingChatCompletion(provider, model, request, emitter, message.getMessageId());
-            // 消息状态更新将在流处理完成时由AiService处理
-        } catch (Exception e) {
-            // 异常处理已在AiService中完成
-            throw e;
-        }
     }
 
     /**

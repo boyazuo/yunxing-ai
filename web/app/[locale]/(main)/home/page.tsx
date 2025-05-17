@@ -1,5 +1,8 @@
 'use client'
 
+import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
+
 import { appConfigService } from '@/api/appConfig'
 import { appService } from '@/api/apps'
 import { chatService } from '@/api/chat'
@@ -7,11 +10,9 @@ import { conversationService } from '@/api/conversation'
 import { ChatInterface, type ChatMessage, type ChatModel } from '@/components/chat/chat-interface'
 import type { App } from '@/types/app'
 import { type Conversation, MessageRole } from '@/types/chat'
-import { useSession } from 'next-auth/react'
-import { useCallback, useEffect, useState } from 'react'
 import { AppsSidebar, ConversationList } from './_components'
 
-// 定义内部应用配置类型
+// 应用配置类型
 interface UIAppConfig {
   sysPrompt?: string
   models: ChatModel[]
@@ -19,34 +20,35 @@ interface UIAppConfig {
 
 export default function HomePage() {
   const { data: session } = useSession()
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-
-  // 应用与会话状态
-  const [apps, setApps] = useState<App[]>([])
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [activeApp, setActiveApp] = useState<App | null>(null)
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
-  const [defaultModelId, setDefaultModelId] = useState<string>('')
-
-  // 应用配置
-  const [appConfig, setAppConfig] = useState<UIAppConfig | null>(null)
-  const [selectedModelId, setSelectedModelId] = useState<string>('')
-
-  // 加载状态
-  const [loadingApps, setLoadingApps] = useState(true)
-  const [loadingConfig, setLoadingConfig] = useState(false)
-  const [loadingConversations, setLoadingConversations] = useState(false)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-
-  // 从会话中获取用户和租户信息
   const tenantId = session?.tenant?.tenantId || ''
   const userId = session?.user?.userId || ''
 
+  // UI状态
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  // 应用状态
+  const [apps, setApps] = useState<App[]>([])
+  const [activeApp, setActiveApp] = useState<App | null>(null)
+  const [appConfig, setAppConfig] = useState<UIAppConfig | null>(null)
+  const [loadingApps, setLoadingApps] = useState(true)
+  const [loadingConfig, setLoadingConfig] = useState(false)
+
+  // 会话状态
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [loadingConversations, setLoadingConversations] = useState(false)
+
+  // 消息状态
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+
+  // 模型状态
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
+  const [defaultModelId, setDefaultModelId] = useState<string>('')
+
   // 格式化时间
   const formatTime = useCallback((dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    return new Date(dateString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
   }, [])
 
   // 加载应用列表
@@ -55,11 +57,10 @@ export default function HomePage() {
 
     try {
       setLoadingApps(true)
-      const data = await appService.getApps(tenantId)
+      const data = await appService.getApps(String(tenantId))
       setApps(data || [])
 
-      // 如果有应用，默认选中第一个
-      if (data && data.length > 0) {
+      if (data?.length > 0) {
         setActiveApp(data[0])
         loadAppConfig(data[0].appId)
         loadConversations(data[0].appId)
@@ -79,22 +80,21 @@ export default function HomePage() {
       setLoadingConfig(true)
       const config = await appConfigService.getAppConfig(appId)
 
-      // 处理 models 字符串转为 JSON 对象
+      // 处理models字符串转为JSON对象
       const parsedConfig = { ...config }
       if (parsedConfig && typeof parsedConfig.models === 'string') {
         try {
           parsedConfig.models = JSON.parse(parsedConfig.models)
         } catch (parseError) {
-          console.error('解析 models JSON 字符串失败', parseError)
+          console.error('解析models JSON字符串失败', parseError)
           parsedConfig.models = []
         }
       }
 
       setAppConfig(parsedConfig as UIAppConfig)
 
-      // 默认选择第一个模型
-      if (parsedConfig?.models && parsedConfig.models.length > 0) {
-        // 优先选择 isActive 为 true 的第一个模型
+      // 设置默认模型
+      if (parsedConfig?.models?.length > 0) {
         const activeModel = parsedConfig.models.find((model) => model.isActive) || parsedConfig.models[0]
         setSelectedModelId(activeModel.modelId)
         setDefaultModelId(activeModel.modelId)
@@ -105,6 +105,24 @@ export default function HomePage() {
       setLoadingConfig(false)
     }
   }
+
+  // 加载会话列表
+  const loadConversations = useCallback(
+    async (appId: string) => {
+      if (!userId || !appId) return
+
+      try {
+        setLoadingConversations(true)
+        const data = await conversationService.getConversations(String(userId), appId)
+        setConversations(data || [])
+      } catch (error) {
+        console.error('加载会话失败', error)
+      } finally {
+        setLoadingConversations(false)
+      }
+    },
+    [userId],
+  )
 
   // 加载会话消息
   const loadMessages = useCallback(
@@ -117,14 +135,12 @@ export default function HomePage() {
 
         // 将后端消息格式转换为前端UI格式
         const formattedMessages: ChatMessage[] = data.flatMap((message) => [
-          // 添加用户问题
           {
             id: `${message.messageId}-q`,
             role: MessageRole.USER,
             content: message.question,
             time: formatTime(message.createTime),
           },
-          // 添加助手回答
           {
             id: `${message.messageId}-a`,
             role: MessageRole.ASSISTANT,
@@ -143,24 +159,6 @@ export default function HomePage() {
     [formatTime],
   )
 
-  // 加载会话列表
-  const loadConversations = useCallback(
-    async (appId: string, conversationId?: string) => {
-      if (!userId || !appId) return
-
-      try {
-        setLoadingConversations(true)
-        const data = await conversationService.getConversations(userId, appId)
-        setConversations(data || [])
-      } catch (error) {
-        console.error('加载会话失败', error)
-      } finally {
-        setLoadingConversations(false)
-      }
-    },
-    [userId],
-  )
-
   // 首次加载
   useEffect(() => {
     if (tenantId && userId) {
@@ -168,7 +166,7 @@ export default function HomePage() {
     }
   }, [tenantId, userId, loadApps])
 
-  // 选择应用时加载会话
+  // 选择应用
   const handleAppClick = (app: App) => {
     if (app.appId === activeApp?.appId) return
     setActiveApp(app)
@@ -176,7 +174,7 @@ export default function HomePage() {
     loadConversations(app.appId)
   }
 
-  // 选择会话时加载消息
+  // 选择会话
   const handleConversationClick = (conversation: Conversation) => {
     if (conversation.conversationId === activeConversationId) return
     setActiveConversationId(conversation.conversationId)
@@ -186,27 +184,139 @@ export default function HomePage() {
   // 创建新会话
   const handleNewConversation = () => {
     if (!activeApp) return
-
-    // 清空当前选中的会话和消息
     setActiveConversationId(null)
     setMessages([])
+  }
+
+  // 处理流式响应
+  const processStream = async (response: Response, tempAssistantId: string, tempUserId: string, activeApp: App) => {
+    try {
+      if (!response.body) {
+        throw new Error('响应体为空')
+      }
+
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+      let buffer = ''
+      let messageContent = ''
+      let conversationId = ''
+      let messageId = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += value
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''
+
+        for (const eventText of events) {
+          if (!eventText.trim()) continue
+
+          const eventLines = eventText.split('\n')
+          let eventName = 'message'
+          let eventData = ''
+
+          for (const line of eventLines) {
+            if (line.startsWith('event:')) {
+              eventName = line.substring(6).trim()
+            } else if (line.startsWith('data:')) {
+              eventData = line.substring(5).trim()
+            }
+          }
+
+          // 处理不同类型的事件
+          if (eventName === 'metadata') {
+            try {
+              const metadata = JSON.parse(eventData)
+              if (metadata.conversationId) {
+                conversationId = String(metadata.conversationId)
+
+                if (!activeConversationId) {
+                  loadConversations(activeApp.appId)
+                  setActiveConversationId(conversationId)
+                }
+              }
+              if (metadata.messageId) {
+                messageId = String(metadata.messageId)
+              }
+            } catch (e) {
+              console.error('解析元数据失败', e)
+            }
+          } else if (eventName !== 'end' && eventData) {
+            // 处理普通消息内容
+            messageContent += eventData
+
+            setMessages((prev) => {
+              const updated = [...prev]
+              const assistantMessageIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
+              if (assistantMessageIndex !== -1) {
+                updated[assistantMessageIndex] = {
+                  ...updated[assistantMessageIndex],
+                  content: messageContent,
+                }
+              }
+              return updated
+            })
+          }
+        }
+      }
+
+      // 流结束处理
+      if (conversationId) {
+        // 更新消息的ID为真实ID
+        if (messageId) {
+          setMessages((prev) => {
+            const updated = [...prev]
+            const userMsgIndex = updated.findIndex((msg) => msg.id === tempUserId)
+            const assistantMsgIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
+
+            if (userMsgIndex !== -1) {
+              updated[userMsgIndex] = {
+                ...updated[userMsgIndex],
+                id: `${messageId}-q`,
+              }
+            }
+
+            if (assistantMsgIndex !== -1) {
+              updated[assistantMsgIndex] = {
+                ...updated[assistantMsgIndex],
+                id: `${messageId}-a`,
+              }
+            }
+
+            return updated
+          })
+        }
+      }
+
+      // 刷新会话列表
+      loadConversations(activeApp.appId)
+    } catch (error) {
+      console.error('处理流数据失败', error)
+    }
   }
 
   // 发送消息
   const handleSendMessage = async (question: string, modelId: string) => {
     if (!question || !activeApp || !modelId || !tenantId || !userId) return
 
-    const now = new Date()
-    const currentTime = formatTime(now.toISOString())
+    const currentTime = formatTime(new Date().toISOString())
+    const tempUserId = `temp-${Date.now()}`
+    const tempAssistantId = `temp-assistant-${Date.now()}`
 
     // 添加用户消息到UI
-    const tempUserId = `temp-${Date.now()}`
     setMessages((prev) => [
       ...prev,
       {
         id: tempUserId,
         role: MessageRole.USER,
         content: question,
+        time: currentTime,
+      },
+      {
+        id: tempAssistantId,
+        role: MessageRole.ASSISTANT,
+        content: '',
         time: currentTime,
       },
     ])
@@ -220,27 +330,30 @@ export default function HomePage() {
         prompt: question,
       }
 
-      // 发送消息
-      const response = await chatService.sendMessage(chatRequest)
-      // 添加回复到UI
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${response.messageId}-a`,
-          role: MessageRole.ASSISTANT,
-          content: response.content,
-          time: formatTime(new Date().toISOString()),
-        },
-      ])
+      // 获取流式响应
+      const response = await chatService.streamMessage(chatRequest)
 
-      // 如果是新会话，更新当前活动会话
-      if (!activeConversationId && response.conversationId) {
-        // 刷新会话列表
-        loadConversations(activeApp.appId)
-        setActiveConversationId(response.conversationId)
+      if (!response.ok || !response.body) {
+        throw new Error(`流式响应创建失败: ${response.status}`)
       }
+
+      // 处理流式响应
+      processStream(response, tempAssistantId, tempUserId, activeApp)
     } catch (error) {
       console.error('发送消息失败', error)
+
+      // 显示错误消息
+      setMessages((prev) => {
+        const updated = [...prev]
+        const assistantMessageIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
+        if (assistantMessageIndex !== -1) {
+          updated[assistantMessageIndex] = {
+            ...updated[assistantMessageIndex],
+            content: '抱歉，请求发送失败，请重试。',
+          }
+        }
+        return updated
+      })
     }
   }
 
