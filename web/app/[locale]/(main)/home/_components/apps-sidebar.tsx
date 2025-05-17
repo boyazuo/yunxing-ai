@@ -1,7 +1,10 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
 
+import { appService } from '@/api/apps'
 import { Button } from '@/components/ui/button'
 import type { App } from '@/types/app'
 
@@ -9,20 +12,50 @@ import type { App } from '@/types/app'
 interface AppsSidebarProps {
   isSidebarCollapsed: boolean
   toggleSidebar: () => void
-  apps: App[]
-  loadingApps: boolean
   activeApp: App | null
-  handleAppClick: (app: App) => void
+  onAppChange: (app: App) => void
 }
 
-export function AppsSidebar({
-  isSidebarCollapsed,
-  toggleSidebar,
-  apps,
-  loadingApps,
-  activeApp,
-  handleAppClick,
-}: AppsSidebarProps) {
+export function AppsSidebar({ isSidebarCollapsed, toggleSidebar, activeApp, onAppChange }: AppsSidebarProps) {
+  const { data: session } = useSession()
+  const tenantId = session?.tenant?.tenantId || ''
+
+  // 应用状态
+  const [apps, setApps] = useState<App[]>([])
+  const [loadingApps, setLoadingApps] = useState(true)
+
+  // 加载应用列表
+  const loadApps = useCallback(async () => {
+    if (!tenantId) return
+
+    try {
+      setLoadingApps(true)
+      const data = await appService.getApps(String(tenantId))
+      setApps(data || [])
+
+      if (data?.length > 0 && !activeApp) {
+        onAppChange(data[0])
+      }
+    } catch (error) {
+      console.error('加载应用失败', error)
+    } finally {
+      setLoadingApps(false)
+    }
+  }, [tenantId, activeApp, onAppChange])
+
+  // 首次加载
+  useEffect(() => {
+    if (tenantId) {
+      loadApps()
+    }
+  }, [tenantId, loadApps])
+
+  // 选择应用
+  const handleAppClick = (app: App) => {
+    if (app.appId === activeApp?.appId) return
+    onAppChange(app)
+  }
+
   return (
     <div
       className={`border-r bg-card flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-60'}`}
