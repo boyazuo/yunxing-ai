@@ -1,85 +1,72 @@
 import { api } from '@/lib/api'
-import { getSession } from 'next-auth/react'
+import { type SSECallbacks, sseClient } from '@/lib/sse'
 
-interface ChatRequest {
+/**
+ * 聊天请求参数
+ */
+export interface ChatRequest {
+  /** 应用ID */
   appId: string
+  /** 会话ID，新会话为null */
   conversationId?: string | null
+  /** 模型ID */
   modelId: string
+  /** 用户输入的问题 */
   prompt: string
 }
 
 /**
  * 聊天响应
  */
-interface ChatResponse {
+export interface ChatResponse {
+  /** 会话ID */
   conversationId: string
+  /** 消息ID */
   messageId: string
+  /** 回复内容 */
   content: string
 }
 
-// 获取API基础URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/v1/api'
-
 /**
  * 聊天服务
+ * 提供流式和同步两种方式的聊天接口
  */
 export const chatService = {
   /**
    * 发送聊天消息（流式响应）
    * @param request 聊天请求参数
-   * @returns Promise<Response>
+   * @returns Promise<Response> 原始响应对象
    */
   async streamMessage(request: ChatRequest): Promise<Response> {
+    return sseClient.fetchEventStream('/ai/chat', request)
+  },
+
+  /**
+   * 发送聊天消息（流式响应）并处理流数据
+   * 封装了请求发送和事件处理的完整流程
+   * @param request 聊天请求参数
+   * @param callbacks 回调函数集合，包含onMessage、onError、onComplete
+   */
+  async streamMessageWithHandling(request: ChatRequest, callbacks: SSECallbacks): Promise<void> {
     try {
-      // 获取认证令牌
-      const session = await getSession()
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      }
-
-      // 如果有认证令牌，添加到请求头
-      if (session?.accessToken) {
-        headers.Authorization = session.accessToken
-      }
-
-      console.log('发送流式请求:', request)
-      console.log('API基础URL:', API_BASE_URL)
-
-      // 使用fetch API发送POST请求，获取流式响应
-      // 这里我们不使用axios，因为axios的流处理在浏览器端不太直观
-      // 对于流式响应，fetch API提供了更简单的处理方式
-      const response = await fetch(`${API_BASE_URL}/ai/chat`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(request),
-        credentials: 'include',
-      })
-
-      console.log('流式响应状态:', response.status, response.statusText, response.headers.get('Content-Type'))
-
-      if (!response.ok) {
-        throw new Error(`请求失败: ${response.status} ${response.statusText}`)
-      }
-
-      return response
+      const response = await this.streamMessage(request)
+      await sseClient.processEventStream(response, callbacks)
     } catch (error) {
-      console.error('创建流式请求失败', error)
-      throw error
+      callbacks.onError?.(new Error('发送消息失败'))
     }
   },
 
   /**
    * 发送聊天消息（同步响应）
+   * 适用于不需要流式响应的场景
    * @param request 聊天请求参数
-   * @returns 聊天响应
+   * @returns 聊天响应对象
    */
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     try {
       const response = await api.post<ChatResponse>('/ai/chat/sync', request)
       return response.data
     } catch (error) {
-      console.error('发送消息失败', error)
       throw new Error('发送消息失败')
     }
   },

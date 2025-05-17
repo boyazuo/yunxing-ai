@@ -110,10 +110,9 @@ export default function HomePage() {
   const loadConversations = useCallback(
     async (appId: string) => {
       if (!userId || !appId) return
-
       try {
         setLoadingConversations(true)
-        const data = await conversationService.getConversations(String(userId), appId)
+        const data = await conversationService.getConversations(userId, appId)
         setConversations(data || [])
       } catch (error) {
         console.error('加载会话失败', error)
@@ -188,114 +187,6 @@ export default function HomePage() {
     setMessages([])
   }
 
-  // 处理流式响应
-  const processStream = async (response: Response, tempAssistantId: string, tempUserId: string, activeApp: App) => {
-    try {
-      if (!response.body) {
-        throw new Error('响应体为空')
-      }
-
-      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
-      let buffer = ''
-      let messageContent = ''
-      let conversationId = ''
-      let messageId = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += value
-        const events = buffer.split('\n\n')
-        buffer = events.pop() || ''
-
-        for (const eventText of events) {
-          if (!eventText.trim()) continue
-
-          const eventLines = eventText.split('\n')
-          let eventName = 'message'
-          let eventData = ''
-
-          for (const line of eventLines) {
-            if (line.startsWith('event:')) {
-              eventName = line.substring(6).trim()
-            } else if (line.startsWith('data:')) {
-              eventData = line.substring(5).trim()
-            }
-          }
-
-          // 处理不同类型的事件
-          if (eventName === 'metadata') {
-            try {
-              const metadata = JSON.parse(eventData)
-              if (metadata.conversationId) {
-                conversationId = String(metadata.conversationId)
-
-                if (!activeConversationId) {
-                  loadConversations(activeApp.appId)
-                  setActiveConversationId(conversationId)
-                }
-              }
-              if (metadata.messageId) {
-                messageId = String(metadata.messageId)
-              }
-            } catch (e) {
-              console.error('解析元数据失败', e)
-            }
-          } else if (eventName !== 'end' && eventData) {
-            // 处理普通消息内容
-            messageContent += eventData
-
-            setMessages((prev) => {
-              const updated = [...prev]
-              const assistantMessageIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
-              if (assistantMessageIndex !== -1) {
-                updated[assistantMessageIndex] = {
-                  ...updated[assistantMessageIndex],
-                  content: messageContent,
-                }
-              }
-              return updated
-            })
-          }
-        }
-      }
-
-      // 流结束处理
-      if (conversationId) {
-        // 更新消息的ID为真实ID
-        if (messageId) {
-          setMessages((prev) => {
-            const updated = [...prev]
-            const userMsgIndex = updated.findIndex((msg) => msg.id === tempUserId)
-            const assistantMsgIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
-
-            if (userMsgIndex !== -1) {
-              updated[userMsgIndex] = {
-                ...updated[userMsgIndex],
-                id: `${messageId}-q`,
-              }
-            }
-
-            if (assistantMsgIndex !== -1) {
-              updated[assistantMsgIndex] = {
-                ...updated[assistantMsgIndex],
-                id: `${messageId}-a`,
-              }
-            }
-
-            return updated
-          })
-        }
-      }
-
-      // 刷新会话列表
-      loadConversations(activeApp.appId)
-    } catch (error) {
-      console.error('处理流数据失败', error)
-    }
-  }
-
   // 发送消息
   const handleSendMessage = async (question: string, modelId: string) => {
     if (!question || !activeApp || !modelId || !tenantId || !userId) return
@@ -330,15 +221,101 @@ export default function HomePage() {
         prompt: question,
       }
 
-      // 获取流式响应
-      const response = await chatService.streamMessage(chatRequest)
+      // 创建处理流式消息的回调
+      let conversationId = activeConversationId
+      let messageId = ''
+      let messageContent = ''
 
-      if (!response.ok || !response.body) {
-        throw new Error(`流式响应创建失败: ${response.status}`)
-      }
+      await chatService.streamMessageWithHandling(chatRequest, {
+        onMessage: (event) => {
+          try {
+            const data = event.data
+            if (event.name === 'metadata') {
+              try {
+                const metaData = JSON.parse(data)
+                if (metaData.conversationId) {
+                  conversationId = metaData.conversationId
+                }
+                if (metaData.messageId) {
+                  messageId = metaData.messageId
+                }
+                if (!activeConversationId) {
+                  loadConversations(activeApp.appId)
+                  setActiveConversationId(conversationId)
+                }
+              } catch (jsonError) {
+                console.error('解析metadata JSON失败:', jsonError, data)
+              }
+            } else if (event.name === 'end') {
+              return
+            } else {
+              messageContent += data
+            }
+            setMessages((prev) => {
+              const updated = [...prev]
+              const assistantMessageIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
+              if (assistantMessageIndex !== -1) {
+                updated[assistantMessageIndex] = {
+                  ...updated[assistantMessageIndex],
+                  content: messageContent,
+                }
+              }
+              return updated
+            })
+          } catch (error) {
+            console.error('处理消息数据失败', error)
+          }
+        },
+        onError: (error) => {
+          console.error('处理流数据失败', error)
+          // 显示错误消息
+          setMessages((prev) => {
+            const updated = [...prev]
+            const assistantMessageIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
+            if (assistantMessageIndex !== -1) {
+              updated[assistantMessageIndex] = {
+                ...updated[assistantMessageIndex],
+                content: `抱歉，${error.message || '请求发送失败，请重试。'}`,
+              }
+            }
+            return updated
+          })
+        },
+        onComplete: () => {
+          try {
+            if (conversationId && messageId) {
+              // 更新消息的ID为真实ID
+              setMessages((prev) => {
+                const updated = [...prev]
+                const userMsgIndex = updated.findIndex((msg) => msg.id === tempUserId)
+                const assistantMsgIndex = updated.findIndex((msg) => msg.id === tempAssistantId)
 
-      // 处理流式响应
-      processStream(response, tempAssistantId, tempUserId, activeApp)
+                if (userMsgIndex !== -1) {
+                  updated[userMsgIndex] = {
+                    ...updated[userMsgIndex],
+                    id: `${messageId}-q`,
+                  }
+                }
+
+                if (assistantMsgIndex !== -1) {
+                  updated[assistantMsgIndex] = {
+                    ...updated[assistantMsgIndex],
+                    id: `${messageId}-a`,
+                  }
+                }
+
+                return updated
+              })
+
+              // // 刷新会话列表
+              // loadConversations(activeApp.appId)
+            }
+          } catch (completeError) {
+            console.error('流完成处理失败', completeError)
+            // 不需要向用户显示此错误，因为内容已经显示出来了
+          }
+        },
+      })
     } catch (error) {
       console.error('发送消息失败', error)
 

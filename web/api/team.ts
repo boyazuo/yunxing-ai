@@ -1,19 +1,19 @@
 import { api } from '@/lib/api'
-import { Tenant, TenantPlan, TenantUserRole } from '@/types/account'
+import type { Tenant, TenantPlan, TenantUserRole } from '@/types/account'
 
 export interface TenantRequest {
-    tenantId?: number
-    tenantName: string
-    plan?: TenantPlan
+  tenantId?: number
+  tenantName: string
+  plan?: TenantPlan
 }
 
 export interface UserInTenant {
-    userId: number,
-    username: string,
-    email: string,
-    avatar: string,
-    role: TenantUserRole | string,
-    isActive: boolean,
+  userId: number
+  username: string
+  email: string
+  avatar: string
+  role: TenantUserRole | string
+  isActive: boolean
 }
 
 export const teamService = {
@@ -52,7 +52,7 @@ export const teamService = {
     }
   },
 
-  async updupdateTenantUserRole(role : TenantUserRole, tenantId: number, userId: number) {
+  async updupdateTenantUserRole(role: TenantUserRole, tenantId: number, userId: number) {
     try {
       const response = await api.put<null>(`${this.apiRoot}/${tenantId}/users/${userId}`, { role })
       return response
@@ -70,5 +70,5 @@ export const teamService = {
       console.error('删除团队成员失败', error)
       throw error
     }
-  }
+  },
 }

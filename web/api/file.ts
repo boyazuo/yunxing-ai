@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import { SysFile } from '@/types/system'
+import type { SysFile } from '@/types/system'
 
 export const fileService = {
   apiRoot: '/system/file',

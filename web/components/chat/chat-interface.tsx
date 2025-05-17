@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
 import { ArrowRight, ChevronDown, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 // 定义类型
 export interface ChatMessage {
@@ -178,14 +178,16 @@ interface ChatMessagesProps {
 
 function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversation }: ChatMessagesProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const container = messagesContainerRef.current
 
-  requestAnimationFrame(() => {
+  // 使用 useLayoutEffect 确保在DOM更新后但在浏览器绘制前执行滚动
+  // 创建一个安全的客户端专用钩子，以避免服务器端渲染问题
+  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
+  useIsomorphicLayoutEffect(() => {
+    const container = messagesContainerRef.current
     if (container) {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
-      })
+      // 滚动到底部
+      container.scrollTop = container.scrollHeight
     }
   })
 

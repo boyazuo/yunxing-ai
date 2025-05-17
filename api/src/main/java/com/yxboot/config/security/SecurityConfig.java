@@ -23,6 +23,8 @@ import com.yxboot.config.security.handler.CustomAccessDeniedHandler;
 import com.yxboot.config.security.handler.CustomAuthenticationEntryPoint;
 import com.yxboot.config.security.jwt.JwtAuthorizationFilter;
 
+import jakarta.servlet.DispatcherType;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -46,6 +48,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**")
                         .permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 异常处理
