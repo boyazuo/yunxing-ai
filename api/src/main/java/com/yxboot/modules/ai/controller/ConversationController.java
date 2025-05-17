@@ -1,7 +1,5 @@
 package com.yxboot.modules.ai.controller;
 
-import java.util.List;
-
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.modules.ai.dto.ConversationDTO;
@@ -41,10 +40,13 @@ public class ConversationController {
 
     @GetMapping
     @Operation(summary = "获取会话列表", description = "获取用户的会话列表")
-    public Result<List<ConversationDTO>> getConversations(
+    public Result<Page<ConversationDTO>> getConversations(
             @RequestParam @Parameter(description = "用户ID") Long userId,
-            @RequestParam @Parameter(description = "应用ID") Long appId) {
-        List<ConversationDTO> conversations = conversationService.getUserAppConversations(userId, appId);
+            @RequestParam @Parameter(description = "应用ID") Long appId,
+            @RequestParam(required = false, defaultValue = "1") @Parameter(description = "当前页码") Long current,
+            @RequestParam(required = false, defaultValue = "15") @Parameter(description = "每页记录数") Long size) {
+
+        Page<ConversationDTO> conversations = conversationService.getUserAppConversations(userId, appId, current, size);
         return Result.success("查询成功", conversations);
     }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
 
 import { conversationService } from '@/api/conversation'
 import {
@@ -24,7 +24,7 @@ import type { App } from '@/types/app'
 import type { Conversation } from '@/types/chat'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Loader2, MessageSquare, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Loader2, MessageSquare, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 
@@ -75,6 +75,16 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
     // 会话状态
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [loadingConversations, setLoadingConversations] = useState(false)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [paginationData, setPaginationData] = useState<{
+      current: number
+      hasNext: boolean
+      total: number
+    }>({
+      current: 1,
+      hasNext: false,
+      total: 0,
+    })
 
     // 加载会话列表
     const loadConversations = useCallback(
@@ -83,7 +93,12 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
         try {
           setLoadingConversations(true)
           const data = await conversationService.getConversations(userId, appId)
-          setConversations(data || [])
+          setConversations(data.records || [])
+          setPaginationData({
+            current: data.current,
+            hasNext: Number(data.current) < Number(data.pages),
+            total: data.total,
+          })
         } catch (error) {
           console.error('加载会话失败', error)
         } finally {
@@ -91,6 +106,31 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
         }
       },
       [userId],
+    )
+
+    // 加载更多会话
+    const loadMoreConversations = useCallback(
+      async (appId: string) => {
+        if (!userId || !appId || !paginationData.hasNext || loadingMore) return
+        try {
+          setLoadingMore(true)
+          const nextPage = Number(paginationData.current) + 1
+          const data = await conversationService.getConversations(userId, appId, nextPage)
+
+          // 合并会话数据
+          setConversations((prev) => [...prev, ...data.records])
+          setPaginationData({
+            current: data.current,
+            hasNext: data.hasNext,
+            total: data.total,
+          })
+        } catch (error) {
+          console.error('加载更多会话失败', error)
+        } finally {
+          setLoadingMore(false)
+        }
+      },
+      [userId, paginationData, loadingMore],
     )
 
     // 暴露方法给父组件
@@ -108,6 +148,11 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
         loadConversations(activeApp.appId)
       } else {
         setConversations([])
+        setPaginationData({
+          current: 1,
+          hasNext: false,
+          total: 0,
+        })
       }
     }, [activeApp, loadConversations])
 
@@ -193,6 +238,28 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
       }
     }
 
+    // 列表容器引用，用于监听滚动
+    const listContainerRef = useRef<HTMLDivElement>(null)
+
+    // 滚动加载检测
+    useEffect(() => {
+      const container = listContainerRef.current
+      if (!container) return
+
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = container
+        // 当滚动到距离底部100px时触发加载更多
+        if (scrollTop + clientHeight >= scrollHeight - 100 && activeApp && paginationData.hasNext && !loadingMore) {
+          loadMoreConversations(activeApp.appId)
+        }
+      }
+
+      container.addEventListener('scroll', handleScroll)
+      return () => {
+        container.removeEventListener('scroll', handleScroll)
+      }
+    }, [activeApp, paginationData.hasNext, loadingMore, loadMoreConversations])
+
     return (
       <div className="w-64 border-r flex flex-col bg-muted/10">
         <div className="p-4 border-b">
@@ -211,7 +278,7 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
+        <div ref={listContainerRef} className="flex-1 overflow-auto">
           <AnimatePresence mode="wait">
             {loadingConversations ? (
               <motion.div
@@ -249,86 +316,108 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
                 暂无会话记录
               </motion.div>
             ) : (
-              <motion.ul
-                key="conversations"
+              <motion.div
+                key="conversations-container"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-1 p-2"
+                className="p-2"
               >
-                {conversations.map((conversation) => {
-                  const isActive = conversation.conversationId === activeConversationId
-                  return (
-                    <motion.li
-                      key={conversation.conversationId}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      layout
-                    >
-                      <div
-                        className={`group relative w-full px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
-                          isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent/50'
-                        }`}
+                <motion.ul className="space-y-1">
+                  {conversations.map((conversation) => {
+                    const isActive = conversation.conversationId === activeConversationId
+                    return (
+                      <motion.li
+                        key={conversation.conversationId}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        layout
                       >
-                        <button
-                          type="button"
-                          className="w-full flex items-center"
-                          onClick={() => handleConversationClick(conversation)}
-                          aria-pressed={isActive}
-                        >
-                          <MessageSquare
-                            className={`h-4 w-4 mr-2 flex-shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`}
-                          />
-                          <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
-                        </button>
-
-                        {/* 更多操作按钮（仅在悬停和选中状态显示） */}
                         <div
-                          className={`absolute right-2 top-1/2 -translate-y-1/2 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                          className={`group relative w-full px-3 py-2.5 rounded-md cursor-pointer transition-colors ${
+                            isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent/50'
+                          }`}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-7 w-7 ${isActive ? 'text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground hover:bg-accent'}`}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">操作菜单</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-36">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleRename(conversation)
-                                }}
-                              >
-                                <Pencil className="h-4 w-4 mr-2" />
-                                <span>重命名</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleDeleteDialog(conversation)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                <span>删除</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <button
+                            type="button"
+                            className="w-full flex items-center"
+                            onClick={() => handleConversationClick(conversation)}
+                            aria-pressed={isActive}
+                          >
+                            <MessageSquare
+                              className={`h-4 w-4 mr-2 flex-shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`}
+                            />
+                            <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
+                          </button>
+
+                          {/* 更多操作按钮（仅在悬停和选中状态显示） */}
+                          <div
+                            className={`absolute right-2 top-1/2 -translate-y-1/2 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                          >
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-7 w-7 ${isActive ? 'text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground hover:bg-accent'}`}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">操作菜单</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleRename(conversation)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  <span>重命名</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleDeleteDialog(conversation)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  <span>删除</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
-                      </div>
-                    </motion.li>
-                  )
-                })}
-              </motion.ul>
+                      </motion.li>
+                    )
+                  })}
+                </motion.ul>
+
+                {/* 加载更多按钮 */}
+                {paginationData.hasNext && (
+                  <div className="flex justify-center mt-4 pb-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => activeApp && loadMoreConversations(activeApp.appId)}
+                      disabled={loadingMore}
+                      className="w-full text-xs text-muted-foreground h-8"
+                    >
+                      {loadingMore ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3 mr-2" />
+                      )}
+                      {loadingMore ? '加载中...' : '加载更多'}
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

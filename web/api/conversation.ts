@@ -1,6 +1,25 @@
 import { api } from '@/lib/api'
 import type { Conversation, Message } from '@/types/chat'
 
+// 定义分页数据结构
+export interface PageData<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages: number
+  hasNext: boolean
+}
+
+// 后端返回的分页数据接口
+interface PageResponse<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages: number
+}
+
 /**
  * 会话服务
  */
@@ -9,12 +28,26 @@ export const conversationService = {
    * 获取用户在指定应用下的会话列表
    * @param userId 用户ID
    * @param appId 应用ID
-   * @returns 会话列表
+   * @param current 当前页码
+   * @param size 每页大小
+   * @returns 会话列表分页数据
    */
-  async getConversations(userId: string, appId: string): Promise<Conversation[]> {
+  async getConversations(userId: string, appId: string, current = 1, size = 15): Promise<PageData<Conversation>> {
     try {
-      const response = await api.get<Conversation[]>(`/conversations?userId=${userId}&appId=${appId}`)
-      return response.data
+      const response = await api.get<PageResponse<Conversation>>(
+        `/conversations?userId=${userId}&appId=${appId}&current=${current}&size=${size}`,
+      )
+
+      // 适配后端返回的分页数据结构
+      const data = response.data
+      return {
+        records: data.records || [],
+        total: data.total || 0,
+        size: data.size || size,
+        current: data.current || current,
+        pages: data.pages || 1,
+        hasNext: data.current < data.pages,
+      }
     } catch (error) {
       console.error('获取会话列表失败', error)
       throw new Error('获取会话列表失败')

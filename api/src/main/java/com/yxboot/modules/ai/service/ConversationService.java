@@ -1,11 +1,11 @@
 package com.yxboot.modules.ai.service;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yxboot.modules.ai.dto.ConversationDTO;
 import com.yxboot.modules.ai.entity.Conversation;
@@ -42,19 +42,26 @@ public class ConversationService extends ServiceImpl<ConversationMapper, Convers
     /**
      * 获取用户在指定应用下的会话列表
      * 
-     * @param userId 用户ID
-     * @param appId  应用ID
-     * @return 会话列表
+     * @param userId  用户ID
+     * @param appId   应用ID
+     * @param current 当前页
+     * @param size    每页大小
+     * @return 会话列表分页对象
      */
-    public List<ConversationDTO> getUserAppConversations(Long userId, Long appId) {
+    public Page<ConversationDTO> getUserAppConversations(Long userId, Long appId, Long current, Long size) {
         LambdaQueryWrapper<Conversation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Conversation::getUserId, userId)
                 .eq(Conversation::getAppId, appId)
                 .orderByDesc(Conversation::getUpdateTime);
-        List<Conversation> conversations = list(queryWrapper);
-        return conversations.stream()
+
+        Page<Conversation> page = page(new Page<>(current, size), queryWrapper);
+
+        Page<ConversationDTO> dtoPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        dtoPage.setRecords(page.getRecords().stream()
                 .map(ConversationDTO::fromConversation)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
+
+        return dtoPage;
     }
 
     /**
