@@ -8,6 +8,7 @@ import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
 import { ArrowRight, ChevronDown, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import Markdown from 'react-markdown'
 
 // 定义类型
 export interface ChatMessage {
@@ -469,7 +470,10 @@ function ChatMessageItem({ message, activeApp }: ChatMessageItemProps) {
               isUserMessage ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted shadow-sm'
             }`}
           >
-            <div className="whitespace-pre-line text-sm">{message.content}</div>
+            <div className="whitespace-pre-line text-sm">
+              <Markdown>{message.content}</Markdown>
+            </div>
+            {/* <div className="whitespace-pre-line text-sm">{message.content}</div> */}
           </div>
           <div className={`text-xs mt-1 text-muted-foreground ${isUserMessage ? 'text-right' : ''}`}>
             {message.time}
