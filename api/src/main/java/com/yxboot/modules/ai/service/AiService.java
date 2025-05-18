@@ -127,7 +127,7 @@ public class AiService {
                             // 确保chunk不为空
                             if (chunk != null && !chunk.trim().isEmpty()) {
                                 // 发送数据块，格式化为SSE格式
-                                emitter.send(SseEmitter.event().data(chunk));
+                                emitter.send(SseEmitter.event().data(Map.of("chunk", chunk)));
                             }
                         } catch (IOException e) {
                             log.error("发送流式数据异常", e);

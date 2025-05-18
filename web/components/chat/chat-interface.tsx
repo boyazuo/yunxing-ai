@@ -8,7 +8,7 @@ import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
 import { ArrowRight, ChevronDown, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
-import Markdown from 'react-markdown'
+import { Markdown } from './markdown'
 
 // 定义类型
 export interface ChatMessage {
@@ -197,7 +197,9 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
                 } else if (event.name === 'end') {
                   return
                 } else {
-                  messageContent += data
+                  const chunk = JSON.parse(data).chunk
+                  console.log('chunk', chunk)
+                  messageContent += chunk
                   // 更新流式消息内容
                   updateMessageContent(messageContent, tempAssistantId)
                 }
