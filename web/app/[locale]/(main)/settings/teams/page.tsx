@@ -1,5 +1,6 @@
 'use client'
 
+import { invitationService } from '@/api/invitation'
 import { teamService, UserInTenant } from '@/api/team'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -65,9 +66,6 @@ import * as z from 'zod'
 
 // 团队成员表单验证
 const memberFormSchema = z.object({
-  name: z.string().min(2, {
-    message: '姓名至少需要 2 个字符',
-  }),
   email: z.string().email({
     message: '请输入有效的邮箱地址',
   }),
@@ -100,7 +98,7 @@ const roles = [
 ]
 
 // 测试数据 - 多个团队信息
-const initialTeams: Tenant[] = [{ tenantId: 0, tenantName: '' }]
+const initialTeams: Tenant[] = [{ tenantId: '', tenantName: '' }]
 
 // 团队成员
 const initialMembers: UserInTenant[] = []
@@ -150,7 +148,6 @@ export default function TeamsPage() {
   const memberForm = useForm<z.infer<typeof memberFormSchema>>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
-      name: '',
       email: '',
       role: 'normal',
     },
@@ -176,24 +173,21 @@ export default function TeamsPage() {
       // 这里添加邀请团队成员的API调用
       console.log('邀请团队成员:', data)
 
-      // 模拟添加团队成员
-      const newMember: UserInTenant = {
-        userId: Date.now(),
-        username: data.name,
-        email: data.email,
-        role: data.role,
-        avatar: '',
-        isActive: true,
-      }
+      // 调用邀请 并 发送邮件的API
+      await invitationService.createInvitations({
+        inviterTenantId: currentTeam.tenantId,
+        inviteeEmail: data.email,
+        inviteeRole: data.role,
+      })
 
-      setMembers([...members, newMember])
       toast.success('团队成员邀请已发送')
       memberForm.reset()
-      setIsOpenAddDialog(false)
+     
     } catch (error) {
       toast.error('邀请团队成员失败')
       console.error(error)
     } finally {
+      setIsOpenAddDialog(false)
       setIsSubmitting(false)
     }
   }
@@ -231,7 +225,7 @@ export default function TeamsPage() {
   }
 
   // 处理团队切换
-  const handleTeamChange = (teamId: number | undefined) => {
+  const handleTeamChange = (teamId: string | undefined) => {
     const selectedTeam = teams.find((team) => team.tenantId === teamId)
     if (selectedTeam) {
       // 更新所有团队的活跃状态
@@ -250,7 +244,7 @@ export default function TeamsPage() {
   }
 
   // 处理删除团队成员
-  const handleDeleteMember = (id: number) => {
+  const handleDeleteMember = (id: string) => {
     try {
       // 这里添加删除团队成员的API调用
       teamService.deleteTenantUser(currentTeam.tenantId, id).then((res) => {
@@ -268,7 +262,7 @@ export default function TeamsPage() {
   }
 
   // 处理修改团队成员角色
-  const handleChangeRole = (userId: number, newRole: TenantUserRole) => {
+  const handleChangeRole = (userId: string, newRole: TenantUserRole) => {
     try {
       // 这里添加修改团队成员角色的API调用
       teamService
@@ -449,19 +443,6 @@ export default function TeamsPage() {
                     >
                       <FormField
                         control={memberForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>姓名</FormLabel>
-                            <FormControl>
-                              <Input placeholder="请输入姓名" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={memberForm.control}
                         name="email"
                         render={({ field }) => (
                           <FormItem>
@@ -489,7 +470,7 @@ export default function TeamsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {roles.map((role) => (
+                                {roles.filter((role) => role.value !== 'owner').map((role) => (
                                   <SelectItem
                                     key={role.value}
                                     value={role.value}

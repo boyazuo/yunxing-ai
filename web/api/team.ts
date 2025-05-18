@@ -2,14 +2,14 @@ import { api } from '@/lib/api'
 import type { Tenant, TenantPlan, TenantUserRole } from '@/types/account'
 
 export interface TenantRequest {
-  tenantId?: number
+  tenantId?: string
   tenantName: string
   plan?: TenantPlan
 }
 
 export interface UserInTenant {
-  userId: number
-  username: string
+  userId: string
+  username?: string
   email: string
   avatar: string
   role: TenantUserRole | string
@@ -42,7 +42,7 @@ export const teamService = {
     }
   },
 
-  async getUserInTeam(tenantId: number) {
+  async getUserInTeam(tenantId: string) {
     try {
       const response = await api.get<UserInTenant[]>(`${this.apiRoot}/${tenantId}/users`)
       return response.data
@@ -52,7 +52,7 @@ export const teamService = {
     }
   },
 
-  async updupdateTenantUserRole(role: TenantUserRole, tenantId: number, userId: number) {
+  async updupdateTenantUserRole(role: TenantUserRole, tenantId: string, userId: string) {
     try {
       const response = await api.put<null>(`${this.apiRoot}/${tenantId}/users/${userId}`, { role })
       return response
@@ -62,7 +62,7 @@ export const teamService = {
     }
   },
 
-  async deleteTenantUser(tenantId: number, userId: number) {
+  async deleteTenantUser(tenantId: string, userId: string) {
     try {
       const response = await api.delete<null>(`${this.apiRoot}/${tenantId}/users/${userId}`)
       return response
