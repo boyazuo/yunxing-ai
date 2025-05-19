@@ -2,14 +2,20 @@
 import Link from 'next/link'
 import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './code-block'
 
 // @ts-ignore
 const components = {
-  code: ({ inline, className, children, ...props }) => {
-    return (
-      <CodeBlock isInline={!!inline} className={className} {...props}>
+  code: ({ node, inline, className, children, ...props }) => {
+    const match = /language-(\w+)/.exec(className || '')
+    return !inline && match ? (
+      <CodeBlock inline={false} className={className} {...props}>
+        {children}
+      </CodeBlock>
+    ) : (
+      <CodeBlock inline={true} className={className} {...props}>
         {children}
       </CodeBlock>
     )
@@ -72,7 +78,7 @@ const components = {
   ),
 }
 
-const remarkPlugins = [remarkGfm]
+const remarkPlugins = [remarkGfm, remarkBreaks]
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (

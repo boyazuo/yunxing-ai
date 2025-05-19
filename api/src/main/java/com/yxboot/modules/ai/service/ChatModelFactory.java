@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import com.yxboot.llm.chat.ChatModel;
 import com.yxboot.llm.chat.ModelProvider;
-import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 
 import jakarta.annotation.PostConstruct;
@@ -71,7 +70,7 @@ public class ChatModelFactory {
      * @param model    模型信息
      * @return ChatModel实例
      */
-    public ChatModel createChatModel(Provider provider, Model model) {
+    public ChatModel createChatModel(Provider provider) {
         String providerName = provider.getProviderName().toLowerCase();
         String cacheKey = providerName;
 
@@ -82,7 +81,7 @@ public class ChatModelFactory {
 
             // 从已注册的模型中查找并配置
             return Optional.ofNullable(modelProviderMap.get(targetProvider))
-                    .map(chatModel -> configureModel(chatModel, provider, model))
+                    .map(chatModel -> configureModel(chatModel, provider))
                     .orElseThrow(() -> new UnsupportedOperationException(
                             "不支持的模型提供商: " + provider.getProviderName()));
         });
@@ -113,7 +112,7 @@ public class ChatModelFactory {
     /**
      * 配置模型实例
      */
-    private ChatModel configureModel(ChatModel chatModel, Provider provider, Model model) {
+    private ChatModel configureModel(ChatModel chatModel, Provider provider) {
         log.info("找到匹配的ChatModel实现: {} 用于提供商: {}",
                 chatModel.getClass().getSimpleName(), provider.getProviderName());
         // 这里可以根据不同类型的模型进行特定配置

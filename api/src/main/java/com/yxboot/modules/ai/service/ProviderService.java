@@ -63,6 +63,19 @@ public class ProviderService extends ServiceImpl<ProviderMapper, Provider> {
     }
 
     /**
+     * 根据模型ID获取提供商
+     * 
+     * @param modelId 模型ID
+     * @return 提供商
+     */
+    public Provider getProviderByModelId(Long modelId) {
+        LambdaQueryWrapper<Provider> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.exists("select 1 from model where model.provider_id = provider.provider_id and model.model_id = "
+                + modelId);
+        return getOne(queryWrapper);
+    }
+
+    /**
      * 更新提供商信息
      * 
      * @param providerId   提供商ID

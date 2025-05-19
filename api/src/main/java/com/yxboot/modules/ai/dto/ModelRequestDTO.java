@@ -2,6 +2,8 @@ package com.yxboot.modules.ai.dto;
 
 import java.util.List;
 
+import com.yxboot.llm.chat.message.Message;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -21,16 +23,19 @@ public class ModelRequestDTO {
     private Long appId;
 
     @Schema(description = "会话ID")
-    private String conversationId;
+    private Long conversationId;
 
     @Schema(description = "模型ID")
     private Long modelId;
+
+    @Schema(description = "模型名称")
+    private String modelName;
 
     @Schema(description = "提示词")
     private String prompt;
 
     @Schema(description = "消息列表")
-    private List<MessageDTO> messages;
+    private List<Message> messages;
 
     @Schema(description = "系统提示词")
     private String systemPrompt;

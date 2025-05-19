@@ -181,7 +181,8 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    outline-color: hsl(var(--ring) / 0.5);
   }
   body {
     @apply bg-background text-foreground;

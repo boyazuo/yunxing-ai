@@ -1,6 +1,7 @@
 package com.yxboot.modules.ai.controller;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,17 +17,20 @@ import com.yxboot.modules.ai.dto.ModelRequestDTO;
 import com.yxboot.modules.ai.dto.ModelResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
 import com.yxboot.modules.ai.entity.Message;
-import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
 import com.yxboot.modules.ai.service.AiService;
 import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
-import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
+import com.yxboot.modules.app.entity.AppConfig;
+import com.yxboot.modules.app.service.AppConfigService;
 
+import cn.hutool.json.JSONUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -42,24 +46,42 @@ public class AiController {
 
     private final AiService aiService;
     private final ProviderService providerService;
-    private final ModelService modelService;
     private final ConversationService conversationService;
     private final MessageService messageService;
+    private final AppConfigService appConfigService;
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
     public SseEmitter chatCompletion(
             @AuthenticationPrincipal SecurityUser securityUser,
             @RequestBody ModelRequestDTO request) throws Exception {
-
         Long userId = securityUser.getUserId();
-        // 获取提供商和模型信息
-        Model model = modelService.getById(request.getModelId());
-        Provider provider = providerService.getById(model.getProviderId());
+        // 获取提供商信息
+        Provider provider = providerService.getProviderByModelId(request.getModelId());
+        // 获取应用配置
+        AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
+        // 设置系统提示词
+        request.setSystemPrompt(appConfig.getSysPrompt());
+        // 获取模型配置
+        String models = appConfig.getModels();
+        if (models != null && !models.isEmpty()) {
+            List<ModelConfig> modelConfigs = JSONUtil.parseArray(models).toList(ModelConfig.class);
+            ModelConfig modelConfig = modelConfigs.stream()
+                    .filter(m -> m.getModelId().equals(request.getModelId()))
+                    .findFirst()
+                    .orElse(null);
+            if (modelConfig != null) {
+                request.setModelId(modelConfig.getModelId());
+                request.setModelName(modelConfig.getModelName());
+                request.setTemperature(Float.parseFloat(modelConfig.getTemperature()));
+                request.setTopP(Float.parseFloat(modelConfig.getTopP()));
+                request.setMaxTokens(Integer.parseInt(modelConfig.getMaxTokens()));
+            }
+        }
 
         // 处理会话
         Long conversationId = handleConversation(userId, request);
-        request.setConversationId(conversationId.toString());
+        request.setConversationId(conversationId);
 
         // 创建消息记录
         Message message = messageService.createMessage(
@@ -72,7 +94,7 @@ public class AiController {
         SseEmitter emitter = new SseEmitter(300000L);
 
         // 调用AI服务进行流式聊天
-        aiService.streamingChatCompletion(provider, model, request, emitter, message.getMessageId());
+        aiService.streamingChatCompletion(provider, request, emitter, message.getMessageId());
 
         return emitter;
     }
@@ -95,9 +117,29 @@ public class AiController {
         // 确保使用非流式请求
         request.setStream(false);
 
-        // 获取提供商和模型信息
-        Model model = modelService.getById(request.getModelId());
-        Provider provider = providerService.getById(model.getProviderId());
+        // 获取提供商信息
+        Provider provider = providerService.getProviderByModelId(request.getModelId());
+        // 获取应用配置
+        AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
+        // 设置系统提示词
+        request.setSystemPrompt(appConfig.getSysPrompt());
+
+        // 获取模型配置
+        String models = appConfig.getModels();
+        if (models != null && !models.isEmpty()) {
+            List<ModelConfig> modelConfigs = JSONUtil.parseArray(models).toList(ModelConfig.class);
+            ModelConfig modelConfig = modelConfigs.stream()
+                    .filter(m -> m.getModelId().equals(request.getModelId()))
+                    .findFirst()
+                    .orElse(null);
+            if (modelConfig != null) {
+                request.setModelId(modelConfig.getModelId());
+                request.setModelName(modelConfig.getModelName());
+                request.setTemperature(Float.parseFloat(modelConfig.getTemperature()));
+                request.setTopP(Float.parseFloat(modelConfig.getTopP()));
+                request.setMaxTokens(Integer.parseInt(modelConfig.getMaxTokens()));
+            }
+        }
 
         // 处理会话
         Long conversationId = handleConversation(userId, request);
@@ -110,7 +152,7 @@ public class AiController {
                 request.getPrompt());
 
         // 调用AI服务进行聊天
-        ModelResponseDTO response = aiService.chatCompletion(provider, model, request);
+        ModelResponseDTO response = aiService.chatCompletion(provider, request);
 
         // 更新消息回复
         messageService.updateMessageAnswer(message.getMessageId(), response.getContent(), MessageStatus.COMPLETED);
@@ -132,20 +174,16 @@ public class AiController {
         Long conversationId = null;
 
         // 检查是否存在会话ID
-        if (request.getConversationId() != null && !request.getConversationId().isEmpty()) {
-            try {
-                conversationId = Long.parseLong(request.getConversationId());
+        if (request.getConversationId() != null) {
 
-                // 检查会话是否存在
-                Conversation conversation = conversationService.getById(conversationId);
-                if (conversation != null) {
-                    // 更新会话的更新时间
-                    conversation.setUpdateTime(LocalDateTime.now());
-                    conversationService.updateById(conversation);
-                    return conversationId;
-                }
-            } catch (NumberFormatException e) {
-                // conversationId不是有效的Long，忽略并创建新会话
+            conversationId = request.getConversationId();
+            // 检查会话是否存在
+            Conversation conversation = conversationService.getById(conversationId);
+            if (conversation != null) {
+                // 更新会话的更新时间
+                conversation.setUpdateTime(LocalDateTime.now());
+                conversationService.updateById(conversation);
+                return conversationId;
             }
         }
 
@@ -162,5 +200,17 @@ public class AiController {
                 title);
 
         return conversation.getConversationId();
+    }
+
+    @Data
+    @Schema(description = "模型配置")
+    public static class ModelConfig {
+        private String id;
+        private Long modelId;
+        private String modelName;
+        private String provider;
+        private String temperature;
+        private String topP;
+        private String maxTokens;
     }
 }
