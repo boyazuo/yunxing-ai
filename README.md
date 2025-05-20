@@ -69,6 +69,7 @@ yunxing-ai/
 │   │   ├── modules/     # 业务模块
 |   |   |    ├── account # 账户权限模块
 |   |   |    ├── app     # 应用模块
+|   |   |    ├── dataset # 数据集（知识库）模块
 |   |   |    ├── system  # 系统模块
 |   |   |    └── ai      # AI模型模块
 │   │   ├── util/        # 工具类

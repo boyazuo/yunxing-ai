@@ -55,6 +55,43 @@ CREATE TABLE `conversation` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
 
 -- ----------------------------
+-- Table structure for dataset
+-- ----------------------------
+DROP TABLE IF EXISTS `dataset`;
+CREATE TABLE `dataset` (
+  `dataset_id` bigint(20) NOT NULL COMMENT '数据集ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `dataset_name` varchar(255) DEFAULT NULL COMMENT '数据集名称',
+  `dataset_desc` varchar(1000) DEFAULT NULL COMMENT '数据集描述',
+  `embedding_model_id` bigint(20) DEFAULT NULL COMMENT '嵌入模型 ID',
+  `status` varchar(20) DEFAULT NULL COMMENT '状态',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`dataset_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据集表';
+
+-- ----------------------------
+-- Table structure for invitation_record
+-- ----------------------------
+DROP TABLE IF EXISTS `invitation_record`;
+CREATE TABLE `invitation_record` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `inviter_tenant_id` bigint(20) NOT NULL COMMENT '邀请租户ID',
+  `inviter_user_id` bigint(20) NOT NULL COMMENT '邀请人ID',
+  `invitee_email` varchar(100) NOT NULL COMMENT '被邀请人邮箱',
+  `invitee_role` varchar(50) NOT NULL COMMENT '被邀请人角色',
+  `invite_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '邀请时间',
+  `status` varchar(20) NOT NULL DEFAULT '0' COMMENT '邀请状态',
+  `token` varchar(64) NOT NULL COMMENT '邀请令牌',
+  `expire_time` datetime NOT NULL COMMENT '过期时间',
+  `accept_time` datetime DEFAULT NULL COMMENT '接受时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token` (`token`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
 -- Table structure for message
 -- ----------------------------
 DROP TABLE IF EXISTS `message`;
@@ -111,6 +148,25 @@ CREATE TABLE `provider` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型提供商表';
 
 -- ----------------------------
+-- Table structure for sys_file
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_file`;
+CREATE TABLE `sys_file` (
+  `file_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '附件编号',
+  `origin_name` varchar(200) DEFAULT NULL COMMENT '原始文件名称',
+  `file_name` varchar(200) DEFAULT NULL COMMENT '文件名称',
+  `url` varchar(500) DEFAULT NULL COMMENT '文件URL',
+  `path` varchar(500) DEFAULT NULL COMMENT '文件路径',
+  `hash` varchar(100) DEFAULT NULL COMMENT '文件hash值',
+  `content_type` varchar(100) DEFAULT NULL COMMENT 'ContentType',
+  `size` bigint(20) DEFAULT NULL COMMENT '文件大小',
+  `create_user_id` bigint(20) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  PRIMARY KEY (`file_id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COMMENT='附件表';
+
+-- ----------------------------
 -- Table structure for tenant
 -- ----------------------------
 DROP TABLE IF EXISTS `tenant`;
@@ -154,6 +210,7 @@ CREATE TABLE `user` (
   `status` varchar(20) DEFAULT NULL COMMENT '状态(pending:待处理 uninitialized: 未初始化 active: 活跃 banned:已禁止 closed:已关闭)',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `avatar_id` int(11) DEFAULT NULL COMMENT '头像关联的附件表ID',
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
