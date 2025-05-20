@@ -12,4 +12,14 @@ export const invitationService = {
       throw error
     }
   },
+
+  async getInvitations(token: string) {
+    try {
+      const response = await api.get(`${this.apiRoot}/${token}`)
+      return response
+    } catch (error) {
+      console.error('获取邀请失败', error)
+      throw error
+    }
+  },
 }

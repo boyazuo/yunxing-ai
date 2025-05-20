@@ -6,6 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.yxboot.config.security.SecurityUser;
+import com.yxboot.modules.account.entity.Invitation;
+import com.yxboot.modules.account.entity.TenantUser;
+import com.yxboot.modules.account.enums.InvitationStatus;
+import com.yxboot.modules.account.service.InvitationService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +49,7 @@ public class AuthController {
     private final UserService userService;
     private final TenantService tenantService;
     private final TenantUserService tenantUserService;
+    private final InvitationService invitationService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -78,6 +84,31 @@ public class AuthController {
         user.setLastLoginTime(LocalDateTime.now());
         userService.saveOrUpdate(user);
 
+        // 加入租户
+        if (StringUtils.isNotBlank(loginRequest.getToken())) {
+            Invitation invitation = invitationService
+                    .lambdaQuery()
+                    .eq(Invitation::getToken, loginRequest.getToken())
+                    .one();
+            if (invitation != null) {
+                // 判断 是否已经加入
+                Long count = tenantUserService
+                        .lambdaQuery()
+                        .eq(TenantUser::getUserId, user.getUserId())
+                        .eq(TenantUser::getTenantId, invitation.getInviterTenantId())
+                        .count();
+                // 没有加入，进行加入操作
+                if (count == 0) {
+                    // 添加团队用户
+                    tenantUserService.addTenantUser(invitation.getInviterTenantId(), user.getUserId(), invitation.getInviteeRole());
+                    // 更新邀请状态
+                    invitation.setStatus(InvitationStatus.ACCEPTED);
+                    invitation.setAcceptTime(LocalDateTime.now());
+                    invitationService.saveOrUpdate(invitation);
+                }
+            }
+        }
+
         // 获取用户所属的租户
         List<TenantUserDTO> tenantUserDTOs = tenantService.getTenantsByUserId(user.getUserId());
 
@@ -107,7 +138,7 @@ public class AuthController {
         result.put("user", userDTO);
         result.put("tenant", activeTenantUserDTO);
 
-        return Result.success("登录成功", result);
+        return Result.success("登录成功" + (StringUtils.isNotBlank(loginRequest.getToken()) ? "，成功加入团队" : ""), result);
     }
 
     @PostMapping("/register")
@@ -128,7 +159,23 @@ public class AuthController {
         Long tenantId = tenantService.createTenant(username);
         tenantUserService.addTenantUser(tenantId, userId, TenantUserRole.OWNER);
 
-        return Result.success("注册成功");
+        // 如果存在token，需要加入token 关联的团队
+        if (StringUtils.isNotBlank(registerRequest.getToken())) {
+            Invitation invitation = invitationService
+                    .lambdaQuery()
+                    .eq(Invitation::getToken, registerRequest.getToken())
+                    .one();
+
+            if (invitation != null) {
+                // 添加团队用户
+                tenantUserService.addTenantUser(invitation.getInviterTenantId(), userId, invitation.getInviteeRole());
+                // 更新邀请状态
+                invitation.setStatus(InvitationStatus.ACCEPTED);
+                invitation.setAcceptTime(LocalDateTime.now());
+                invitationService.saveOrUpdate(invitation);
+            }
+        }
+        return Result.success("注册成功" + (StringUtils.isNotBlank(registerRequest.getToken()) ? "，成功加入团队" : ""));
     }
 
     @PutMapping("/password")
@@ -162,6 +209,8 @@ public class AuthController {
 
         @NotBlank(message = "密码不能为空")
         private String password;
+
+        private String token;
     }
 
     @Data
@@ -176,6 +225,8 @@ public class AuthController {
 
         @NotBlank(message = "密码不能为空")
         private String password;
+
+        private String token;
     }
 
     /**

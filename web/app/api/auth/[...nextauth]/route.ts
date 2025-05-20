@@ -11,6 +11,7 @@ export const authOptions: AuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        token:{ label: 'Token', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -22,6 +23,7 @@ export const authOptions: AuthOptions = {
           const response = await authService.login({
             email: credentials.email,
             password: credentials.password,
+            token: credentials.token
           })
 
           if (!response) {

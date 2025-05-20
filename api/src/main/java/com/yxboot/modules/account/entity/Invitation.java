@@ -2,6 +2,7 @@ package com.yxboot.modules.account.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.yxboot.modules.account.enums.InvitationStatus;
+import com.yxboot.modules.account.enums.TenantUserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,10 +15,10 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("invitation_record")
-public class InvitationRecord implements Serializable {
+@TableName("invitation")
+public class Invitation implements Serializable {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     @TableField("inviter_tenant_id")
@@ -30,7 +31,7 @@ public class InvitationRecord implements Serializable {
     private String inviteeEmail;
 
     @TableField("invitee_role")
-    private String inviteeRole;
+    private TenantUserRole inviteeRole;
 
     @TableField(value = "invite_time", fill = FieldFill.INSERT)
     private LocalDateTime inviteTime;

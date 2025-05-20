@@ -125,6 +125,12 @@ export default function TeamsPage() {
   useEffect(() => {
     // 这里添加获取当前用户所涉及的团队的API调用
     teamService.getTeams().then((data) => {
+      console.log('获取团队信息:', data)
+
+      data.forEach((team) => {
+        team.isActive = team.role === 'owner'
+      })
+
       setTeams(data)
       setCurrentTeam(data.find((team) => team.isActive) || data[0])
     })
@@ -174,15 +180,19 @@ export default function TeamsPage() {
       console.log('邀请团队成员:', data)
 
       // 调用邀请 并 发送邮件的API
-      await invitationService.createInvitations({
+      const res: any = await invitationService.createInvitations({
         inviterTenantId: currentTeam.tenantId,
         inviteeEmail: data.email,
         inviteeRole: data.role,
       })
 
+      if (res.code !== 0) {
+        toast.error(res.msg)
+        return
+      }
+
       toast.success('团队成员邀请已发送')
       memberForm.reset()
-     
     } catch (error) {
       toast.error('邀请团队成员失败')
       console.error(error)
@@ -470,17 +480,19 @@ export default function TeamsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {roles.filter((role) => role.value !== 'owner').map((role) => (
-                                  <SelectItem
-                                    key={role.value}
-                                    value={role.value}
-                                  >
-                                    <div className="flex items-center">
-                                      {role.icon}
-                                      {role.label}
-                                    </div>
-                                  </SelectItem>
-                                ))}
+                                {roles
+                                  .filter((role) => role.value !== 'owner')
+                                  .map((role) => (
+                                    <SelectItem
+                                      key={role.value}
+                                      value={role.value}
+                                    >
+                                      <div className="flex items-center">
+                                        {role.icon}
+                                        {role.label}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />

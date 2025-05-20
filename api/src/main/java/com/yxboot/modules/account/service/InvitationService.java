@@ -2,8 +2,8 @@ package com.yxboot.modules.account.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.modules.account.entity.InvitationRecord;
-import com.yxboot.modules.account.mapper.InvitationRecordMapper;
+import com.yxboot.modules.account.entity.Invitation;
+import com.yxboot.modules.account.mapper.InvitationMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +12,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
-public class InvitationRecordService extends ServiceImpl<InvitationRecordMapper, InvitationRecord>
-        implements IService<InvitationRecord> {
+public class InvitationService extends ServiceImpl<InvitationMapper, Invitation>
+        implements IService<Invitation> {
 }

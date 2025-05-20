@@ -3,13 +3,15 @@ import type { Tenant, User } from '@/types/account'
 
 export interface LoginParams {
   email: string
-  password: string
+  password: string,
+  token?: string | null
 }
 
 export interface RegisterParams {
   username: string
   email: string
   password: string
+  token?: string | null
 }
 
 export interface LoginResponse {

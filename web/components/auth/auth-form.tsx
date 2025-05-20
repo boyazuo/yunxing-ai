@@ -8,24 +8,41 @@ import { Label } from '@radix-ui/react-label'
 import { signIn } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 interface AuthFormProps extends React.ComponentPropsWithoutRef<'form'> {
   mode: 'login' | 'register'
   redirectUrl?: string
+  email?: string
+  token?: string | null
 }
 
-export function AuthForm({ mode, redirectUrl = '/home', children, className, ...props }: AuthFormProps) {
+export function AuthForm({
+  mode,
+  redirectUrl = '/home',
+  email,
+  token,
+  children,
+  className,
+  ...props
+}: AuthFormProps) {
   const t = useTranslations('auth')
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
+    email: email || '',
     password: '',
+    token: token || '',
   })
+
+  useEffect(() => {
+    if (email) {
+      setFormData({ ...formData, email })
+    }
+  }, [email])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -45,6 +62,7 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
           email: formData.email,
           password: formData.password,
           callbackUrl: redirectUrl,
+          token: token
         })
 
         if (result?.error) {
@@ -67,6 +85,7 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
             username: formData.username,
             email: formData.email,
             password: formData.password,
+            token: token,
           })
 
           // 注册成功后自动登录
@@ -86,14 +105,16 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
           router.push(redirectUrl)
           router.refresh()
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error)
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
           setError(errorMessage)
           toast.error(errorMessage || t('registerFailed'))
           return
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       setError(errorMessage)
       toast.error(errorMessage || t('error'))
     } finally {
@@ -102,9 +123,17 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
   }
 
   return (
-    <form className={cn('flex flex-col gap-6', className)} onSubmit={handleSubmit} {...props}>
+    <form
+      className={cn('flex flex-col gap-6', className)}
+      onSubmit={handleSubmit}
+      {...props}
+    >
       <div className="grid gap-6">
-        {error && <div className="text-sm text-red-500 p-2 bg-red-50 rounded border border-red-200">{error}</div>}
+        {error && (
+          <div className="text-sm text-red-500 p-2 bg-red-50 rounded border border-red-200">
+            {error}
+          </div>
+        )}
         {mode === 'register' && (
           <div className="grid gap-2">
             <Label htmlFor="username">{t('username')}</Label>
@@ -129,6 +158,7 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
             type="email"
             placeholder="m@example.com"
             required
+            readOnly={!!email}
             value={formData.email}
             onChange={handleChange}
             disabled={isLoading}
@@ -138,7 +168,10 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
           <div className="flex items-center">
             <Label htmlFor="password">{t('password')}</Label>
             {mode === 'login' && (
-              <a href="/forgot-password" className="ml-auto text-sm underline-offset-4 hover:underline">
+              <a
+                href="/forgot-password"
+                className="ml-auto text-sm underline-offset-4 hover:underline"
+              >
                 {t('forgotPassword')}
               </a>
             )}
@@ -154,7 +187,11 @@ export function AuthForm({ mode, redirectUrl = '/home', children, className, ...
           />
         </div>
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? t('loading') : mode === 'login' ? t('login') : t('register')}
+          {isLoading
+            ? t('loading')
+            : mode === 'login'
+            ? t('login')
+            : t('register')}
         </Button>
       </div>
     </form>
