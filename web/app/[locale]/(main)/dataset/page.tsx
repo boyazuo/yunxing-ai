@@ -2,16 +2,7 @@
 
 import { datasetService } from '@/api/dataset'
 import { DatasetFormDialog } from '@/app/[locale]/(main)/dataset/_components/DatasetFormDialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -130,7 +121,7 @@ export default function DatasetsPage() {
     return searchMatch && statusMatch
   })
 
-  // 跳转到数据集详情页面
+  // 跳转到数据集文档列表页面
   const navigateToDatasetDetail = (datasetId: string) => {
     router.push(`/dataset/${datasetId}`)
   }
@@ -298,39 +289,14 @@ export default function DatasetsPage() {
       />
 
       {/* 删除确认对话框 */}
-      <AlertDialog
+
+      <ConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          if (open === false) {
-            setDeleteDialogOpen(false)
-            setDatasetToDelete(null)
-          }
-        }}
-      >
-        <AlertDialogContent
-          onCloseAutoFocus={(event) => {
-            // 阻止默认的焦点处理
-            event.preventDefault()
-            document.body.style.pointerEvents = ''
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除数据集</AlertDialogTitle>
-            <AlertDialogDescription>
-              您确定要删除数据集 "{datasetToDelete?.datasetName}" 吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteDataset}
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={setDeleteDialogOpen}
+        title="确认删除数据集"
+        description={`您确定要删除数据集 "${datasetToDelete?.datasetName}" 吗？此操作不可撤销。`}
+        onConfirm={handleDeleteDataset}
+      />
     </div>
   )
 }

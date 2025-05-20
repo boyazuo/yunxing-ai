@@ -2,16 +2,7 @@
 
 import { appService } from '@/api/apps'
 import { AppFormDialog } from '@/app/[locale]/(main)/app/_components/AppFormDialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +29,7 @@ export default function SpacePage() {
   const [currentApp, setCurrentApp] = useState<App | undefined>(undefined)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [appToDelete, setAppToDelete] = useState<App | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
@@ -97,12 +89,15 @@ export default function SpacePage() {
     try {
       if (!appToDelete) return
 
+      setIsDeleting(true)
       await appService.deleteApp(appToDelete.appId)
       setDeleteDialogOpen(false)
       setAppToDelete(null)
       loadApps() // 重新加载应用列表
     } catch (error) {
       console.error('删除应用失败', error)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -320,39 +315,22 @@ export default function SpacePage() {
       />
 
       {/* 删除确认对话框 */}
-      <AlertDialog
+      <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
-          if (open === false) {
+          if (!open) {
             setDeleteDialogOpen(false)
             setAppToDelete(null)
           }
         }}
-      >
-        <AlertDialogContent
-          onCloseAutoFocus={(event) => {
-            // 阻止默认的焦点处理
-            event.preventDefault()
-            document.body.style.pointerEvents = ''
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除应用</AlertDialogTitle>
-            <AlertDialogDescription>
-              您确定要删除应用 "{appToDelete?.appName}" 吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteApp}
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="确认删除应用"
+        description={`您确定要删除应用 "${appToDelete?.appName}" 吗？此操作不可撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleDeleteApp}
+        isConfirming={isDeleting}
+      />
     </div>
   )
 }

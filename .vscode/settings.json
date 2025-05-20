@@ -22,6 +22,7 @@
 		"editor.defaultFormatter": "biomejs.biome"
 	},
 	"typescript.tsdk": "node_modules/typescript/lib",
+	"biome.lspBin": "web/node_modules/.bin/biome",
 	"biome.projects": [
 		{
 			"path": "web"
