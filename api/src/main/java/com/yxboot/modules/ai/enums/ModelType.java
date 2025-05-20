@@ -1,5 +1,7 @@
 package com.yxboot.modules.ai.enums;
 
+import java.util.Arrays;
+
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -34,5 +36,12 @@ public enum ModelType {
     @JsonValue
     public String getValue() {
         return this.value;
+    }
+
+    public static ModelType fromValue(String value) {
+        return Arrays.stream(ModelType.values())
+                .filter(type -> type.getValue().equals(value))
+                .findFirst()
+                .orElse(null);
     }
 }

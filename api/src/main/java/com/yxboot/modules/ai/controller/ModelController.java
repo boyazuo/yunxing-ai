@@ -48,6 +48,13 @@ public class ModelController {
         return Result.success("查询成功", models);
     }
 
+    @GetMapping("/type/{modelType}")
+    @Operation(summary = "获取模型类型列表", description = "获取指定模型类型下的模型")
+    public Result<List<ModelDTO>> getModelsByType(@PathVariable String modelType) {
+        List<ModelDTO> models = modelService.getModelsByType(ModelType.fromValue(modelType));
+        return Result.success("查询成功", models);
+    }
+
     @GetMapping("/{modelId}")
     @Operation(summary = "获取模型详情", description = "根据模型ID获取详情")
     public Result<ModelDTO> getModelById(@PathVariable Long modelId) {

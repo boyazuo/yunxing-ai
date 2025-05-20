@@ -2,9 +2,11 @@ package com.yxboot.modules.ai.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yxboot.modules.ai.dto.ModelDTO;
 import com.yxboot.modules.ai.entity.Model;
@@ -67,6 +69,18 @@ public class ModelService extends ServiceImpl<ModelMapper, Model> {
      */
     public List<ModelDTO> getModelsByProviderId(Long providerId) {
         return baseMapper.getModelsByProviderId(providerId);
+    }
+
+    /**
+     * 获取模型类型列表
+     * 
+     * @param modelType 模型类型
+     * @return 模型列表
+     */
+    public List<ModelDTO> getModelsByType(ModelType modelType) {
+        LambdaQueryWrapper<Model> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Model::getModelType, modelType);
+        return list(queryWrapper).stream().map(ModelDTO::fromModel).collect(Collectors.toList());
     }
 
     /**
