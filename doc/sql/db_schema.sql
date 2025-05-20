@@ -73,10 +73,33 @@ CREATE TABLE `dataset` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据集表';
 
 -- ----------------------------
--- Table structure for invitation_record
+-- Table structure for dataset_document
 -- ----------------------------
-DROP TABLE IF EXISTS `invitation_record`;
-CREATE TABLE `invitation_record` (
+DROP TABLE IF EXISTS `dataset_document`;
+CREATE TABLE `dataset_document` (
+  `document_id` bigint(20) NOT NULL COMMENT '文档ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `dataset_id` bigint(20) DEFAULT NULL COMMENT '数据集ID',
+  `file_id` bigint(20) DEFAULT NULL COMMENT '文件 ID',
+  `file_name` varchar(255) DEFAULT NULL COMMENT '文件名称',
+  `file_size` int(11) DEFAULT NULL COMMENT '文件大小',
+  `segment_method` varchar(20) DEFAULT NULL COMMENT '分段方式',
+  `max_segment_length` int(11) DEFAULT NULL COMMENT '分段最大长度',
+  `overlap_length` int(11) DEFAULT NULL COMMENT '重叠长度',
+  `segment_num` int(11) DEFAULT NULL COMMENT '文档分段数',
+  `status` varchar(20) DEFAULT NULL COMMENT '状态(pending-待处理，processing-处理中，completed-处理完成，failed-处理失败)',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`document_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档表';
+
+-- ----------------------------
+-- Table structure for invitation
+-- ----------------------------
+DROP TABLE IF EXISTS `invitation`;
+CREATE TABLE `invitation` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `inviter_tenant_id` bigint(20) NOT NULL COMMENT '邀请租户ID',
   `inviter_user_id` bigint(20) NOT NULL COMMENT '邀请人ID',
@@ -89,7 +112,7 @@ CREATE TABLE `invitation_record` (
   `accept_time` datetime DEFAULT NULL COMMENT '接受时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `token` (`token`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COMMENT='邀请记录表';
 
 -- ----------------------------
 -- Table structure for message
