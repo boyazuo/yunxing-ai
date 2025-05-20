@@ -9,14 +9,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.yxboot.llm.chat.ChatModel;
+import com.yxboot.llm.chat.ChatModelFactory;
 import com.yxboot.llm.chat.ChatResponse;
 import com.yxboot.llm.chat.message.Message;
 import com.yxboot.llm.chat.message.SystemMessage;
 import com.yxboot.llm.chat.message.UserMessage;
 import com.yxboot.llm.chat.prompt.ChatOptions;
 import com.yxboot.llm.chat.prompt.Prompt;
-import com.yxboot.modules.ai.dto.ModelRequestDTO;
-import com.yxboot.modules.ai.dto.ModelResponseDTO;
+import com.yxboot.modules.ai.dto.ChatRequestDTO;
+import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
 
@@ -49,7 +50,7 @@ public class AiService {
      * @return 响应结果
      * @throws IOException 请求异常
      */
-    public ModelResponseDTO chatCompletion(Provider provider, ModelRequestDTO request) throws IOException {
+    public ChatResponseDTO chatCompletion(Provider provider, ChatRequestDTO request) throws IOException {
         log.info("开始处理聊天请求，提供商：{}，模型：{}", provider.getProviderName(), request.getModelName());
 
         try {
@@ -83,7 +84,7 @@ public class AiService {
      * @param messageId 消息ID，用于在流处理完成时更新消息状态
      * @throws IOException 请求异常
      */
-    public void streamingChatCompletion(Provider provider, ModelRequestDTO request,
+    public void streamingChatCompletion(Provider provider, ChatRequestDTO request,
             SseEmitter emitter, Long messageId) throws IOException {
         try {
             // 获取对应的ChatModel实现（仅根据Provider选择）
@@ -183,7 +184,7 @@ public class AiService {
      * @param request 请求参数
      * @return 提示词对象
      */
-    private Prompt buildPrompt(ModelRequestDTO request) {
+    private Prompt buildPrompt(ChatRequestDTO request) {
         // 转换消息
         List<Message> messages = request.getMessages();
 
@@ -221,7 +222,7 @@ public class AiService {
      * @param model    模型信息
      * @return 响应DTO
      */
-    private ModelResponseDTO buildResponseDTO(ChatResponse response, Provider provider, String modelName) {
+    private ChatResponseDTO buildResponseDTO(ChatResponse response, Provider provider, String modelName) {
         // 从响应中提取token使用情况
         int promptTokens = 0;
         int completionTokens = 0;
@@ -234,7 +235,7 @@ public class AiService {
             totalTokens = response.getTokenUsage().getTotalTokens();
         }
 
-        return ModelResponseDTO.builder()
+        return ChatResponseDTO.builder()
                 .content(response.getContent())
                 .model(modelName)
                 .provider(provider.getProviderName())

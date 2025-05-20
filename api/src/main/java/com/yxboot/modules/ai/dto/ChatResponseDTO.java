@@ -14,7 +14,7 @@ import lombok.Data;
 @Data
 @Builder
 @Schema(description = "模型响应数据")
-public class ModelResponseDTO {
+public class ChatResponseDTO {
 
     @Schema(description = "生成ID")
     private Long id;

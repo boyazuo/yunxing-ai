@@ -1,4 +1,4 @@
-package com.yxboot.modules.ai.service;
+package com.yxboot.llm.chat;
 
 import java.util.List;
 import java.util.Map;
@@ -8,8 +8,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.yxboot.llm.chat.ChatModel;
-import com.yxboot.llm.chat.ModelProvider;
 import com.yxboot.modules.ai.entity.Provider;
 
 import jakarta.annotation.PostConstruct;
@@ -72,10 +70,9 @@ public class ChatModelFactory {
      */
     public ChatModel createChatModel(Provider provider) {
         String providerName = provider.getProviderName().toLowerCase();
-        String cacheKey = providerName;
 
         // 从缓存获取已创建的实例
-        return modelCache.computeIfAbsent(cacheKey, key -> {
+        return modelCache.computeIfAbsent(providerName, key -> {
             ModelProvider targetProvider = resolveModelProvider(providerName);
             log.debug("为提供商 {} 解析出模型提供者类型: {}", providerName, targetProvider);
 

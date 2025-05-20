@@ -14,7 +14,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "模型请求参数")
-public class ModelRequestDTO {
+public class ChatRequestDTO {
 
     @Schema(description = "用户ID")
     private Long userId;

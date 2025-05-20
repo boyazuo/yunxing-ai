@@ -13,8 +13,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.yxboot.common.api.Result;
 import com.yxboot.config.security.SecurityUser;
-import com.yxboot.modules.ai.dto.ModelRequestDTO;
-import com.yxboot.modules.ai.dto.ModelResponseDTO;
+import com.yxboot.modules.ai.dto.ChatRequestDTO;
+import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
 import com.yxboot.modules.ai.entity.Message;
 import com.yxboot.modules.ai.entity.Provider;
@@ -54,7 +54,7 @@ public class AiController {
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
     public SseEmitter chatCompletion(
             @AuthenticationPrincipal SecurityUser securityUser,
-            @RequestBody ModelRequestDTO request) throws Exception {
+            @RequestBody ChatRequestDTO request) throws Exception {
         Long userId = securityUser.getUserId();
         // 获取提供商信息
         Provider provider = providerService.getProviderByModelId(request.getModelId());
@@ -109,9 +109,9 @@ public class AiController {
      */
     @PostMapping("/chat/sync")
     @Operation(summary = "非流式聊天模型调用", description = "调用大模型进行聊天，使用同步响应方式")
-    public Result<ModelResponseDTO> chatCompletionSync(
+    public Result<ChatResponseDTO> chatCompletionSync(
             @AuthenticationPrincipal SecurityUser securityUser,
-            @RequestBody ModelRequestDTO request) throws Exception {
+            @RequestBody ChatRequestDTO request) throws Exception {
 
         Long userId = securityUser.getUserId();
         // 确保使用非流式请求
@@ -152,7 +152,7 @@ public class AiController {
                 request.getPrompt());
 
         // 调用AI服务进行聊天
-        ModelResponseDTO response = aiService.chatCompletion(provider, request);
+        ChatResponseDTO response = aiService.chatCompletion(provider, request);
 
         // 更新消息回复
         messageService.updateMessageAnswer(message.getMessageId(), response.getContent(), MessageStatus.COMPLETED);
@@ -170,7 +170,7 @@ public class AiController {
      * @param request 请求参数
      * @return 会话ID
      */
-    private Long handleConversation(Long userId, ModelRequestDTO request) {
+    private Long handleConversation(Long userId, ChatRequestDTO request) {
         Long conversationId = null;
 
         // 检查是否存在会话ID
