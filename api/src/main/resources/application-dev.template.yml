@@ -43,3 +43,19 @@ yxboot:
       secretKey: xxx
       bucketName: xxx
       rewrite-file-name: true
+
+# 嵌入服务配置
+  llm:
+    embedding:
+      zhipuai:
+        api-key: your-zhipuai-api-key
+        model-name: embedding-2
+        embedding-dimension: 1024
+        batch-size: 32
+      qdrant:
+        host: localhost
+        port: 6333
+        grpc-port: 6334
+        https: false
+        api-key: 
+        default-collection-name: documents

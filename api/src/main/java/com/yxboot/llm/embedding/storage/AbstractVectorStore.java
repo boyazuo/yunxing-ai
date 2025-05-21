@@ -1,0 +1,105 @@
+package com.yxboot.llm.embedding.storage;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.embedding.model.EmbeddingModel;
+import com.yxboot.llm.embedding.storage.query.QueryResult;
+import com.yxboot.llm.embedding.storage.query.VectorQuery;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * 抽象向量存储基类，提供通用功能
+ */
+@Slf4j
+public abstract class AbstractVectorStore implements VectorStore {
+
+    /**
+     * 默认集合名称
+     */
+    @Getter
+    protected final String defaultCollectionName;
+
+    /**
+     * 嵌入模型
+     */
+    @Getter
+    protected final EmbeddingModel embeddingModel;
+
+    /**
+     * 构造函数
+     *
+     * @param defaultCollectionName 默认集合名称
+     * @param embeddingModel        嵌入模型
+     */
+    public AbstractVectorStore(String defaultCollectionName, EmbeddingModel embeddingModel) {
+        this.defaultCollectionName = defaultCollectionName;
+        this.embeddingModel = embeddingModel;
+    }
+
+    /**
+     * 使用向量添加文档块的默认实现
+     */
+    @Override
+    public int addDocumentChunks(List<DocumentChunk> chunks, List<float[]> vectors) {
+        if (chunks == null || chunks.isEmpty()) {
+            return 0;
+        }
+
+        if (vectors == null || vectors.size() != chunks.size()) {
+            throw new IllegalArgumentException("向量列表大小必须与文档块列表大小相同");
+        }
+
+        List<String> ids = chunks.stream()
+                .map(chunk -> chunk.getId() != null ? chunk.getId() : UUID.randomUUID().toString())
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> metadataList = chunks.stream()
+                .map(DocumentChunk::getMetadata)
+                .collect(Collectors.toList());
+
+        List<String> texts = chunks.stream()
+                .map(DocumentChunk::getContent)
+                .collect(Collectors.toList());
+
+        // 更新chunk的ID，确保每个chunk都有ID
+        IntStream.range(0, chunks.size())
+                .forEach(i -> chunks.get(i).setId(ids.get(i)));
+
+        return addVectors(ids, vectors, metadataList, texts);
+    }
+
+    /**
+     * 相似度搜索，支持使用文本自动转换为向量查询
+     */
+    @Override
+    public List<QueryResult> similaritySearch(VectorQuery query) {
+        // 如果提供了查询文本但没有提供查询向量，使用嵌入模型将文本转换为向量
+        if (query.getQueryVector() == null && query.getQueryText() != null) {
+            float[] queryVector = embeddingModel.embed(query.getQueryText());
+            query.setQueryVector(queryVector);
+        }
+
+        // 如果没有指定集合名称，使用默认集合
+        if (query.getCollectionName() == null || query.getCollectionName().isEmpty()) {
+            query.setCollectionName(defaultCollectionName);
+        }
+
+        // 执行具体的相似度搜索
+        return doSimilaritySearch(query);
+    }
+
+    /**
+     * 具体的相似度搜索实现，由子类实现
+     *
+     * @param query 查询参数
+     * @return 查询结果
+     */
+    protected abstract List<QueryResult> doSimilaritySearch(VectorQuery query);
+}
