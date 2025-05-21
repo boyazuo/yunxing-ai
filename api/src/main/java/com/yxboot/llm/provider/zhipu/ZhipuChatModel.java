@@ -243,11 +243,15 @@ public class ZhipuChatModel implements ChatModel {
         }
 
         if (options.getParameters().containsKey("stop")) {
-            builder.stop((List<String>) options.getParameters().get("stop"));
+            @SuppressWarnings("unchecked")
+            List<String> stopList = (List<String>) options.getParameters().get("stop");
+            builder.stop(stopList);
         }
 
         if (options.getParameters().containsKey("tools")) {
-            builder.tools((List<Map<String, Object>>) options.getParameters().get("tools"));
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> toolsList = (List<Map<String, Object>>) options.getParameters().get("tools");
+            builder.tools(toolsList);
         }
 
         return builder.build();

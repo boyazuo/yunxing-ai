@@ -2,21 +2,26 @@ package com.yxboot.modules.account.controller;
 
 import java.util.List;
 
-import com.yxboot.modules.account.dto.UserInTenantDTO;
-import com.yxboot.modules.account.entity.User;
-import com.yxboot.modules.account.enums.TenantUserRole;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.common.exception.ApiException;
 import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.account.dto.TenantUserDTO;
+import com.yxboot.modules.account.dto.UserInTenantDTO;
 import com.yxboot.modules.account.entity.Tenant;
 import com.yxboot.modules.account.entity.TenantUser;
 import com.yxboot.modules.account.enums.TenantPlan;
+import com.yxboot.modules.account.enums.TenantUserRole;
 import com.yxboot.modules.account.service.TenantService;
 import com.yxboot.modules.account.service.TenantUserService;
 
