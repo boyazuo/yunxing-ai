@@ -6,6 +6,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import com.yxboot.llm.embedding.config.EmbeddingConfig;
+import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
 
 /**
  * 抽象嵌入模型实现，提供基础功能
@@ -20,12 +24,12 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     /**
      * 批处理大小，每次API调用最多处理的文本数量
      */
-    private final int batchSize;
+    protected int batchSize;
 
     /**
      * 线程池，用于并行处理大量嵌入请求
      */
-    private final ExecutorService executorService;
+    protected final ExecutorService executorService;
 
     /**
      * 构造函数
@@ -55,6 +59,19 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
+     * 配置方法的默认实现
+     * 子类应该覆盖此方法以提供自定义实现
+     *
+     * @param config 嵌入配置
+     */
+    @Override
+    public void configure(EmbeddingConfig config) {
+        if (config != null) {
+            this.batchSize = config.getBatchSize();
+        }
+    }
+
+    /**
      * 默认实现：调用单文本嵌入方法
      * 子类可以覆盖此方法以提供更高效的批处理实现
      */
@@ -64,27 +81,80 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
             return new ArrayList<>();
         }
 
-        // 如果文本数量小于等于批处理大小，直接调用批处理API
-        if (texts.size() <= batchSize) {
-            return embedBatch(texts);
+        if (texts.size() == 1) {
+            List<float[]> result = new ArrayList<>(1);
+            result.add(embed(texts.get(0)));
+            return result;
         }
 
-        // 将文本列表分成多个批次
-        List<List<String>> batches = new ArrayList<>();
-        for (int i = 0; i < texts.size(); i += batchSize) {
-            batches.add(texts.subList(i, Math.min(i + batchSize, texts.size())));
+        // 分批处理大量文本
+        if (texts.size() > batchSize) {
+            return processBatches(texts);
         }
 
-        // 使用CompletableFuture并行处理多个批次
-        List<CompletableFuture<List<float[]>>> futures = batches.stream()
-                .map(batch -> CompletableFuture.supplyAsync(() -> embedBatch(batch), executorService))
-                .collect(Collectors.toList());
+        // 处理单个批次
+        return embedBatch(texts);
+    }
 
-        // 等待所有批次处理完成并合并结果
+    /**
+     * 分批处理大量文本
+     *
+     * @param texts 文本列表
+     * @return 向量列表
+     */
+    protected List<float[]> processBatches(List<String> texts) {
+        int totalSize = texts.size();
+        int batchCount = (totalSize + batchSize - 1) / batchSize; // 向上取整
+
+        List<CompletableFuture<List<float[]>>> futures = new ArrayList<>(batchCount);
+
+        // 将文本分批并提交到线程池
+        for (int i = 0; i < batchCount; i++) {
+            int start = i * batchSize;
+            int end = Math.min(start + batchSize, totalSize);
+            List<String> batch = texts.subList(start, end);
+
+            // 创建异步任务
+            CompletableFuture<List<float[]>> future = CompletableFuture.supplyAsync(
+                    () -> embedBatch(batch),
+                    executorService);
+
+            futures.add(future);
+        }
+
+        // 等待所有批次完成并合并结果
         return futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public EmbeddingResponse embedRequest(EmbeddingRequest request) {
+        if (request == null || request.getInput() == null || request.getInput().isEmpty()) {
+            return EmbeddingResponse.builder()
+                    .modelName(getModelName())
+                    .build();
+        }
+
+        // 使用现有的embedAll方法处理文本
+        List<float[]> embeddings = embedAll(request.getInput());
+
+        // 创建嵌入结果列表
+        List<EmbeddingResult> results = IntStream.range(0, embeddings.size())
+                .mapToObj(i -> EmbeddingResult.builder()
+                        .index(i)
+                        .object("embedding")
+                        .embedding(embeddings.get(i))
+                        .build())
+                .collect(Collectors.toList());
+
+        // 构建响应
+        return EmbeddingResponse.builder()
+                .modelName(getModelName())
+                .data(results)
+                .tokenUsage(EmbeddingResponse.TokenUsage.of(calculateTokens(request.getInput())))
+                .build();
     }
 
     /**
@@ -99,6 +169,25 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
         return batch.stream()
                 .map(this::embed)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 计算输入文本的token数量
+     * 默认实现使用简单的空格分词估算
+     * 子类可以覆盖此方法提供更准确的计算
+     * 
+     * @param texts 输入文本列表
+     * @return 估算的token数量
+     */
+    protected int calculateTokens(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            return 0;
+        }
+
+        // 简单估算：按空格分词，每个单词算作一个token
+        return texts.stream()
+                .mapToInt(text -> text.split("\\s+").length)
+                .sum();
     }
 
     /**

@@ -1,26 +1,20 @@
 package com.yxboot.llm.provider.zhipu;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yxboot.llm.embedding.config.EmbeddingConfig;
 import com.yxboot.llm.embedding.model.AbstractEmbeddingModel;
+import com.yxboot.llm.embedding.model.EmbeddingRequest;
+import com.yxboot.llm.embedding.model.EmbeddingResponse;
+import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
+import com.yxboot.llm.embedding.model.EmbeddingResponse.TokenUsage;
 import com.yxboot.llm.embedding.model.config.ZhipuAIEmbeddingConfig;
+import com.yxboot.util.HttpClient;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,9 +24,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
 
-    private final ZhipuAIEmbeddingConfig config;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private ZhipuAIEmbeddingConfig config;
+    private ObjectMapper objectMapper;
+
+    public ZhipuAIEmbeddingModel() {
+        this.config = new ZhipuAIEmbeddingConfig();
+        this.objectMapper = new ObjectMapper();
+    }
 
     /**
      * 构造函数
@@ -42,8 +40,12 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
     public ZhipuAIEmbeddingModel(ZhipuAIEmbeddingConfig config) {
         super(config.getBatchSize());
         this.config = config;
-        this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
+    }
+
+    @Override
+    public void configure(EmbeddingConfig config) {
+        this.config = (ZhipuAIEmbeddingConfig) config;
     }
 
     /**
@@ -79,15 +81,16 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             requestBody.put("input", batch);
 
             // 准备请求头
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> headers = createHeaders();
+
+            // 序列化请求体
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
 
             // 发送请求
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(config.getBaseUrl(), entity, String.class);
+            String response = HttpClient.postJson(config.getBaseUrl(), jsonBody, headers);
 
             // 解析响应
-            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode root = objectMapper.readTree(response);
             JsonNode dataNode = root.get("data");
 
             List<float[]> embeddings = new ArrayList<>();
@@ -110,37 +113,119 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
     }
 
     /**
+     * 处理嵌入请求并返回嵌入响应
+     * 直接调用智谱AI的嵌入API，优化性能
+     *
+     * @param request 嵌入请求对象
+     * @return 嵌入响应对象
+     */
+    @Override
+    public EmbeddingResponse embedRequest(EmbeddingRequest request) {
+        if (request == null || request.getInput() == null || request.getInput().isEmpty()) {
+            return EmbeddingResponse.builder()
+                    .modelName(getModelName())
+                    .build();
+        }
+
+        try {
+            // 准备请求体
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", config.getModelName());
+            requestBody.put("input", request.getInput());
+
+            // 如果请求中有指定维度，添加到请求体
+            if (request.getDimensions() != null) {
+                requestBody.put("dimensions", request.getDimensions());
+            }
+
+            // 添加额外参数
+            if (request.getOptions() != null) {
+                requestBody.putAll(request.getOptions());
+            }
+
+            // 准备请求头
+            Map<String, String> headers = createHeaders();
+
+            // 序列化请求体
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+
+            // 发送请求
+            String responseBody = HttpClient.postJson(config.getBaseUrl(), jsonBody, headers);
+
+            // 解析响应
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode dataNode = root.get("data");
+            JsonNode usageNode = root.get("usage");
+
+            // 提取token使用情况
+            TokenUsage tokenUsage = null;
+            if (usageNode != null) {
+                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt()
+                        : calculateTokens(request.getInput());
+
+                tokenUsage = TokenUsage.of(inputTokens);
+            } else {
+                tokenUsage = TokenUsage.of(calculateTokens(request.getInput()));
+            }
+
+            // 构建结果列表
+            List<EmbeddingResult> results = new ArrayList<>();
+            for (int i = 0; i < dataNode.size(); i++) {
+                JsonNode item = dataNode.get(i);
+                JsonNode embeddingNode = item.get("embedding");
+                int index = item.has("index") ? item.get("index").asInt() : i;
+                String object = item.has("object") ? item.get("object").asText() : "embedding";
+
+                float[] embedding = new float[embeddingNode.size()];
+                for (int j = 0; j < embeddingNode.size(); j++) {
+                    embedding[j] = (float) embeddingNode.get(j).asDouble();
+                }
+
+                results.add(EmbeddingResult.builder()
+                        .index(index)
+                        .object(object)
+                        .embedding(embedding)
+                        .build());
+            }
+
+            // 构建元数据
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("model", config.getModelName());
+            if (root.has("id")) {
+                metadata.put("id", root.get("id").asText());
+            }
+            if (root.has("created")) {
+                metadata.put("created", root.get("created").asLong());
+            }
+
+            // 构建并返回响应
+            return EmbeddingResponse.builder()
+                    .modelName(config.getModelName())
+                    .data(results)
+                    .tokenUsage(tokenUsage)
+                    .metadata(metadata)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("嵌入处理失败", e);
+            throw new RuntimeException("嵌入处理失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 创建API请求头，包括身份验证信息
      *
      * @return HTTP头信息
      */
-    private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
+    private Map<String, String> createHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
 
         try {
-            // 解析API密钥
-            String[] keyParts = config.getApiKey().split("\\.");
-            if (keyParts.length != 2) {
-                throw new IllegalArgumentException("无效的API密钥格式");
-            }
-
-            String apiKey = keyParts[0];
-            String apiSecret = keyParts[1];
-
-            // 准备签名数据
-            long timestamp = Instant.now().getEpochSecond();
-            String signData = apiKey + "." + timestamp;
-
-            // 使用HMAC-SHA256计算签名
-            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secret_key = new SecretKeySpec(apiSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            sha256_HMAC.init(secret_key);
-            String signature = Base64.getEncoder()
-                    .encodeToString(sha256_HMAC.doFinal(signData.getBytes(StandardCharsets.UTF_8)));
-
+            String apiKey = config.getApiKey();
             // 设置认证头
-            String authorization = "Bearer " + apiKey + "." + timestamp + "." + signature;
-            headers.set("Authorization", authorization);
+            String authorization = "Bearer " + apiKey;
+            headers.put("Authorization", authorization);
 
         } catch (Exception e) {
             log.error("创建认证头失败", e);

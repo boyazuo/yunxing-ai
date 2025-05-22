@@ -19,8 +19,9 @@ import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
 import com.yxboot.modules.dataset.enums.SegmentMethod;
+import com.yxboot.modules.dataset.service.DatasetDocumentAsyncService;
+import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +40,8 @@ import lombok.RequiredArgsConstructor;
 public class DatasetDocumentController {
 
     private final DatasetDocumentService datasetDocumentService;
+    private final DatasetDocumentAsyncService datasetDocumentAsyncService;
+    private final DatasetDocumentSegmentService datasetDocumentSegmentService;
 
     @GetMapping
     @Operation(summary = "获取文档列表", description = "根据数据集ID获取文档列表")
@@ -114,7 +117,10 @@ public class DatasetDocumentController {
                 documentRequest.getMaxSegmentLength(),
                 documentRequest.getOverlapLength());
 
-        return Result.success("文档创建成功", document);
+        // 触发异步文档处理
+        datasetDocumentAsyncService.processDocumentAsync(document.getDocumentId());
+
+        return Result.success("文档创建成功，正在后台处理", document);
     }
 
     @PutMapping("/{documentId}/status")
@@ -140,6 +146,9 @@ public class DatasetDocumentController {
         if (existingDocument == null) {
             return Result.error(ResultCode.NOT_FOUND, "文档不存在");
         }
+
+        // 删除文档分段
+        datasetDocumentSegmentService.deleteSegmentsByDocumentId(documentId);
 
         // 删除文档
         boolean removed = datasetDocumentService.removeById(documentId);

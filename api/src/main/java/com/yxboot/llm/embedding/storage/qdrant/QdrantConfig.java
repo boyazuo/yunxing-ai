@@ -17,7 +17,8 @@ public class QdrantConfig {
     /**
      * 服务器地址
      */
-    private String host;
+    @Builder.Default
+    private String host = "127.0.0.1";
 
     /**
      * 服务器端口

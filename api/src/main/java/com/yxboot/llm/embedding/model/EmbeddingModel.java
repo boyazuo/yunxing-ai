@@ -2,6 +2,8 @@ package com.yxboot.llm.embedding.model;
 
 import java.util.List;
 
+import com.yxboot.llm.embedding.config.EmbeddingConfig;
+
 /**
  * 嵌入模型接口，用于将文本转换为向量表示
  */
@@ -22,6 +24,21 @@ public interface EmbeddingModel {
      * @return 向量表示列表
      */
     List<float[]> embedAll(List<String> texts);
+
+    /**
+     * 处理嵌入请求并返回嵌入响应
+     *
+     * @param request 嵌入请求对象
+     * @return 嵌入响应对象
+     */
+    EmbeddingResponse embedRequest(EmbeddingRequest request);
+
+    /**
+     * 配置模型
+     *
+     * @param config 配置信息
+     */
+    void configure(EmbeddingConfig config);
 
     /**
      * 获取模型名称

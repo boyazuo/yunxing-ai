@@ -1,5 +1,7 @@
 package com.yxboot.llm.embedding.model.config;
 
+import com.yxboot.llm.embedding.config.EmbeddingConfig;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ZhipuAIEmbeddingConfig {
+public class ZhipuAIEmbeddingConfig implements EmbeddingConfig {
 
     /**
      * API密钥
@@ -23,7 +25,7 @@ public class ZhipuAIEmbeddingConfig {
      * 模型名称
      */
     @Builder.Default
-    private String modelName = "embedding-2";
+    private String modelName = "embedding-3";
 
     /**
      * API基础URL

@@ -1,6 +1,9 @@
 package com.yxboot.util;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -161,6 +164,76 @@ public class HttpClient {
      */
     public static String delete(String url) {
         return delete(url, null);
+    }
+
+    /**
+     * 下载文件
+     * 
+     * @param url        文件URL
+     * @param targetFile 目标文件
+     * @param headers    请求头
+     * @return 是否下载成功
+     */
+    public static boolean downloadFile(String url, File targetFile, Map<String, String> headers) {
+        Request.Builder builder = new Request.Builder().url(url);
+        addHeaders(builder, headers);
+        Request request = builder.build();
+
+        try (Response response = CLIENT.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.error("文件下载失败: {}, 状态码: {}", url, response.code());
+                return false;
+            }
+
+            // 确保目标文件的父目录存在
+            File parentDir = targetFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                boolean created = parentDir.mkdirs();
+                if (!created) {
+                    log.error("创建目录失败: {}", parentDir.getAbsolutePath());
+                    return false;
+                }
+            }
+
+            // 将响应内容写入文件
+            try (InputStream inputStream = Objects.requireNonNull(response.body()).byteStream();
+                    FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                long totalBytesRead = 0;
+                long contentLength = response.body().contentLength();
+
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                    totalBytesRead += bytesRead;
+
+                    // 日志记录下载进度
+                    if (contentLength > 0) {
+                        int progress = (int) (totalBytesRead * 100 / contentLength);
+                        log.debug("下载进度: {}%, {}/{} bytes", progress, totalBytesRead, contentLength);
+                    }
+                }
+
+                outputStream.flush();
+                log.info("文件下载完成: {}, 大小: {} bytes", targetFile.getAbsolutePath(), totalBytesRead);
+                return true;
+            }
+        } catch (IOException e) {
+            log.error("文件下载异常: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 下载文件（无请求头）
+     * 
+     * @param url        文件URL
+     * @param targetFile 目标文件
+     * @return 是否下载成功
+     */
+    public static boolean downloadFile(String url, File targetFile) {
+        return downloadFile(url, targetFile, null);
     }
 
     /**
