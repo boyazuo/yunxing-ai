@@ -96,6 +96,26 @@ CREATE TABLE `dataset_document` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档表';
 
 -- ----------------------------
+-- Table structure for dataset_document_segment
+-- ----------------------------
+DROP TABLE IF EXISTS `dataset_document_segment`;
+CREATE TABLE `dataset_document_segment` (
+  `segment_id` bigint(20) NOT NULL COMMENT '分段ID',
+  `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
+  `dataset_id` bigint(20) DEFAULT NULL COMMENT '数据集ID',
+  `document_id` bigint(20) DEFAULT NULL COMMENT '文档 ID',
+  `position` int(11) DEFAULT NULL COMMENT '位置',
+  `title` varchar(255) DEFAULT NULL COMMENT '标题',
+  `content` text COMMENT '内容',
+  `content_length` int(11) DEFAULT NULL COMMENT '内容长度',
+  `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`segment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档分段表';
+
+-- ----------------------------
 -- Table structure for invitation
 -- ----------------------------
 DROP TABLE IF EXISTS `invitation`;
@@ -112,7 +132,7 @@ CREATE TABLE `invitation` (
   `accept_time` datetime DEFAULT NULL COMMENT '接受时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `token` (`token`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COMMENT='邀请记录表';
+) ENGINE=InnoDB AUTO_INCREMENT=1924769803498348546 DEFAULT CHARSET=utf8mb4 COMMENT='邀请记录表';
 
 -- ----------------------------
 -- Table structure for message
@@ -187,7 +207,7 @@ CREATE TABLE `sys_file` (
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `status` int(11) DEFAULT NULL COMMENT '状态',
   PRIMARY KEY (`file_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COMMENT='附件表';
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COMMENT='附件表';
 
 -- ----------------------------
 -- Table structure for tenant
