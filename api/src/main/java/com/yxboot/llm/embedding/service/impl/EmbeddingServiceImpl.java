@@ -8,7 +8,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 import com.yxboot.llm.document.Document;
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.service.DocumentProcessorService;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.embedding.service.EmbeddingService;
@@ -42,35 +42,35 @@ public class EmbeddingServiceImpl implements EmbeddingService {
     }
 
     @Override
-    public boolean addDocumentChunk(DocumentChunk chunk) {
+    public boolean addDocumentSegment(DocumentSegment segment) {
         // 生成向量
-        float[] vector = embeddingModel.embed(chunk.getContent());
+        float[] vector = embeddingModel.embed(segment.getContent());
 
         // 添加到向量存储
         return vectorStore.addVector(
-                chunk.getId(),
+                segment.getId(),
                 vector,
-                chunk.getMetadata(),
-                chunk.getContent());
+                segment.getMetadata(),
+                segment.getContent());
     }
 
     @Override
-    public int addDocumentChunks(List<DocumentChunk> chunks) {
-        if (chunks == null || chunks.isEmpty()) {
+    public int addDocumentSegments(List<DocumentSegment> segments) {
+        if (segments == null || segments.isEmpty()) {
             return 0;
         }
 
         // 提取所有文本内容
         List<String> texts = new ArrayList<>();
-        for (DocumentChunk chunk : chunks) {
-            texts.add(chunk.getContent());
+        for (DocumentSegment segment : segments) {
+            texts.add(segment.getContent());
         }
 
         // 批量生成向量
         List<float[]> vectors = embeddingModel.embedAll(texts);
 
         // 批量添加到向量存储
-        return vectorStore.addDocumentChunks(chunks, vectors);
+        return vectorStore.addDocumentSegments(segments, vectors);
     }
 
     @Override
@@ -80,10 +80,10 @@ public class EmbeddingServiceImpl implements EmbeddingService {
         }
 
         // 分割文档
-        List<DocumentChunk> chunks = documentProcessorService.splitDocument(document);
+        List<DocumentSegment> segments = documentProcessorService.splitDocument(document);
 
         // 添加文档块
-        return addDocumentChunks(chunks);
+        return addDocumentSegments(segments);
     }
 
     @Override

@@ -3,7 +3,7 @@ package com.yxboot.llm.embedding.storage;
 import java.util.List;
 import java.util.Map;
 
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.embedding.storage.query.QueryResult;
 import com.yxboot.llm.embedding.storage.query.VectorQuery;
 
@@ -41,7 +41,7 @@ public interface VectorStore {
      * @param vectors 向量列表
      * @return 添加成功的数量
      */
-    int addDocumentChunks(List<DocumentChunk> chunks, List<float[]> vectors);
+    int addDocumentSegments(List<DocumentSegment> segments, List<float[]> vectors);
 
     /**
      * 根据ID删除向量

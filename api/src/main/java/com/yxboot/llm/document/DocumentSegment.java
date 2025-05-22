@@ -15,11 +15,16 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentChunk {
+public class DocumentSegment {
     /**
      * 块ID
      */
     private String id;
+
+    /**
+     * 块标题
+     */
+    private String title;
 
     /**
      * 块内容
@@ -38,8 +43,8 @@ public class DocumentChunk {
      * @param content 块内容
      * @return 文档块实例
      */
-    public static DocumentChunk of(String content) {
-        return DocumentChunk.builder().content(content).build();
+    public static DocumentSegment of(String title, String content) {
+        return DocumentSegment.builder().title(title).content(content).build();
     }
 
     /**
@@ -49,8 +54,8 @@ public class DocumentChunk {
      * @param content 块内容
      * @return 文档块实例
      */
-    public static DocumentChunk of(String id, String content) {
-        return DocumentChunk.builder().id(id).content(content).build();
+    public static DocumentSegment of(String id, String title, String content) {
+        return DocumentSegment.builder().id(id).title(title).content(content).build();
     }
 
     /**
@@ -60,8 +65,8 @@ public class DocumentChunk {
      * @param metadata 块元数据
      * @return 文档块实例
      */
-    public static DocumentChunk of(String content, Map<String, Object> metadata) {
-        return DocumentChunk.builder().content(content).metadata(metadata).build();
+    public static DocumentSegment of(String title, String content, Map<String, Object> metadata) {
+        return DocumentSegment.builder().title(title).content(content).metadata(metadata).build();
     }
 
     /**
@@ -71,7 +76,7 @@ public class DocumentChunk {
      * @param value 值
      * @return 当前文档块实例
      */
-    public DocumentChunk addMetadata(String key, Object value) {
+    public DocumentSegment addMetadata(String key, Object value) {
         this.metadata.put(key, value);
         return this;
     }

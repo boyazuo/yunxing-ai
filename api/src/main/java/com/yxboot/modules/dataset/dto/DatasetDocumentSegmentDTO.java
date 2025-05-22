@@ -4,6 +4,7 @@ import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 文档分段DTO
@@ -11,6 +12,7 @@ import lombok.Data;
  * @author Boya
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "文档分段信息DTO")
 public class DatasetDocumentSegmentDTO extends DatasetDocumentSegment {
 

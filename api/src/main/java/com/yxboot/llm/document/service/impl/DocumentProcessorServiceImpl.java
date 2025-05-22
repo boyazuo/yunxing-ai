@@ -12,7 +12,7 @@ import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 
 import com.yxboot.llm.document.Document;
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.loader.DocumentLoader;
 import com.yxboot.llm.document.loader.PdfDocumentLoader;
 import com.yxboot.llm.document.loader.WordDocumentLoader;
@@ -183,36 +183,36 @@ public class DocumentProcessorServiceImpl implements DocumentProcessorService {
     }
 
     @Override
-    public List<DocumentChunk> splitDocument(Document document) {
+    public List<DocumentSegment> splitDocument(Document document) {
         return characterLengthSplitter.split(document);
     }
 
     @Override
-    public List<DocumentChunk> splitDocument(Document document, int maxChunkSize, int overlapSize) {
+    public List<DocumentSegment> splitDocument(Document document, int maxChunkSize, int overlapSize) {
         DocumentSplitter splitter = new CharacterLengthSplitter(maxChunkSize, overlapSize);
         return splitter.split(document);
     }
 
     @Override
-    public List<DocumentChunk> loadAndSplitDocument(File file) {
+    public List<DocumentSegment> loadAndSplitDocument(File file) {
         Document document = loadDocument(file);
         return splitDocument(document);
     }
 
     @Override
-    public List<DocumentChunk> loadAndSplitDocument(Path path) {
+    public List<DocumentSegment> loadAndSplitDocument(Path path) {
         Document document = loadDocument(path);
         return splitDocument(document);
     }
 
     @Override
-    public List<DocumentChunk> loadAndSplitDocument(InputStream inputStream, String filename) {
+    public List<DocumentSegment> loadAndSplitDocument(InputStream inputStream, String filename) {
         Document document = loadDocument(inputStream, filename);
         return splitDocument(document);
     }
 
     @Override
-    public List<DocumentChunk> loadAndSplitDocument(File file, int maxChunkSize, int overlapSize) {
+    public List<DocumentSegment> loadAndSplitDocument(File file, int maxChunkSize, int overlapSize) {
         Document document = loadDocument(file);
         return splitDocument(document, maxChunkSize, overlapSize);
     }

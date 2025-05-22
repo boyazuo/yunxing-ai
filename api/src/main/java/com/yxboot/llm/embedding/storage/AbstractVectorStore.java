@@ -6,7 +6,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.embedding.storage.query.QueryResult;
 import com.yxboot.llm.embedding.storage.query.VectorQuery;
@@ -47,30 +47,30 @@ public abstract class AbstractVectorStore implements VectorStore {
      * 使用向量添加文档块的默认实现
      */
     @Override
-    public int addDocumentChunks(List<DocumentChunk> chunks, List<float[]> vectors) {
-        if (chunks == null || chunks.isEmpty()) {
+    public int addDocumentSegments(List<DocumentSegment> segments, List<float[]> vectors) {
+        if (segments == null || segments.isEmpty()) {
             return 0;
         }
 
-        if (vectors == null || vectors.size() != chunks.size()) {
+        if (vectors == null || vectors.size() != segments.size()) {
             throw new IllegalArgumentException("向量列表大小必须与文档块列表大小相同");
         }
 
-        List<String> ids = chunks.stream()
-                .map(chunk -> chunk.getId() != null ? chunk.getId() : UUID.randomUUID().toString())
+        List<String> ids = segments.stream()
+                .map(segment -> segment.getId() != null ? segment.getId() : UUID.randomUUID().toString())
                 .collect(Collectors.toList());
 
-        List<Map<String, Object>> metadataList = chunks.stream()
-                .map(DocumentChunk::getMetadata)
+        List<Map<String, Object>> metadataList = segments.stream()
+                .map(DocumentSegment::getMetadata)
                 .collect(Collectors.toList());
 
-        List<String> texts = chunks.stream()
-                .map(DocumentChunk::getContent)
+        List<String> texts = segments.stream()
+                .map(segment -> segment.getTitle() + " " + segment.getContent())
                 .collect(Collectors.toList());
 
         // 更新chunk的ID，确保每个chunk都有ID
-        IntStream.range(0, chunks.size())
-                .forEach(i -> chunks.get(i).setId(ids.get(i)));
+        IntStream.range(0, segments.size())
+                .forEach(i -> segments.get(i).setId(ids.get(i)));
 
         return addVectors(ids, vectors, metadataList, texts);
     }

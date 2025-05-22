@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.yxboot.llm.document.Document;
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.embedding.storage.query.QueryResult;
 import com.yxboot.llm.embedding.storage.query.VectorQuery;
 
@@ -35,7 +35,7 @@ public interface EmbeddingService {
      * @param chunk 文档块
      * @return 是否添加成功
      */
-    boolean addDocumentChunk(DocumentChunk chunk);
+    boolean addDocumentSegment(DocumentSegment segment);
 
     /**
      * 批量将文档块添加到向量存储
@@ -43,7 +43,7 @@ public interface EmbeddingService {
      * @param chunks 文档块列表
      * @return 添加成功的数量
      */
-    int addDocumentChunks(List<DocumentChunk> chunks);
+    int addDocumentSegments(List<DocumentSegment> segments);
 
     /**
      * 将文档处理并添加到向量存储

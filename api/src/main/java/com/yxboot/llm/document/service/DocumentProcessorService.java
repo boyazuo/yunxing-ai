@@ -6,7 +6,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import com.yxboot.llm.document.Document;
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 
 /**
  * 文档处理服务接口
@@ -53,7 +53,7 @@ public interface DocumentProcessorService {
      * @param document 文档对象
      * @return 文档块列表
      */
-    List<DocumentChunk> splitDocument(Document document);
+    List<DocumentSegment> splitDocument(Document document);
 
     /**
      * 分割文档
@@ -63,7 +63,7 @@ public interface DocumentProcessorService {
      * @param overlapSize  重叠大小
      * @return 文档块列表
      */
-    List<DocumentChunk> splitDocument(Document document, int maxChunkSize, int overlapSize);
+    List<DocumentSegment> splitDocument(Document document, int maxChunkSize, int overlapSize);
 
     /**
      * 加载并分割文档（使用默认分割参数）
@@ -71,7 +71,7 @@ public interface DocumentProcessorService {
      * @param file 文件对象
      * @return 文档块列表
      */
-    List<DocumentChunk> loadAndSplitDocument(File file);
+    List<DocumentSegment> loadAndSplitDocument(File file);
 
     /**
      * 加载并分割文档（使用默认分割参数）
@@ -79,7 +79,7 @@ public interface DocumentProcessorService {
      * @param path 文件路径
      * @return 文档块列表
      */
-    List<DocumentChunk> loadAndSplitDocument(Path path);
+    List<DocumentSegment> loadAndSplitDocument(Path path);
 
     /**
      * 加载并分割文档（使用默认分割参数）
@@ -88,7 +88,7 @@ public interface DocumentProcessorService {
      * @param filename    文件名
      * @return 文档块列表
      */
-    List<DocumentChunk> loadAndSplitDocument(InputStream inputStream, String filename);
+    List<DocumentSegment> loadAndSplitDocument(InputStream inputStream, String filename);
 
     /**
      * 加载并分割文档（使用自定义分割参数）
@@ -98,5 +98,5 @@ public interface DocumentProcessorService {
      * @param overlapSize  重叠大小
      * @return 文档块列表
      */
-    List<DocumentChunk> loadAndSplitDocument(File file, int maxChunkSize, int overlapSize);
+    List<DocumentSegment> loadAndSplitDocument(File file, int maxSegmentSize, int overlapSize);
 }

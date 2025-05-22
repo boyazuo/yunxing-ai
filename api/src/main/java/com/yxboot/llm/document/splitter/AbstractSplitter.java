@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.yxboot.llm.document.Document;
-import com.yxboot.llm.document.DocumentChunk;
+import com.yxboot.llm.document.DocumentSegment;
 
 /**
  * 抽象文档分割器
@@ -14,45 +14,46 @@ import com.yxboot.llm.document.DocumentChunk;
 public abstract class AbstractSplitter implements DocumentSplitter {
 
     @Override
-    public List<DocumentChunk> split(Document document) {
-        List<DocumentChunk> chunks = split(document.getContent());
+    public List<DocumentSegment> split(Document document) {
+        List<DocumentSegment> segments = split(document.getContent());
 
         // 将文档的元数据添加到每个块中
         Map<String, Object> metadata = document.getMetadata();
-        chunks.forEach(chunk -> {
+        segments.forEach(segment -> {
             metadata.forEach((key, value) -> {
-                if (!chunk.getMetadata().containsKey(key)) {
-                    chunk.getMetadata().put(key, value);
+                if (!segment.getMetadata().containsKey(key)) {
+                    segment.getMetadata().put(key, value);
                 }
             });
         });
 
-        return chunks;
+        return segments;
     }
 
     @Override
-    public List<DocumentChunk> split(String text) {
+    public List<DocumentSegment> split(String text) {
         if (text == null || text.trim().isEmpty()) {
             return new ArrayList<>();
         }
 
-        List<String> textChunks = splitText(text);
-        List<DocumentChunk> documentChunks = new ArrayList<>();
+        List<String> textSegments = splitText(text);
+        List<DocumentSegment> documentSegments = new ArrayList<>();
 
-        for (String textChunk : textChunks) {
-            if (textChunk.trim().isEmpty()) {
+        for (String textSegment : textSegments) {
+            if (textSegment.trim().isEmpty()) {
                 continue;
             }
 
-            DocumentChunk chunk = DocumentChunk.builder()
-                    .id(generateChunkId())
-                    .content(textChunk)
+            DocumentSegment segment = DocumentSegment.builder()
+                    .id(generateSegmentId())
+                    .title(generateSegmentTitle())
+                    .content(textSegment)
                     .build();
 
-            documentChunks.add(chunk);
+            documentSegments.add(segment);
         }
 
-        return documentChunks;
+        return documentSegments;
     }
 
     /**
@@ -68,7 +69,16 @@ public abstract class AbstractSplitter implements DocumentSplitter {
      *
      * @return 块ID
      */
-    protected String generateChunkId() {
+    protected String generateSegmentId() {
         return UUID.randomUUID().toString();
+    }
+
+    /**
+     * 生成块标题
+     *
+     * @return 块标题
+     */
+    protected String generateSegmentTitle() {
+        return "Segment " + generateSegmentId();
     }
 }
