@@ -1,4 +1,4 @@
-package com.yxboot.llm.embedding.storage.query;
+package com.yxboot.llm.storage.query;
 
 import java.util.Map;
 

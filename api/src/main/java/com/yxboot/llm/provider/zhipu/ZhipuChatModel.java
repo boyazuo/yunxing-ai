@@ -130,19 +130,6 @@ public class ZhipuChatModel implements ChatModel {
     }
 
     /**
-     * 设置API密钥
-     * 
-     * @param apiKey API密钥
-     */
-    public void setApiKey(String apiKey) {
-        if (this.config != null) {
-            this.config = this.config.withApiKey(apiKey);
-        } else {
-            this.config = ZhipuConfig.of(apiKey);
-        }
-    }
-
-    /**
      * 获取提供商信息
      */
     @Override

@@ -31,12 +31,8 @@ public class ChatModelFactory {
     // 提供商名称到ModelProvider的映射
     private final Map<String, ModelProvider> providerMapping = Map.of(
             "zhipuai", ModelProvider.ZHIPU,
-            "zhipu", ModelProvider.ZHIPU,
             "qianwen", ModelProvider.QIANWEN,
-            "qwen", ModelProvider.QIANWEN,
-            "tongyi", ModelProvider.QIANWEN,
             "openai", ModelProvider.OPENAI,
-            "open_ai", ModelProvider.OPENAI,
             "azure_openai", ModelProvider.OPENAI);
 
     // 按ModelProvider分类的ChatModel映射

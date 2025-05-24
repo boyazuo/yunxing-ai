@@ -6,11 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.embedding.model.config.ZhipuAIEmbeddingConfig;
-import com.yxboot.llm.embedding.storage.VectorStore;
-import com.yxboot.llm.embedding.storage.qdrant.QdrantConfig;
-import com.yxboot.llm.embedding.storage.qdrant.QdrantVectorStore;
+import com.yxboot.llm.provider.zhipu.ZhipuAIEmbeddingConfig;
 import com.yxboot.llm.provider.zhipu.ZhipuAIEmbeddingModel;
+import com.yxboot.llm.storage.VectorStore;
+import com.yxboot.llm.storage.qdrant.QdrantConfig;
+import com.yxboot.llm.storage.qdrant.QdrantVectorStore;
 
 /**
  * 嵌入服务配置Bean

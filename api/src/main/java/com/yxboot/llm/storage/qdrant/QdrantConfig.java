@@ -1,4 +1,4 @@
-package com.yxboot.llm.embedding.storage.qdrant;
+package com.yxboot.llm.storage.qdrant;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

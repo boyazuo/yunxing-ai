@@ -1,4 +1,4 @@
-package com.yxboot.llm.embedding.storage.qdrant;
+package com.yxboot.llm.storage.qdrant;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,9 +16,9 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.embedding.storage.AbstractVectorStore;
-import com.yxboot.llm.embedding.storage.query.QueryResult;
-import com.yxboot.llm.embedding.storage.query.VectorQuery;
+import com.yxboot.llm.storage.AbstractVectorStore;
+import com.yxboot.llm.storage.query.QueryResult;
+import com.yxboot.llm.storage.query.VectorQuery;
 
 import lombok.extern.slf4j.Slf4j;
 

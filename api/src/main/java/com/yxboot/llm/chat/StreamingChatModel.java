@@ -109,43 +109,4 @@ public interface StreamingChatModel {
                 .stream(true)
                 .build();
     }
-
-    /**
-     * 使用示例：使用Flux进行流式处理
-     * 
-     * <pre>{@code
-     * // 1. 直接处理聊天响应流
-     * model.stream("你好，请介绍一下自己")
-     *     .doOnNext(response -> System.out.print(response.getContent()))
-     *     .subscribe();
-     * 
-     * // 2. 处理内容字符流
-     * model.streamContent("你好，请介绍一下自己")
-     *     .doOnNext(System.out::print)
-     *     .subscribe();
-     * 
-     * // 3. 处理消息流
-     * model.streamMessages("你能给我讲个笑话吗")
-     *     .doOnNext(message -> {
-     *         System.out.println("\n当前生成的内容: " + message.getContent());
-     *     })
-     *     .subscribe();
-     * 
-     * // 4. 获取完整结果
-     * model.streamToResponse("帮我写一首诗")
-     *     .doOnSuccess(response -> {
-     *         System.out.println("\n完整内容: " + response.getContent());
-     *     })
-     *     .subscribe();
-     * 
-     * // 5. 使用WebFlux在Controller中返回流
-     * &#64;GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-     * public Flux<ChatResponse> streamChat(@RequestParam String message) {
-     *     return model.stream(message);
-     * }
-     * }</pre>
-     */
-    default void exampleUsage() {
-        // 这是一个示例方法，实际使用时不需要调用此方法
-    }
 }

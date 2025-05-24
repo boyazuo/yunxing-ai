@@ -1,4 +1,4 @@
-package com.yxboot.llm.embedding.storage;
+package com.yxboot.llm.storage;
 
 import java.util.List;
 import java.util.Map;
@@ -8,8 +8,8 @@ import java.util.stream.IntStream;
 
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.embedding.storage.query.QueryResult;
-import com.yxboot.llm.embedding.storage.query.VectorQuery;
+import com.yxboot.llm.storage.query.QueryResult;
+import com.yxboot.llm.storage.query.VectorQuery;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

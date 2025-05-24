@@ -1,4 +1,4 @@
-package com.yxboot.llm.embedding.model.config;
+package com.yxboot.llm.provider.zhipu;
 
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 

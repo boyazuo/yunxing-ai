@@ -13,7 +13,6 @@ import com.yxboot.llm.embedding.model.EmbeddingRequest;
 import com.yxboot.llm.embedding.model.EmbeddingResponse;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.TokenUsage;
-import com.yxboot.llm.embedding.model.config.ZhipuAIEmbeddingConfig;
 import com.yxboot.util.HttpClient;
 
 import lombok.extern.slf4j.Slf4j;
