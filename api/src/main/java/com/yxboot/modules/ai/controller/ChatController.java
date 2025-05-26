@@ -19,7 +19,7 @@ import com.yxboot.modules.ai.entity.Conversation;
 import com.yxboot.modules.ai.entity.Message;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
-import com.yxboot.modules.ai.service.AiService;
+import com.yxboot.modules.ai.service.ChatService;
 import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
 import com.yxboot.modules.ai.service.ProviderService;
@@ -42,9 +42,9 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/v1/api/ai")
 @RequiredArgsConstructor
 @Tag(name = "AI模型调用接口", description = "提供AI模型调用的相关接口")
-public class AiController {
+public class ChatController {
 
-    private final AiService aiService;
+    private final ChatService aiService;
     private final ProviderService providerService;
     private final ConversationService conversationService;
     private final MessageService messageService;

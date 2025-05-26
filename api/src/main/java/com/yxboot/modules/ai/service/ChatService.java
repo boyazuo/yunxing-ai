@@ -8,7 +8,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.yxboot.llm.chat.ChatModelFactory;
 import com.yxboot.llm.chat.ChatResponse;
 import com.yxboot.llm.chat.message.Message;
 import com.yxboot.llm.chat.message.SystemMessage;
@@ -34,9 +33,8 @@ import reactor.core.publisher.Flux;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AiService {
+public class ChatService {
 
-    private final ChatModelFactory chatModelFactory;
     private final MessageService messageService;
     private final ChatClient chatClient;
 
