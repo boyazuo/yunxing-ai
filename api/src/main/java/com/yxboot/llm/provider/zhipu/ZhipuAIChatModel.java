@@ -16,10 +16,10 @@ import com.yxboot.llm.chat.message.AiMessage;
 import com.yxboot.llm.chat.message.Message;
 import com.yxboot.llm.chat.prompt.ChatOptions;
 import com.yxboot.llm.chat.prompt.Prompt;
-import com.yxboot.llm.provider.zhipu.client.ZhipuClient;
-import com.yxboot.llm.provider.zhipu.client.ZhipuRequest;
-import com.yxboot.llm.provider.zhipu.client.ZhipuRequest.ZhipuMessage;
-import com.yxboot.llm.provider.zhipu.client.ZhipuResponse;
+import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIApi;
+import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIMessage;
+import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIRequest;
+import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIResponse;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -32,54 +32,54 @@ import reactor.core.publisher.Flux;
  */
 @Slf4j
 @Component
-public class ZhipuChatModel implements ChatModel {
+public class ZhipuAIChatModel implements ChatModel {
 
     /**
      * 默认配置
      */
-    private ZhipuConfig config;
+    private ZhipuAIChatConfig config;
 
     /**
-     * 知启API客户端
+     * 智谱API客户端
      */
-    private ZhipuClient zhipuClient;
+    private ZhipuAIApi zhipuApi;
 
     /**
      * 无参构造函数 - 供Spring使用
      */
-    public ZhipuChatModel() {
+    public ZhipuAIChatModel() {
         // Spring依赖注入需要此构造函数
     }
 
     /**
      * 构造函数，使用默认配置
      * 
-     * @param zhipuClient 知启客户端
-     * @param apiKey      API密钥
+     * @param zhipuApi 智谱API
+     * @param apiKey   API密钥
      */
-    public ZhipuChatModel(ZhipuClient zhipuClient, String apiKey) {
-        this.zhipuClient = zhipuClient;
-        this.config = ZhipuConfig.of(apiKey);
+    public ZhipuAIChatModel(ZhipuAIApi zhipuApi, String apiKey) {
+        this.zhipuApi = zhipuApi;
+        this.config = ZhipuAIChatConfig.of(apiKey);
     }
 
     /**
      * 构造函数，使用自定义配置
      * 
-     * @param zhipuClient 知启客户端
-     * @param config      知启配置
+     * @param zhipuApi 智谱API
+     * @param config   智谱配置
      */
-    public ZhipuChatModel(ZhipuClient zhipuClient, ZhipuConfig config) {
-        this.zhipuClient = zhipuClient;
+    public ZhipuAIChatModel(ZhipuAIApi zhipuApi, ZhipuAIChatConfig config) {
+        this.zhipuApi = zhipuApi;
         this.config = config;
     }
 
     /**
      * 设置配置
      * 
-     * @param config 知启配置
+     * @param config 智谱配置
      * @return 当前模型实例
      */
-    public ZhipuChatModel withConfig(ZhipuConfig config) {
+    public ZhipuAIChatModel withConfig(ZhipuAIChatConfig config) {
         this.config = config;
         return this;
     }
@@ -90,33 +90,33 @@ public class ZhipuChatModel implements ChatModel {
      * @param apiKey API密钥
      * @return 当前模型实例
      */
-    public ZhipuChatModel withApiKey(String apiKey) {
+    public ZhipuAIChatModel withApiKey(String apiKey) {
         if (this.config != null) {
             this.config = this.config.withApiKey(apiKey);
         } else {
-            this.config = ZhipuConfig.of(apiKey);
+            this.config = ZhipuAIChatConfig.of(apiKey);
         }
         return this;
     }
 
     /**
-     * 设置知启客户端
+     * 设置智谱客户端
      * 
-     * @param zhipuClient 知启客户端
+     * @param zhipuApi 智谱API
      */
     @Autowired
-    public void setZhipuClient(ZhipuClient zhipuClient) {
-        this.zhipuClient = zhipuClient;
+    public void setZhipuApi(ZhipuAIApi zhipuApi) {
+        this.zhipuApi = zhipuApi;
     }
 
     /**
      * 设置客户端
      * 
-     * @param zhipuClient 知启客户端
+     * @param zhipuApi 智谱API
      * @return 当前模型实例
      */
-    public ZhipuChatModel withClient(ZhipuClient zhipuClient) {
-        this.zhipuClient = zhipuClient;
+    public ZhipuAIChatModel withClient(ZhipuAIApi zhipuApi) {
+        this.zhipuApi = zhipuApi;
         return this;
     }
 
@@ -151,14 +151,13 @@ public class ZhipuChatModel implements ChatModel {
     }
 
     /**
-     * 将Message对象转换为知启消息
+     * 将Message对象转换为智谱消息
      */
-    private List<ZhipuMessage> convertMessages(List<Message> messages) {
-        List<ZhipuMessage> result = new ArrayList<>();
+    private List<ZhipuAIMessage> convertMessages(List<Message> messages) {
+        List<ZhipuAIMessage> result = new ArrayList<>();
 
         for (Message message : messages) {
             String role;
-
             // 根据消息类型确定角色
             switch (message.type()) {
                 case SYSTEM:
@@ -171,7 +170,7 @@ public class ZhipuChatModel implements ChatModel {
                     role = "assistant";
                     break;
                 case TOOL_EXECUTION_RESULT:
-                    role = "tool"; // 知启AI的工具结果消息类型
+                    role = "tool"; // 智谱AI的工具结果消息类型
                     break;
                 case CUSTOM:
                     role = "user"; // 自定义消息默认作为用户消息
@@ -179,27 +178,18 @@ public class ZhipuChatModel implements ChatModel {
                 default:
                     role = "user";
             }
-
-            // 获取消息内容，通过反射实现
-            String content = "";
-            try {
-                java.lang.reflect.Method getContentMethod = message.getClass().getMethod("getContent");
-                content = (String) getContentMethod.invoke(message);
-            } catch (Exception e) {
-                log.error("获取消息内容失败: {}", e.getMessage());
-            }
-
+            String content = message.getContent();
             // 添加到知启消息列表
-            result.add(ZhipuMessage.builder().role(role).content(content).build());
+            result.add(ZhipuAIMessage.builder().role(role).content(content).build());
         }
 
         return result;
     }
 
     /**
-     * 构建知启请求
+     * 构建智谱请求
      */
-    private ZhipuRequest buildRequest(Prompt prompt, boolean stream) {
+    private ZhipuAIRequest buildRequest(Prompt prompt, boolean stream) {
         // 获取选项
         ChatOptions options = extractChatOptions(prompt);
 
@@ -210,7 +200,7 @@ public class ZhipuChatModel implements ChatModel {
         Float topP = options.getTopP();
 
         // 构建请求
-        ZhipuRequest.ZhipuRequestBuilder builder = ZhipuRequest.builder()
+        ZhipuAIRequest.ZhipuAIRequestBuilder builder = ZhipuAIRequest.builder()
                 .model(model)
                 .messages(convertMessages(prompt.getMessages()))
                 .temperature(temperature != null ? temperature : config.getTemperature())
@@ -259,17 +249,17 @@ public class ZhipuChatModel implements ChatModel {
      */
     @Override
     public Flux<ChatResponse> stream(Prompt prompt) {
-        // 构建知启请求
-        ZhipuRequest request = buildRequest(prompt, true);
+        // 构建智谱请求
+        ZhipuAIRequest request = buildRequest(prompt, true);
 
         // 定义数据处理器
-        ZhipuClient.StreamDataProcessor dataProcessor = (data, mapper) -> {
-            ZhipuResponse response = mapper.readValue(data, ZhipuResponse.class);
+        ZhipuAIApi.StreamDataProcessor dataProcessor = (data, mapper) -> {
+            ZhipuAIResponse response = mapper.readValue(data, ZhipuAIResponse.class);
 
             // 检查响应状态
             if (response.getCode() != null && response.getCode() != 0) {
-                log.error("知启API调用失败: {}", response.getMessage());
-                throw new RuntimeException("知启API调用失败: " + response.getMessage());
+                log.error("智谱API调用失败: {}", response.getMessage());
+                throw new RuntimeException("智谱API调用失败: " + response.getMessage());
             }
 
             // 获取内容
@@ -283,7 +273,7 @@ public class ZhipuChatModel implements ChatModel {
         };
 
         // 发送流式请求获取字符流
-        Flux<String> contentFlux = zhipuClient.sendStreamRequest(
+        Flux<String> contentFlux = zhipuApi.sendStreamRequest(
                 request,
                 getApiKey(),
                 config.getBaseUrl(),
@@ -313,20 +303,20 @@ public class ZhipuChatModel implements ChatModel {
      * 发送同步请求（非流式）
      */
     private ChatResponse callSync(Prompt prompt) {
-        // 构建知启请求
-        ZhipuRequest request = buildRequest(prompt, false);
+        // 构建智谱请求
+        ZhipuAIRequest request = buildRequest(prompt, false);
 
         // 发送请求
-        ZhipuResponse response = zhipuClient.sendRequest(
+        ZhipuAIResponse response = zhipuApi.sendRequest(
                 request,
                 getApiKey(),
                 config.getBaseUrl(),
-                ZhipuResponse.class);
+                ZhipuAIResponse.class);
 
         // 检查响应状态
         if (response.getCode() != null && response.getCode() != 0) {
-            log.error("知启API调用失败: {}", response.getMessage());
-            throw new RuntimeException("知启API调用失败: " + response.getMessage());
+            log.error("智谱API调用失败: {}", response.getMessage());
+            throw new RuntimeException("智谱API调用失败: " + response.getMessage());
         }
 
         // 获取内容
@@ -385,7 +375,7 @@ public class ZhipuChatModel implements ChatModel {
     public void init() {
         if (config == null) {
             // 使用默认配置
-            this.config = ZhipuConfig.defaultConfig();
+            this.config = ZhipuAIChatConfig.defaultConfig();
         }
     }
 }

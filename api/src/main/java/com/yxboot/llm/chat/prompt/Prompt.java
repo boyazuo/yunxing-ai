@@ -8,6 +8,7 @@ import java.util.List;
 import com.yxboot.llm.chat.message.Message;
 import com.yxboot.llm.chat.message.UserMessage;
 
+import lombok.Builder;
 import lombok.Getter;
 
 /**
@@ -17,6 +18,7 @@ import lombok.Getter;
  * @author Boya
  */
 @Getter
+@Builder
 public class Prompt {
 
     /**
@@ -76,36 +78,4 @@ public class Prompt {
         this.options = options;
     }
 
-    /**
-     * 创建一个包含相同消息但不同参数的提示词
-     * 
-     * @param options 新的模型参数
-     * @return 新的提示词对象
-     */
-    public Prompt withOptions(ChatOptions options) {
-        return new Prompt(this.messages, options);
-    }
-
-    /**
-     * 创建一个添加了新消息的提示词
-     * 
-     * @param message 要添加的消息
-     * @return 新的提示词对象
-     */
-    public Prompt withMessage(Message message) {
-        List<Message> newMessages = new ArrayList<>(this.messages);
-        newMessages.add(message);
-        return new Prompt(newMessages, this.options);
-    }
-
-    /**
-     * 设置单个参数
-     * 
-     * @param key   参数名
-     * @param value 参数值
-     * @return 带有新参数的提示词
-     */
-    public Prompt withOption(String key, Object value) {
-        return new Prompt(this.messages, this.options.withParameter(key, value));
-    }
 }

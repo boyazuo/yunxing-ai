@@ -26,6 +26,8 @@ import com.yxboot.llm.chat.StreamingChatModel;
 })
 public interface Message {
 
+    String getContent();
+
     /**
      * The type of the message.
      *

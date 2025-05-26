@@ -8,7 +8,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.yxboot.llm.chat.ChatModel;
 import com.yxboot.llm.chat.ChatModelFactory;
 import com.yxboot.llm.chat.ChatResponse;
 import com.yxboot.llm.chat.message.Message;
@@ -16,6 +15,7 @@ import com.yxboot.llm.chat.message.SystemMessage;
 import com.yxboot.llm.chat.message.UserMessage;
 import com.yxboot.llm.chat.prompt.ChatOptions;
 import com.yxboot.llm.chat.prompt.Prompt;
+import com.yxboot.llm.client.chat.ChatClient;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Provider;
@@ -38,6 +38,7 @@ public class AiService {
 
     private final ChatModelFactory chatModelFactory;
     private final MessageService messageService;
+    private final ChatClient chatClient;
 
     /**
      * 创建聊天完成
@@ -54,14 +55,11 @@ public class AiService {
         log.info("开始处理聊天请求，提供商：{}，模型：{}", provider.getProviderName(), request.getModelName());
 
         try {
-            // 获取对应的ChatModel实现
-            ChatModel chatModel = chatModelFactory.createChatModel(provider);
-
             // 构建提示词
             Prompt prompt = buildPrompt(request);
 
             // 调用模型
-            ChatResponse response = chatModel.call(prompt);
+            ChatResponse response = chatClient.chat(provider, prompt);
 
             // 转换为DTO返回
             return buildResponseDTO(response, provider, request.getModelName());
@@ -87,9 +85,6 @@ public class AiService {
     public void streamingChatCompletion(Provider provider, ChatRequestDTO request,
             SseEmitter emitter, Long messageId) throws IOException {
         try {
-            // 获取对应的ChatModel实现（仅根据Provider选择）
-            ChatModel chatModel = chatModelFactory.createChatModel(provider);
-
             // 构建提示词
             Prompt prompt = buildPrompt(request);
 
@@ -104,7 +99,7 @@ public class AiService {
                             "messageId", messageId)));
 
             // 调用流式接口
-            Flux<ChatResponse> responseStream = chatModel.stream(prompt);
+            Flux<ChatResponse> responseStream = chatClient.streamChat(provider, prompt);
 
             // 处理流式响应
             responseStream
@@ -197,20 +192,14 @@ public class AiService {
         messages.add(new UserMessage(request.getPrompt()));
 
         // 构建选项参数映射
-        ChatOptions options = new ChatOptions();
-        options.setModel(request.getModelName());
-        options.setStream(request.getStream());
-        if (request.getMaxTokens() != null) {
-            options.setMaxTokens(request.getMaxTokens());
-        }
+        ChatOptions options = ChatOptions.builder()
+                .model(request.getModelName())
+                .stream(request.getStream())
+                .maxTokens(request.getMaxTokens())
+                .temperature(request.getTemperature())
+                .topP(request.getTopP())
+                .build();
 
-        if (request.getTemperature() != null) {
-            options.setTemperature(request.getTemperature());
-        }
-
-        if (request.getTopP() != null) {
-            options.setTopP(request.getTopP());
-        }
         return new Prompt(messages, options);
     }
 

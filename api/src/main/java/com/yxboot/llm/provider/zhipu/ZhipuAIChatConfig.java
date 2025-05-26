@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class ZhipuConfig {
+public class ZhipuAIChatConfig {
 
     /**
      * API密钥
@@ -54,8 +54,8 @@ public class ZhipuConfig {
      * @param apiKey API密钥
      * @return 知启配置
      */
-    public static ZhipuConfig of(String apiKey) {
-        return ZhipuConfig.builder()
+    public static ZhipuAIChatConfig of(String apiKey) {
+        return ZhipuAIChatConfig.builder()
                 .apiKey(apiKey)
                 .build();
     }
@@ -67,8 +67,8 @@ public class ZhipuConfig {
      * @param model  模型名称
      * @return 知启配置
      */
-    public static ZhipuConfig of(String apiKey, String model) {
-        return ZhipuConfig.builder()
+    public static ZhipuAIChatConfig of(String apiKey, String model) {
+        return ZhipuAIChatConfig.builder()
                 .apiKey(apiKey)
                 .model(model)
                 .build();
@@ -80,7 +80,7 @@ public class ZhipuConfig {
      * @param apiKey API密钥
      * @return 当前配置对象
      */
-    public ZhipuConfig withApiKey(String apiKey) {
+    public ZhipuAIChatConfig withApiKey(String apiKey) {
         this.apiKey = apiKey;
         return this;
     }
@@ -91,7 +91,7 @@ public class ZhipuConfig {
      * @param temperature 温度参数
      * @return 当前配置对象
      */
-    public ZhipuConfig withTemperature(float temperature) {
+    public ZhipuAIChatConfig withTemperature(float temperature) {
         this.temperature = temperature;
         return this;
     }
@@ -102,7 +102,7 @@ public class ZhipuConfig {
      * @param maxTokens 最大Token数
      * @return 当前配置对象
      */
-    public ZhipuConfig withMaxTokens(int maxTokens) {
+    public ZhipuAIChatConfig withMaxTokens(int maxTokens) {
         this.maxTokens = maxTokens;
         return this;
     }
@@ -113,7 +113,7 @@ public class ZhipuConfig {
      * @param topP Top-P参数
      * @return 当前配置对象
      */
-    public ZhipuConfig withTopP(float topP) {
+    public ZhipuAIChatConfig withTopP(float topP) {
         this.topP = topP;
         return this;
     }
@@ -124,7 +124,7 @@ public class ZhipuConfig {
      * @param baseUrl API基础URL
      * @return 当前配置对象
      */
-    public ZhipuConfig withBaseUrl(String baseUrl) {
+    public ZhipuAIChatConfig withBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
         return this;
     }
@@ -134,7 +134,7 @@ public class ZhipuConfig {
      * 
      * @return 带默认值的配置
      */
-    public static ZhipuConfig defaultConfig() {
-        return ZhipuConfig.builder().build();
+    public static ZhipuAIChatConfig defaultConfig() {
+        return ZhipuAIChatConfig.builder().build();
     }
 }

@@ -1,4 +1,4 @@
-package com.yxboot.llm.provider.zhipu.client;
+package com.yxboot.llm.provider.zhipu.kernel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ZhipuRequest {
+public class ZhipuAIRequest {
 
     /**
      * 模型名称
@@ -33,7 +33,7 @@ public class ZhipuRequest {
      * 消息列表
      */
     @Builder.Default
-    private List<ZhipuMessage> messages = new ArrayList<>();
+    private List<ZhipuAIMessage> messages = new ArrayList<>();
 
     /**
      * 温度参数(0-1)
@@ -78,34 +78,4 @@ public class ZhipuRequest {
      */
     private List<Map<String, Object>> tools;
 
-    /**
-     * 知启消息模型
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ZhipuMessage {
-        /**
-         * 角色
-         */
-        private String role;
-
-        /**
-         * 内容
-         */
-        private String content;
-
-        /**
-         * 工具调用
-         */
-        @JsonProperty("tool_calls")
-        private List<Map<String, Object>> toolCalls;
-
-        /**
-         * 工具结果
-         */
-        @JsonProperty("tool_call_id")
-        private String toolCallId;
-    }
 }

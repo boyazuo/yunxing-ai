@@ -1,4 +1,4 @@
-package com.yxboot.llm.provider.zhipu.client;
+package com.yxboot.llm.provider.zhipu.kernel;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ZhipuResponse {
+public class ZhipuAIResponse {
 
     /**
      * 响应ID
@@ -74,7 +74,7 @@ public class ZhipuResponse {
         /**
          * 消息
          */
-        private ZhipuMessage message;
+        private ZhipuAIMessage message;
 
         /**
          * 结束原因
@@ -112,30 +112,6 @@ public class ZhipuResponse {
          */
         @JsonProperty("total_tokens")
         private Integer totalTokens;
-    }
-
-    /**
-     * 知启消息模型
-     */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ZhipuMessage {
-        /**
-         * 角色
-         */
-        private String role;
-
-        /**
-         * 内容
-         */
-        private String content;
-
-        /**
-         * 工具调用
-         */
-        @JsonProperty("tool_calls")
-        private List<Map<String, Object>> toolCalls;
     }
 
     /**

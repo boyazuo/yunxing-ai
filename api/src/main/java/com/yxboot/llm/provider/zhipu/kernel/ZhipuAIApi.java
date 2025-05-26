@@ -1,4 +1,4 @@
-package com.yxboot.llm.provider.zhipu.client;
+package com.yxboot.llm.provider.zhipu.kernel;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +24,7 @@ import reactor.core.publisher.Flux;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ZhipuClient {
+public class ZhipuAIApi {
 
     private final ObjectMapper objectMapper;
     private final SseClient sseClient;
