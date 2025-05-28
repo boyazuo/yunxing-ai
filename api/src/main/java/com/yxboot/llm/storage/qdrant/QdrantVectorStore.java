@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * QDrant向量存储实现
  */
 @Slf4j
+@SuppressWarnings("unchecked")
 public class QdrantVectorStore extends AbstractVectorStore {
 
     private final QdrantConfig config;
