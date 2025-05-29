@@ -39,14 +39,15 @@ public abstract class AbstractSplitter implements DocumentSplitter {
         List<String> textSegments = splitText(text);
         List<DocumentSegment> documentSegments = new ArrayList<>();
 
-        for (String textSegment : textSegments) {
+        for (int index = 0; index < textSegments.size(); index++) {
+            String textSegment = textSegments.get(index);
             if (textSegment.trim().isEmpty()) {
                 continue;
             }
 
             DocumentSegment segment = DocumentSegment.builder()
                     .id(generateSegmentId())
-                    .title(generateSegmentTitle())
+                    .title(generateSegmentTitle(index))
                     .content(textSegment)
                     .build();
 
@@ -78,7 +79,7 @@ public abstract class AbstractSplitter implements DocumentSplitter {
      *
      * @return 块标题
      */
-    protected String generateSegmentTitle() {
-        return "Segment " + generateSegmentId();
+    protected String generateSegmentTitle(int index) {
+        return "分段 " + (index + 1);
     }
 }
