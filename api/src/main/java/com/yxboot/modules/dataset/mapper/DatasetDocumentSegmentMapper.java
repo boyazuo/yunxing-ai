@@ -63,6 +63,32 @@ public interface DatasetDocumentSegmentMapper extends BaseMapper<DatasetDocument
             @Param("documentId") Long documentId);
 
     /**
+     * 分页获取文档的分段（带搜索）
+     * 
+     * @param page       分页信息
+     * @param documentId 文档ID
+     * @param keyword    搜索关键词
+     * @return 分页结果
+     */
+    @Select("SELECT s.*, " +
+            "cu.username as creator_username, " +
+            "cu.avatar as creator_avatar, " +
+            "uu.username as updator_username, " +
+            "dd.file_name as document_name, " +
+            "d.dataset_name " +
+            "FROM dataset_document_segment s " +
+            "LEFT JOIN user cu ON s.creator_id = cu.user_id " +
+            "LEFT JOIN user uu ON s.updator_id = uu.user_id " +
+            "LEFT JOIN dataset_document dd ON s.document_id = dd.document_id " +
+            "LEFT JOIN dataset d ON s.dataset_id = d.dataset_id " +
+            "WHERE s.document_id = #{documentId} " +
+            "AND (s.title LIKE CONCAT('%', #{keyword}, '%') OR s.content LIKE CONCAT('%', #{keyword}, '%')) "
+            +
+            "ORDER BY s.position ASC")
+    IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(Page<DatasetDocumentSegmentDTO> page,
+            @Param("documentId") Long documentId, @Param("keyword") String keyword);
+
+    /**
      * 根据数据集ID获取所有分段
      * 
      * @param datasetId 数据集ID

@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { Dataset } from '@/types/dataset'
 import { type DatasetDocument, DocumentStatus, getDocumentStatusText } from '@/types/document'
-import { ArrowLeft, Download, File, MoreHorizontal, Plus, Trash, Upload, User } from 'lucide-react'
+import { ArrowLeft, Download, File, FileText, MoreHorizontal, Plus, Trash, Upload, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -268,7 +268,16 @@ export default function DatasetDocumentsPage() {
                       <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
                         <File className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <span className="font-medium">{document.fileName}</span>
+                      {document.status === DocumentStatus.COMPLETED ? (
+                        <Link
+                          href={`/dataset/${datasetId}/document/${document.documentId}`}
+                          className="font-medium text-primary hover:underline cursor-pointer"
+                        >
+                          {document.fileName}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{document.fileName}</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{formatFileSize(document.fileSize)}</TableCell>
@@ -316,6 +325,12 @@ export default function DatasetDocumentsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled={document.status !== DocumentStatus.COMPLETED} asChild>
+                          <Link href={`/dataset/${datasetId}/document/${document.documentId}`}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            <span>查看分段</span>
+                          </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem disabled={document.status !== DocumentStatus.COMPLETED}>
                           <Download className="mr-2 h-4 w-4" />
                           <span>下载文档</span>

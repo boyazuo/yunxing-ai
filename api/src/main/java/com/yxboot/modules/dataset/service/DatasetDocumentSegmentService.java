@@ -76,12 +76,13 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
             if (segmentTitles != null && i < segmentTitles.size()) {
                 segment.setTitle(segmentTitles.get(i));
             }
+            this.save(segment);
 
             segmentList.add(segment);
         }
 
         // 批量保存
-        saveBatch(segmentList);
+        // saveBatch(segmentList);
 
         // 更新文档的分段数
         document.setSegmentNum(segmentList.size());
@@ -111,6 +112,21 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
     public IPage<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(int page, int size, Long documentId) {
         Page<DatasetDocumentSegmentDTO> pageParam = new Page<>(page, size);
         return baseMapper.pageSegmentsByDocumentId(pageParam, documentId);
+    }
+
+    /**
+     * 分页获取文档的分段（带搜索）
+     * 
+     * @param current    页码
+     * @param size       每页大小
+     * @param documentId 文档ID
+     * @param keyword    搜索关键词
+     * @return 分页结果
+     */
+    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+            String keyword) {
+        Page<DatasetDocumentSegmentDTO> pageParam = new Page<>(current, size);
+        return baseMapper.pageSegmentsWithSearch(pageParam, documentId, keyword);
     }
 
     /**

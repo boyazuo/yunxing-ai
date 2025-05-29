@@ -3,13 +3,10 @@ package com.yxboot.config.mybatisplus.handler;
 import java.time.LocalDateTime;
 
 import org.apache.ibatis.reflection.MetaObject;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import com.yxboot.config.security.SecurityUser;
+import com.yxboot.util.SecurityUtil;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MyMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void insertFill(MetaObject metaObject) {
+        log.info("insertFill: {}", metaObject);
         this.strictInsertFill(metaObject, "creatorId", Long.class, getCurrentUserId());
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject, "updatorId", Long.class, getCurrentUserId());
@@ -38,12 +36,6 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     }
 
     private Long getCurrentUserId() {
-        // 获取当前用户id
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName() != null
-                && !(authentication instanceof AnonymousAuthenticationToken)) {
-            return ((SecurityUser) authentication.getPrincipal()).getUserId();
-        }
-        return null;
+        return SecurityUtil.getCurrentUserId();
     }
 }

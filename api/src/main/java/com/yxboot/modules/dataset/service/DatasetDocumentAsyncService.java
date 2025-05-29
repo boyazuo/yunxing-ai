@@ -57,10 +57,12 @@ public class DatasetDocumentAsyncService {
      * 异步处理文档
      *
      * @param documentId 文档ID
+     * @param userId     用户ID（为避免SecurityContext在异步线程中丢失，显式传递）
      * @return CompletableFuture<Boolean> 处理结果
      */
-    @Async
-    public CompletableFuture<Boolean> processDocumentAsync(Long documentId) {
+    @Async("documentTaskExecutor")
+    public CompletableFuture<Boolean> processDocumentAsync(Long documentId, Long userId) {
+        log.info("开始异步处理文档, documentId: {}, userId: {}", documentId, userId);
         try {
             // 更新文档状态为处理中
             boolean updated = datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.PROCESSING);

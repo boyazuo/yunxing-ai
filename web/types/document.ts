@@ -46,6 +46,29 @@ export interface DatasetDocument {
 }
 
 /**
+ * 文档分段类型
+ */
+export interface DocumentSegment {
+  segmentId: string | number
+  tenantId: string | number
+  datasetId: string | number
+  documentId: string | number
+  position: number
+  title?: string
+  content: string
+  contentLength: number
+  creatorId: string | number
+  creatorUsername?: string
+  creatorAvatar?: string
+  createTime: string
+  updatorId: string | number
+  updatorUsername?: string
+  updateTime: string
+  documentName?: string
+  datasetName?: string
+}
+
+/**
  * 获取文档状态文本
  */
 export function getDocumentStatusText(status?: DocumentStatus): string {

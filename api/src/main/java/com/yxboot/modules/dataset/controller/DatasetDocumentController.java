@@ -2,6 +2,7 @@ package com.yxboot.modules.dataset.controller;
 
 import java.util.List;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
+import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
@@ -22,6 +24,7 @@ import com.yxboot.modules.dataset.enums.SegmentMethod;
 import com.yxboot.modules.dataset.service.DatasetDocumentAsyncService;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -79,7 +82,9 @@ public class DatasetDocumentController {
 
     @PostMapping
     @Operation(summary = "创建文档", description = "创建新的文档")
-    public Result<DatasetDocument> createDocument(@RequestBody DocumentRequest documentRequest) {
+    public Result<DatasetDocument> createDocument(
+            @AuthenticationPrincipal SecurityUser securityUser,
+            @RequestBody DocumentRequest documentRequest) {
         // 参数验证
         if (documentRequest.getTenantId() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
@@ -117,8 +122,8 @@ public class DatasetDocumentController {
                 documentRequest.getMaxSegmentLength(),
                 documentRequest.getOverlapLength());
 
-        // 触发异步文档处理
-        datasetDocumentAsyncService.processDocumentAsync(document.getDocumentId());
+        // 触发异步文档处理，传递用户ID
+        datasetDocumentAsyncService.processDocumentAsync(document.getDocumentId(), securityUser.getUserId());
 
         return Result.success("文档创建成功，正在后台处理", document);
     }
