@@ -1,5 +1,5 @@
 /**
- * 数据集状态枚举
+ * 知识库状态枚举
  */
 export enum DatasetStatus {
   ACTIVE = 'active',
@@ -8,7 +8,7 @@ export enum DatasetStatus {
 }
 
 /**
- * 数据集类型
+ * 知识库类型
  */
 export interface Dataset {
   datasetId: string
@@ -28,7 +28,7 @@ export interface Dataset {
 }
 
 /**
- * 创建数据集请求参数
+ * 创建知识库请求参数
  */
 export interface CreateDatasetRequest {
   tenantId: string
@@ -38,11 +38,11 @@ export interface CreateDatasetRequest {
 }
 
 /**
- * 更新数据集请求参数
+ * 更新知识库请求参数
  */
 export interface UpdateDatasetRequest {
   datasetId: string
   datasetName: string
   datasetDesc?: string
   embeddingModelId: string
-} 
+}

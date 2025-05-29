@@ -24,7 +24,7 @@ export interface VariableConfig {
 }
 
 /**
- * 数据集配置类型
+ * 知识库配置类型
  */
 export interface DatasetConfig {
   id?: string

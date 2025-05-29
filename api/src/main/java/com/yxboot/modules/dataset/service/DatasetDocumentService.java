@@ -17,7 +17,7 @@ import com.yxboot.modules.dataset.mapper.DatasetDocumentMapper;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 数据集文档服务实现类
+ * 知识库文档服务实现类
  * 
  * @author Boya
  */
@@ -29,7 +29,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
      * 创建文档
      * 
      * @param tenantId         租户ID
-     * @param datasetId        数据集ID
+     * @param datasetId        知识库ID
      * @param fileId           文件ID
      * @param fileName         文件名称
      * @param fileSize         文件大小
@@ -66,9 +66,9 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
     }
 
     /**
-     * 分页获取数据集下的文档
+     * 分页获取知识库下的文档
      * 
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @param current   页码
      * @param size      每页大小
      * @return 分页数据
@@ -79,9 +79,9 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
     }
 
     /**
-     * 获取数据集下的所有文档
+     * 获取知识库下的所有文档
      * 
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @return 文档列表
      */
     public List<DatasetDocumentDTO> listDocumentsByDatasetId(Long datasetId) {

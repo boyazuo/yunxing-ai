@@ -59,10 +59,10 @@ CREATE TABLE `conversation` (
 -- ----------------------------
 DROP TABLE IF EXISTS `dataset`;
 CREATE TABLE `dataset` (
-  `dataset_id` bigint(20) NOT NULL COMMENT '数据集ID',
+  `dataset_id` bigint(20) NOT NULL COMMENT '知识库ID',
   `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
-  `dataset_name` varchar(255) DEFAULT NULL COMMENT '数据集名称',
-  `dataset_desc` varchar(1000) DEFAULT NULL COMMENT '数据集描述',
+  `dataset_name` varchar(255) DEFAULT NULL COMMENT '知识库名称',
+  `dataset_desc` varchar(1000) DEFAULT NULL COMMENT '知识库描述',
   `embedding_model_id` bigint(20) DEFAULT NULL COMMENT '嵌入模型 ID',
   `status` varchar(20) DEFAULT NULL COMMENT '状态',
   `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
@@ -70,7 +70,7 @@ CREATE TABLE `dataset` (
   `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`dataset_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据集表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库表';
 
 -- ----------------------------
 -- Table structure for dataset_document
@@ -79,7 +79,7 @@ DROP TABLE IF EXISTS `dataset_document`;
 CREATE TABLE `dataset_document` (
   `document_id` bigint(20) NOT NULL COMMENT '文档ID',
   `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
-  `dataset_id` bigint(20) DEFAULT NULL COMMENT '数据集ID',
+  `dataset_id` bigint(20) DEFAULT NULL COMMENT '知识库ID',
   `file_id` bigint(20) DEFAULT NULL COMMENT '文件 ID',
   `file_name` varchar(255) DEFAULT NULL COMMENT '文件名称',
   `file_size` int(11) DEFAULT NULL COMMENT '文件大小',
@@ -102,7 +102,7 @@ DROP TABLE IF EXISTS `dataset_document_segment`;
 CREATE TABLE `dataset_document_segment` (
   `segment_id` bigint(20) NOT NULL COMMENT '分段ID',
   `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
-  `dataset_id` bigint(20) DEFAULT NULL COMMENT '数据集ID',
+  `dataset_id` bigint(20) DEFAULT NULL COMMENT '知识库ID',
   `document_id` bigint(20) DEFAULT NULL COMMENT '文档 ID',
   `position` int(11) DEFAULT NULL COMMENT '位置',
   `title` varchar(255) DEFAULT NULL COMMENT '标题',

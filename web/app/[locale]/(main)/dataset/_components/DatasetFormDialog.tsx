@@ -11,24 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ModelType, type Model } from '@/types/ai'
+import { type Model, ModelType } from '@/types/ai'
 import type { Dataset } from '@/types/dataset'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
@@ -38,7 +25,7 @@ import { z } from 'zod'
 
 // 表单验证规则
 const datasetFormSchema = z.object({
-  datasetName: z.string().min(1, '数据集名称不能为空').max(50, '数据集名称最长50个字符'),
+  datasetName: z.string().min(1, '知识库名称不能为空').max(50, '知识库名称最长50个字符'),
   datasetDesc: z.string().max(200, '描述最长200个字符').optional(),
   embeddingModelId: z.string().min(1, '请选择嵌入模型'),
 })
@@ -53,13 +40,7 @@ interface DatasetFormDialogProps {
   tenantId: string
 }
 
-export function DatasetFormDialog({
-  open,
-  onOpenChange,
-  dataset,
-  onSuccess,
-  tenantId,
-}: DatasetFormDialogProps) {
+export function DatasetFormDialog({ open, onOpenChange, dataset, onSuccess, tenantId }: DatasetFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [embeddingModels, setEmbeddingModels] = useState<Model[]>([])
   const isEditing = !!dataset
@@ -102,26 +83,26 @@ export function DatasetFormDialog({
       setIsSubmitting(true)
 
       if (isEditing && dataset) {
-        // 更新数据集
+        // 更新知识库
         await datasetService.updateDataset({
           datasetId: dataset.datasetId,
           ...values,
         })
-        toast.success('数据集更新成功')
+        toast.success('知识库更新成功')
       } else {
-        // 创建数据集
+        // 创建知识库
         await datasetService.createDataset({
           tenantId,
           ...values,
         })
-        toast.success('数据集创建成功')
+        toast.success('知识库创建成功')
       }
 
       onOpenChange(false)
       onSuccess()
     } catch (error) {
-      console.error(isEditing ? '更新数据集失败' : '创建数据集失败', error)
-      toast.error(isEditing ? '更新数据集失败' : '创建数据集失败')
+      console.error(isEditing ? '更新知识库失败' : '创建知识库失败', error)
+      toast.error(isEditing ? '更新知识库失败' : '创建知识库失败')
     } finally {
       setIsSubmitting(false)
     }
@@ -131,11 +112,9 @@ export function DatasetFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? '编辑数据集' : '创建数据集'}</DialogTitle>
+          <DialogTitle>{isEditing ? '编辑知识库' : '创建知识库'}</DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? '修改数据集的基本信息'
-              : '创建一个新的数据集用于训练和知识库检索'}
+            {isEditing ? '修改知识库的基本信息' : '创建一个新的知识库用于训练和知识库检索'}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,9 +125,9 @@ export function DatasetFormDialog({
               name="datasetName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>数据集名称</FormLabel>
+                  <FormLabel>知识库名称</FormLabel>
                   <FormControl>
-                    <Input placeholder="请输入数据集名称" {...field} />
+                    <Input placeholder="请输入知识库名称" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,10 +139,10 @@ export function DatasetFormDialog({
               name="datasetDesc"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>数据集描述</FormLabel>
+                  <FormLabel>知识库描述</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="请输入数据集描述（选填）"
+                      placeholder="请输入知识库描述（选填）"
                       className="resize-none"
                       {...field}
                       value={field.value || ''}
@@ -180,11 +159,7 @@ export function DatasetFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>嵌入模型</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="请选择嵌入模型" />
@@ -204,21 +179,11 @@ export function DatasetFormDialog({
             />
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 取消
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? isEditing
-                    ? '更新中...'
-                    : '创建中...'
-                  : isEditing
-                  ? '更新'
-                  : '创建'}
+                {isSubmitting ? (isEditing ? '更新中...' : '创建中...') : isEditing ? '更新' : '创建'}
               </Button>
             </DialogFooter>
           </form>
@@ -226,4 +191,4 @@ export function DatasetFormDialog({
       </DialogContent>
     </Dialog>
   )
-} 
+}

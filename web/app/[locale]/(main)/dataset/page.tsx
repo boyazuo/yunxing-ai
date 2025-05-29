@@ -32,7 +32,7 @@ export default function DatasetsPage() {
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
 
-  // 加载数据集列表
+  // 加载知识库列表
   const loadDatasets = useCallback(async () => {
     try {
       if (!tenantId) {
@@ -45,7 +45,7 @@ export default function DatasetsPage() {
       const data = await datasetService.getDatasets(tenantId.toString())
       setDatasets(data || [])
     } catch (error) {
-      console.error('加载数据集失败', error)
+      console.error('加载知识库失败', error)
     } finally {
       setIsLoading(false)
     }
@@ -58,13 +58,13 @@ export default function DatasetsPage() {
     }
   }, [status, tenantId, loadDatasets])
 
-  // 打开创建数据集表单
+  // 打开创建知识库表单
   const handleCreateDataset = () => {
     setCurrentDataset(undefined)
     setIsFormOpen(true)
   }
 
-  // 打开编辑数据集表单
+  // 打开编辑知识库表单
   const handleEditDataset = (dataset: Dataset) => {
     setCurrentDataset(dataset)
     setIsFormOpen(true)
@@ -79,7 +79,7 @@ export default function DatasetsPage() {
     }, 0)
   }
 
-  // 删除数据集
+  // 删除知识库
   const handleDeleteDataset = async () => {
     try {
       if (!datasetToDelete) return
@@ -87,9 +87,9 @@ export default function DatasetsPage() {
       await datasetService.deleteDataset(datasetToDelete.datasetId)
       setDeleteDialogOpen(false)
       setDatasetToDelete(null)
-      loadDatasets() // 重新加载数据集列表
+      loadDatasets() // 重新加载知识库列表
     } catch (error) {
-      console.error('删除数据集失败', error)
+      console.error('删除知识库失败', error)
     }
   }
 
@@ -110,7 +110,7 @@ export default function DatasetsPage() {
     }
   }
 
-  // 过滤数据集
+  // 过滤知识库
   const filteredDatasets = datasets.filter((dataset) => {
     // 搜索过滤
     const searchMatch = searchTerm ? dataset.datasetName.toLowerCase().includes(searchTerm.toLowerCase()) : true
@@ -121,7 +121,7 @@ export default function DatasetsPage() {
     return searchMatch && statusMatch
   })
 
-  // 跳转到数据集文档列表页面
+  // 跳转到知识库文档列表页面
   const navigateToDatasetDetail = (datasetId: string) => {
     router.push(`/dataset/${datasetId}`)
   }
@@ -136,7 +136,7 @@ export default function DatasetsPage() {
               <SelectValue placeholder="筛选状态" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部数据集</SelectItem>
+              <SelectItem value="all">全部知识库</SelectItem>
               <SelectItem value={DatasetStatus.ACTIVE}>正常</SelectItem>
               <SelectItem value={DatasetStatus.DISABLED}>已禁用</SelectItem>
             </SelectContent>
@@ -144,19 +144,19 @@ export default function DatasetsPage() {
         </div>
         <div className="flex items-center space-x-2">
           <Input
-            placeholder="搜索数据集..."
+            placeholder="搜索知识库..."
             className="w-[250px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Button onClick={handleCreateDataset}>
             <Plus className="mr-2 h-4 w-4" />
-            新建数据集
+            新建知识库
           </Button>
         </div>
       </div>
 
-      {/* 数据集列表 */}
+      {/* 知识库列表 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {isLoading ? (
           // 加载状态
@@ -166,7 +166,7 @@ export default function DatasetsPage() {
             </Card>
           ))
         ) : filteredDatasets.length > 0 ? (
-          // 数据集列表
+          // 知识库列表
           filteredDatasets.map((dataset) => (
             <Card
               key={dataset.datasetId}
@@ -230,7 +230,7 @@ export default function DatasetsPage() {
                       }}
                     >
                       <Trash className="mr-2 h-4 w-4" />
-                      <span>删除数据集</span>
+                      <span>删除知识库</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -270,16 +270,16 @@ export default function DatasetsPage() {
         ) : (
           // 无数据状态
           <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p>暂无数据集数据</p>
+            <p>暂无知识库数据</p>
             <Button variant="outline" className="mt-2" onClick={handleCreateDataset}>
               <Plus className="mr-2 h-4 w-4" />
-              创建第一个数据集
+              创建第一个知识库
             </Button>
           </div>
         )}
       </div>
 
-      {/* 数据集表单弹窗 */}
+      {/* 知识库表单弹窗 */}
       <DatasetFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
@@ -293,8 +293,8 @@ export default function DatasetsPage() {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="确认删除数据集"
-        description={`您确定要删除数据集 "${datasetToDelete?.datasetName}" 吗？此操作不可撤销。`}
+        title="确认删除知识库"
+        description={`您确定要删除知识库 "${datasetToDelete?.datasetName}" 吗？此操作不可撤销。`}
         onConfirm={handleDeleteDataset}
       />
     </div>

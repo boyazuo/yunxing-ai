@@ -89,9 +89,9 @@ public interface DatasetDocumentSegmentMapper extends BaseMapper<DatasetDocument
             @Param("documentId") Long documentId, @Param("keyword") String keyword);
 
     /**
-     * 根据数据集ID获取所有分段
+     * 根据知识库ID获取所有分段
      * 
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @return 分段列表
      */
     @Select("SELECT s.*, " +

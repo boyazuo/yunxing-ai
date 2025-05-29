@@ -119,7 +119,7 @@ export function DocumentUploadDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>上传文档</DialogTitle>
-          <DialogDescription>上传文档到数据集，支持PDF、DOCX、TXT等格式</DialogDescription>
+          <DialogDescription>上传文档到知识库，支持PDF、DOCX、TXT等格式</DialogDescription>
         </DialogHeader>
 
         {/* 文件上传区域 */}

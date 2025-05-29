@@ -28,6 +28,6 @@ public class DatasetDocumentSegmentDTO extends DatasetDocumentSegment {
     @Schema(description = "文档名称")
     private String documentName;
 
-    @Schema(description = "数据集名称")
+    @Schema(description = "知识库名称")
     private String datasetName;
 }

@@ -13,26 +13,26 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 数据集表实体类
+ * 知识库表实体类
  * 
  * @author Boya
  */
 @Data
 @TableName("dataset")
-@Schema(description = "数据集信息")
+@Schema(description = "知识库信息")
 public class Dataset {
 
     @TableId(value = "dataset_id", type = IdType.ASSIGN_ID)
-    @Schema(description = "数据集ID")
+    @Schema(description = "知识库ID")
     private Long datasetId;
 
     @Schema(description = "所属租户ID")
     private Long tenantId;
 
-    @Schema(description = "数据集名称")
+    @Schema(description = "知识库名称")
     private String datasetName;
 
-    @Schema(description = "数据集描述")
+    @Schema(description = "知识库描述")
     private String datasetDesc;
 
     @Schema(description = "嵌入模型ID")

@@ -32,13 +32,13 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 数据集文档控制器
+ * 知识库文档控制器
  * 
  * @author Boya
  */
 @RestController
 @RequestMapping("/v1/api/dataset-documents")
-@Tag(name = "数据集文档API", description = "数据集文档管理相关接口")
+@Tag(name = "知识库文档API", description = "知识库文档管理相关接口")
 @RequiredArgsConstructor
 public class DatasetDocumentController {
 
@@ -47,24 +47,24 @@ public class DatasetDocumentController {
     private final DatasetDocumentSegmentService datasetDocumentSegmentService;
 
     @GetMapping
-    @Operation(summary = "获取文档列表", description = "根据数据集ID获取文档列表")
+    @Operation(summary = "获取文档列表", description = "根据知识库ID获取文档列表")
     public Result<List<DatasetDocumentDTO>> getDocumentsByDatasetId(
-            @Parameter(description = "数据集ID") @RequestParam Long datasetId) {
+            @Parameter(description = "知识库ID") @RequestParam Long datasetId) {
         if (datasetId == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "数据集ID不能为空");
+            return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
         List<DatasetDocumentDTO> documents = datasetDocumentService.listDocumentsByDatasetId(datasetId);
         return Result.success("查询成功", documents);
     }
 
     @GetMapping("/page")
-    @Operation(summary = "分页获取文档列表", description = "根据数据集ID分页获取文档列表")
+    @Operation(summary = "分页获取文档列表", description = "根据知识库ID分页获取文档列表")
     public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(
-            @Parameter(description = "数据集ID") @RequestParam Long datasetId,
+            @Parameter(description = "知识库ID") @RequestParam Long datasetId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size) {
         if (datasetId == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "数据集ID不能为空");
+            return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
         IPage<DatasetDocumentDTO> documents = datasetDocumentService.getDocumentsByDatasetId(datasetId, current, size);
         return Result.success("查询成功", documents);
@@ -90,7 +90,7 @@ public class DatasetDocumentController {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
         }
         if (documentRequest.getDatasetId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "数据集ID不能为空");
+            return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
         if (documentRequest.getFileId() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "文件ID不能为空");

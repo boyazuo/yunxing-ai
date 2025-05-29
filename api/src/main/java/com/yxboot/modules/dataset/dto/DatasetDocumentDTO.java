@@ -9,12 +9,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 数据集文档DTO
+ * 知识库文档DTO
  * 
  * @author Boya
  */
 @Data
-@Schema(description = "数据集文档信息DTO")
+@Schema(description = "知识库文档信息DTO")
 public class DatasetDocumentDTO {
 
     @Schema(description = "文档ID")
@@ -23,10 +23,10 @@ public class DatasetDocumentDTO {
     @Schema(description = "所属租户ID")
     private Long tenantId;
 
-    @Schema(description = "数据集ID")
+    @Schema(description = "知识库ID")
     private Long datasetId;
 
-    @Schema(description = "数据集名称")
+    @Schema(description = "知识库名称")
     private String datasetName;
 
     @Schema(description = "文件ID")

@@ -17,7 +17,7 @@ interface Dataset extends DatasetConfigType {
 export default function DatasetConfig({ appId, datasets = [], onChange }: DatasetConfigProps) {
   const [datasetList, setDatasetList] = useState<Dataset[]>([])
 
-  // 这里应该从API获取可用的数据集列表
+  // 这里应该从API获取可用的知识库列表
   const [availableDatasets, setAvailableDatasets] = useState([
     { id: 'ds-1', name: '公司产品知识库' },
     { id: 'ds-2', name: '行业知识库' },
@@ -45,7 +45,7 @@ export default function DatasetConfig({ appId, datasets = [], onChange }: Datase
     }
   }
 
-  // 添加数据集
+  // 添加知识库
   const addDataset = (datasetId: string, name: string) => {
     // 检查是否已经添加过
     if (datasetList.some((ds) => ds.datasetId === datasetId)) {
@@ -62,7 +62,7 @@ export default function DatasetConfig({ appId, datasets = [], onChange }: Datase
     updateParent([...datasetList, newDataset])
   }
 
-  // 删除数据集
+  // 删除知识库
   const removeDataset = (id: string) => {
     updateParent(datasetList.filter((ds) => ds.id !== id))
   }
@@ -111,7 +111,7 @@ export default function DatasetConfig({ appId, datasets = [], onChange }: Datase
       {/* 添加知识库部分 */}
       {getUnavailableDatasets().length > 0 && (
         <div className="mt-4 pt-4 border-t">
-          <h4 className="text-sm font-medium mb-2">添加数据集</h4>
+          <h4 className="text-sm font-medium mb-2">添加知识库</h4>
           <div className="space-y-2">
             {getUnavailableDatasets().map((ds) => (
               <div key={ds.id} className="flex items-center justify-between p-2 border rounded-md">

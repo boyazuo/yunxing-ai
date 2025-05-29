@@ -36,7 +36,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 数据集文档异步处理服务
+ * 知识库文档异步处理服务
  */
 @Slf4j
 @Service
@@ -148,10 +148,10 @@ public class DatasetDocumentAsyncService {
             // 7. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, segments.size());
 
-            // 获取数据集信息
+            // 获取知识库信息
             Dataset dataset = datasetService.getById(document.getDatasetId());
             if (dataset == null) {
-                log.error("数据集不存在, datasetId: {}", document.getDatasetId());
+                log.error("知识库不存在, datasetId: {}", document.getDatasetId());
                 datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.FAILED);
                 return CompletableFuture.completedFuture(false);
             }

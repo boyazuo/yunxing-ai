@@ -10,17 +10,17 @@ import com.yxboot.modules.dataset.dto.DatasetDTO;
 import com.yxboot.modules.dataset.entity.Dataset;
 
 /**
- * 数据集表 Mapper 接口
+ * 知识库表 Mapper 接口
  * 
  * @author Boya
  */
 public interface DatasetMapper extends BaseMapper<Dataset> {
 
     /**
-     * 根据租户ID获取数据集列表，同时包含创建者和更新者信息
+     * 根据租户ID获取知识库列表，同时包含创建者和更新者信息
      * 
      * @param tenantId 租户ID
-     * @return 数据集列表DTO
+     * @return 知识库列表DTO
      */
     @Select("SELECT d.*, " +
             "cu.username as creator_username, " +

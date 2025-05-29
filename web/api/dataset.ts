@@ -2,11 +2,11 @@ import { api } from '@/lib/api'
 import type { CreateDatasetRequest, Dataset, UpdateDatasetRequest } from '@/types/dataset'
 
 /**
- * 数据集服务
+ * 知识库服务
  */
 export const datasetService = {
   /**
-   * 获取租户下的数据集列表
+   * 获取租户下的知识库列表
    */
   getDatasets: async (tenantId: string): Promise<Dataset[]> => {
     const response = await api.get<Dataset[]>(`/datasets`, {
@@ -16,7 +16,7 @@ export const datasetService = {
   },
 
   /**
-   * 获取数据集详情
+   * 获取知识库详情
    */
   getDataset: async (datasetId: string): Promise<Dataset> => {
     const response = await api.get<Dataset>(`/datasets/${datasetId}`)
@@ -24,7 +24,7 @@ export const datasetService = {
   },
 
   /**
-   * 创建数据集
+   * 创建知识库
    */
   createDataset: async (data: CreateDatasetRequest): Promise<Dataset> => {
     const response = await api.post<Dataset>(`/datasets`, data)
@@ -32,7 +32,7 @@ export const datasetService = {
   },
 
   /**
-   * 更新数据集
+   * 更新知识库
    */
   updateDataset: async (data: UpdateDatasetRequest): Promise<Dataset> => {
     const response = await api.put<Dataset>(`/datasets/${data.datasetId}`, data)
@@ -40,7 +40,7 @@ export const datasetService = {
   },
 
   /**
-   * 删除数据集
+   * 删除知识库
    */
   deleteDataset: async (datasetId: string): Promise<void> => {
     await api.delete(`/datasets/${datasetId}`)

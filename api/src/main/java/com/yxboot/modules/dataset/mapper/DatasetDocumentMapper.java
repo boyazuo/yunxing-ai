@@ -12,17 +12,17 @@ import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 
 /**
- * 数据集文档表 Mapper 接口
+ * 知识库文档表 Mapper 接口
  * 
  * @author Boya
  */
 public interface DatasetDocumentMapper extends BaseMapper<DatasetDocument> {
 
     /**
-     * 分页获取数据集文档列表，包含创建者和数据集信息
+     * 分页获取知识库文档列表，包含创建者和知识库信息
      * 
      * @param page      分页参数
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @return 文档列表分页数据
      */
     @Select("SELECT dd.*, " +
@@ -40,9 +40,9 @@ public interface DatasetDocumentMapper extends BaseMapper<DatasetDocument> {
             @Param("datasetId") Long datasetId);
 
     /**
-     * 根据数据集ID获取文档列表，包含创建者和数据集信息
+     * 根据知识库ID获取文档列表，包含创建者和知识库信息
      * 
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @return 文档列表
      */
     @Select("SELECT dd.*, " +
@@ -59,7 +59,7 @@ public interface DatasetDocumentMapper extends BaseMapper<DatasetDocument> {
     List<DatasetDocumentDTO> listDocumentsByDatasetId(@Param("datasetId") Long datasetId);
 
     /**
-     * 根据租户ID获取文档列表，包含创建者和数据集信息
+     * 根据租户ID获取文档列表，包含创建者和知识库信息
      * 
      * @param tenantId 租户ID
      * @return 文档列表

@@ -75,10 +75,10 @@ export default function DatasetDocumentsPage() {
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
-  // 从URL参数中获取数据集ID
+  // 从URL参数中获取知识库ID
   const datasetId = params.datasetId as string
 
-  // 加载数据集信息
+  // 加载知识库信息
   const loadDataset = useCallback(async () => {
     try {
       if (!datasetId) {
@@ -88,8 +88,8 @@ export default function DatasetDocumentsPage() {
       const data = await datasetService.getDataset(datasetId)
       setDataset(data)
     } catch (error) {
-      console.error('加载数据集信息失败', error)
-      toast.error('加载数据集信息失败')
+      console.error('加载知识库信息失败', error)
+      toast.error('加载知识库信息失败')
     }
   }, [datasetId])
 
@@ -177,7 +177,7 @@ export default function DatasetDocumentsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{dataset?.datasetName || '数据集'}</h1>
+            <h1 className="text-2xl font-bold">{dataset?.datasetName || '知识库'}</h1>
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import type { DatasetDocument, DocumentSegment, DocumentStatus, SegmentMethod } 
  */
 export const documentService = {
   /**
-   * 获取数据集下的文档列表
+   * 获取知识库下的文档列表
    */
   getDocuments: async (
     datasetId: string,

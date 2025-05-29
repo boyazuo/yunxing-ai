@@ -13,7 +13,7 @@ import com.yxboot.modules.dataset.mapper.DatasetMapper;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 数据集服务实现类
+ * 知识库服务实现类
  * 
  * @author Boya
  */
@@ -22,13 +22,13 @@ import lombok.RequiredArgsConstructor;
 public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
 
     /**
-     * 创建数据集
+     * 创建知识库
      * 
      * @param tenantId         租户ID
-     * @param datasetName      数据集名称
-     * @param datasetDesc      数据集描述
+     * @param datasetName      知识库名称
+     * @param datasetDesc      知识库描述
      * @param embeddingModelId 嵌入模型ID
-     * @return 数据集对象
+     * @return 知识库对象
      */
     public Dataset createDataset(Long tenantId, String datasetName, String datasetDesc, Long embeddingModelId) {
         Dataset dataset = new Dataset();
@@ -42,19 +42,19 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
     }
 
     /**
-     * 获取租户下的所有数据集列表
+     * 获取租户下的所有知识库列表
      * 
      * @param tenantId 租户ID
-     * @return 数据集列表
+     * @return 知识库列表
      */
     public List<DatasetDTO> getDatasetsByTenantId(String tenantId) {
         return baseMapper.getDatasetsByTenantId(tenantId);
     }
 
     /**
-     * 更新数据集状态
+     * 更新知识库状态
      * 
-     * @param datasetId 数据集ID
+     * @param datasetId 知识库ID
      * @param status    新状态
      * @return 是否成功
      */

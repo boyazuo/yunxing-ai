@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * 数据集状态枚举
+ * 知识库状态枚举
  * 
  * @author Boya
  */

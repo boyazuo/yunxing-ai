@@ -28,7 +28,7 @@ public class DatasetDocumentSegment {
     @Schema(description = "所属租户ID")
     private Long tenantId;
 
-    @Schema(description = "数据集ID")
+    @Schema(description = "知识库ID")
     private Long datasetId;
 
     @Schema(description = "文档ID")

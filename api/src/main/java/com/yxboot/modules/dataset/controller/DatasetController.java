@@ -25,20 +25,20 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 数据集控制器
+ * 知识库控制器
  * 
  * @author Boya
  */
 @RestController
 @RequestMapping("/v1/api/datasets")
-@Tag(name = "数据集API", description = "数据集管理相关接口")
+@Tag(name = "知识库API", description = "知识库管理相关接口")
 @RequiredArgsConstructor
 public class DatasetController {
 
     private final DatasetService datasetService;
 
     @GetMapping
-    @Operation(summary = "获取数据集列表", description = "获取当前租户下的所有数据集")
+    @Operation(summary = "获取知识库列表", description = "获取当前租户下的所有知识库")
     public Result<List<DatasetDTO>> getDatasets(@Parameter(description = "租户ID") String tenantId) {
         if (tenantId == null || tenantId.isEmpty()) {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
@@ -48,17 +48,17 @@ public class DatasetController {
     }
 
     @GetMapping("/{datasetId}")
-    @Operation(summary = "获取数据集详情", description = "根据数据集ID获取数据集详情")
+    @Operation(summary = "获取知识库详情", description = "根据知识库ID获取知识库详情")
     public Result<Dataset> getDatasetById(@PathVariable Long datasetId) {
         Dataset dataset = datasetService.getById(datasetId);
         if (dataset == null) {
-            return Result.error(ResultCode.NOT_FOUND, "数据集不存在");
+            return Result.error(ResultCode.NOT_FOUND, "知识库不存在");
         }
         return Result.success("查询成功", dataset);
     }
 
     @PostMapping
-    @Operation(summary = "创建数据集", description = "创建新的数据集")
+    @Operation(summary = "创建知识库", description = "创建新的知识库")
     public Result<Dataset> createDataset(@RequestBody DatasetRequest datasetRequest) {
         // 参数验证
         Long tenantId = datasetRequest.getTenantId();
@@ -70,25 +70,25 @@ public class DatasetController {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
         }
         if (datasetName == null || datasetName.trim().isEmpty()) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "数据集名称不能为空");
+            return Result.error(ResultCode.VALIDATE_FAILED, "知识库名称不能为空");
         }
         if (embeddingModelId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "嵌入模型ID不能为空");
         }
 
-        // 创建数据集
+        // 创建知识库
         Dataset dataset = datasetService.createDataset(tenantId, datasetName, datasetDesc, embeddingModelId);
 
-        return Result.success("数据集创建成功", dataset);
+        return Result.success("知识库创建成功", dataset);
     }
 
     @PutMapping("/{datasetId}")
-    @Operation(summary = "更新数据集", description = "更新数据集信息")
+    @Operation(summary = "更新知识库", description = "更新知识库信息")
     public Result<Dataset> updateDataset(@PathVariable Long datasetId, @RequestBody DatasetRequest datasetRequest) {
-        // 验证数据集是否存在
+        // 验证知识库是否存在
         Dataset existingDataset = datasetService.getById(datasetId);
         if (existingDataset == null) {
-            return Result.error(ResultCode.NOT_FOUND, "数据集不存在");
+            return Result.error(ResultCode.NOT_FOUND, "知识库不存在");
         }
 
         // 设置要更新的字段
@@ -105,35 +105,35 @@ public class DatasetController {
             existingDataset.setStatus(datasetRequest.getStatus());
         }
 
-        // 更新数据集
+        // 更新知识库
         boolean updated = datasetService.updateById(existingDataset);
         if (!updated) {
-            return Result.error(ResultCode.FAIL, "数据集更新失败");
+            return Result.error(ResultCode.FAIL, "知识库更新失败");
         }
 
-        return Result.success("数据集更新成功", existingDataset);
+        return Result.success("知识库更新成功", existingDataset);
     }
 
     @DeleteMapping("/{datasetId}")
-    @Operation(summary = "删除数据集", description = "删除指定数据集")
+    @Operation(summary = "删除知识库", description = "删除指定知识库")
     public Result<Void> deleteDataset(@PathVariable Long datasetId) {
-        // 验证数据集是否存在
+        // 验证知识库是否存在
         Dataset existingDataset = datasetService.getById(datasetId);
         if (existingDataset == null) {
-            return Result.error(ResultCode.NOT_FOUND, "数据集不存在");
+            return Result.error(ResultCode.NOT_FOUND, "知识库不存在");
         }
 
-        // 删除数据集
+        // 删除知识库
         boolean removed = datasetService.removeById(datasetId);
         if (!removed) {
-            return Result.error(ResultCode.FAIL, "数据集删除失败");
+            return Result.error(ResultCode.FAIL, "知识库删除失败");
         }
 
-        return Result.success("数据集已删除");
+        return Result.success("知识库已删除");
     }
 
     @PutMapping("/{datasetId}/status")
-    @Operation(summary = "更新数据集状态", description = "更新数据集状态")
+    @Operation(summary = "更新知识库状态", description = "更新知识库状态")
     public Result<Void> updateDatasetStatus(@PathVariable Long datasetId, @RequestBody StatusRequest statusRequest) {
         if (statusRequest.getStatus() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "状态不能为空");
@@ -141,10 +141,10 @@ public class DatasetController {
 
         boolean updated = datasetService.updateDatasetStatus(datasetId, statusRequest.getStatus());
         if (!updated) {
-            return Result.error(ResultCode.FAIL, "数据集状态更新失败");
+            return Result.error(ResultCode.FAIL, "知识库状态更新失败");
         }
 
-        return Result.success("数据集状态已更新");
+        return Result.success("知识库状态已更新");
     }
 
     @Data
