@@ -5,15 +5,31 @@ import UserAvatar from '@/components/layouts/header/user-avatar'
 import LocaleToggle from '@/components/locale/toggle'
 import ThemeToggle from '@/components/theme/toggle'
 import { cn } from '@/lib/utils'
+import { Database, Home, Layers } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 // 导航菜单
 const navigation = [
-  { name: '首页', href: '/home' },
-  { name: '工作空间', href: '/app' },
-  { name: '知识库', href: '/dataset' },
+  {
+    name: '首页',
+    href: '/home',
+    icon: Home,
+    description: '返回主页',
+  },
+  {
+    name: '工作空间',
+    href: '/app',
+    icon: Layers,
+    description: 'AI应用管理',
+  },
+  {
+    name: '知识库',
+    href: '/dataset',
+    icon: Database,
+    description: '数据与知识管理',
+  },
 ]
 
 export default function Header() {
@@ -31,19 +47,32 @@ export default function Header() {
           </Link>
         </div>
         <nav className="hidden flex-1 md:flex">
-          <ul className="flex space-x-4">
+          <ul className="flex space-x-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
+              const Icon = item.icon
               return (
                 <li key={item.name}>
                   <Link
                     href={item.href}
                     className={cn(
-                      'text-sm font-medium transition-colors hover:text-primary cursor-pointer',
-                      isActive ? 'text-foreground' : 'text-muted-foreground',
+                      'group relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer',
+                      'hover:bg-muted/50 hover:scale-105',
+                      isActive ? 'text-primary bg-primary/10 shadow-sm' : 'text-muted-foreground hover:text-foreground',
                     )}
+                    title={item.description}
                   >
-                    {item.name}
+                    <Icon
+                      size={16}
+                      className={cn(
+                        'transition-all duration-200',
+                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                      )}
+                    />
+                    <span className="relative">
+                      {item.name}
+                      {isActive && <span className="absolute left-0 right-0 h-0.5 bg-gradient-to-r rounded-full" />}
+                    </span>
                   </Link>
                 </li>
               )
