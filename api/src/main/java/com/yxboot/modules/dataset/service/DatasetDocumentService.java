@@ -44,7 +44,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
                 .eq(DatasetDocument::getDatasetId, datasetId)
                 .eq(DatasetDocument::getFileHash, fileHash);
 
-        return getOne(queryWrapper);
+        return getOne(queryWrapper, false);
     }
 
     /**

@@ -3,10 +3,10 @@ import axios from 'axios'
 import { getSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   code: number
   data: T
-  message: string
+  msg: string
 }
 
 // 获取API基础URL

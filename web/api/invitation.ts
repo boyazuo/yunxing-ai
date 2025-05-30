@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import { InvitationRequest } from '@/types/invitation'
+import type { InvitationRequest } from '@/types/invitation'
 
 export const invitationService = {
   apiRoot: '/invitations',

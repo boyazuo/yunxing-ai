@@ -88,7 +88,7 @@ export function DocumentUploadDialog({
       setUploadProgress(60)
 
       // 2. 创建文档记录
-      await documentService.createDocument({
+      const result = await documentService.createDocument({
         tenantId,
         datasetId,
         fileId: uploadedFile.fileId,
@@ -98,6 +98,11 @@ export function DocumentUploadDialog({
         maxSegmentLength,
         overlapLength,
       })
+
+      if (result.code !== 0) {
+        toast.error(result.msg)
+        return
+      }
 
       setUploadProgress(100)
 
