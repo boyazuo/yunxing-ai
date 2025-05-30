@@ -83,6 +83,7 @@ CREATE TABLE `dataset_document` (
   `file_id` bigint(20) DEFAULT NULL COMMENT '文件 ID',
   `file_name` varchar(255) DEFAULT NULL COMMENT '文件名称',
   `file_size` int(11) DEFAULT NULL COMMENT '文件大小',
+  `file_hash` varchar(100) DEFAULT NULL COMMENT '文件hash值',
   `segment_method` varchar(20) DEFAULT NULL COMMENT '分段方式',
   `max_segment_length` int(11) DEFAULT NULL COMMENT '分段最大长度',
   `overlap_length` int(11) DEFAULT NULL COMMENT '重叠长度',

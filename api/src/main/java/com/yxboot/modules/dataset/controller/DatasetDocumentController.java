@@ -24,6 +24,8 @@ import com.yxboot.modules.dataset.enums.SegmentMethod;
 import com.yxboot.modules.dataset.service.DatasetDocumentAsyncService;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
+import com.yxboot.modules.system.entity.SysFile;
+import com.yxboot.modules.system.service.SysFileService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,6 +47,7 @@ public class DatasetDocumentController {
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentAsyncService datasetDocumentAsyncService;
     private final DatasetDocumentSegmentService datasetDocumentSegmentService;
+    private final SysFileService sysFileService;
 
     @GetMapping
     @Operation(summary = "获取文档列表", description = "根据知识库ID获取文档列表")
@@ -111,6 +114,25 @@ public class DatasetDocumentController {
             return Result.error(ResultCode.VALIDATE_FAILED, "重叠长度不能为空");
         }
 
+        // 检查文件是否存在
+        SysFile existingFile = sysFileService.getById(documentRequest.getFileId());
+        if (existingFile == null) {
+            return Result.error(ResultCode.NOT_FOUND, "文件不存在");
+        }
+
+        // 检查是否已存在相同hash的文档
+        String fileHash = existingFile.getHash();
+        if (fileHash != null && !fileHash.trim().isEmpty()) {
+            DatasetDocument existingDocument = datasetDocumentService.checkDocumentExistsByHash(
+                    documentRequest.getTenantId(),
+                    documentRequest.getDatasetId(),
+                    fileHash);
+            if (existingDocument != null) {
+                return Result.error(ResultCode.VALIDATE_FAILED,
+                        "该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
+            }
+        }
+
         // 创建文档
         DatasetDocument document = datasetDocumentService.createDocument(
                 documentRequest.getTenantId(),
@@ -118,6 +140,7 @@ public class DatasetDocumentController {
                 documentRequest.getFileId(),
                 documentRequest.getFileName(),
                 documentRequest.getFileSize(),
+                fileHash,
                 documentRequest.getSegmentMethod(),
                 documentRequest.getMaxSegmentLength(),
                 documentRequest.getOverlapLength());

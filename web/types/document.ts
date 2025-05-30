@@ -2,11 +2,11 @@
  * 文档状态枚举
  */
 export enum DocumentStatus {
-  PENDING = 'pending',    // 待处理
+  PENDING = 'pending', // 待处理
   PROCESSING = 'processing', // 处理中
   COMPLETED = 'completed', // 已完成
-  FAILED = 'failed',     // 失败
-  DELETED = 'deleted'    // 已删除
+  FAILED = 'failed', // 失败
+  DELETED = 'deleted', // 已删除
 }
 
 /**
@@ -15,7 +15,7 @@ export enum DocumentStatus {
 export enum SegmentMethod {
   SENTENCE = 'sentence', // 按句子分段
   PARAGRAPH = 'paragraph', // 按段落分段
-  CUSTOM = 'custom'     // 自定义分段
+  CUSTOM = 'custom', // 自定义分段
 }
 
 /**
@@ -29,6 +29,7 @@ export interface DatasetDocument {
   fileId: string | number
   fileName: string
   fileSize: number
+  fileHash?: string
   segmentMethod: SegmentMethod
   maxSegmentLength: number
   overlapLength: number
@@ -73,7 +74,7 @@ export interface DocumentSegment {
  */
 export function getDocumentStatusText(status?: DocumentStatus): string {
   if (!status) return '未知状态'
-  
+
   switch (status) {
     case DocumentStatus.PENDING:
       return '待处理'
@@ -95,7 +96,7 @@ export function getDocumentStatusText(status?: DocumentStatus): string {
  */
 export function getDocumentStatusColor(status?: DocumentStatus): string {
   if (!status) return 'gray'
-  
+
   switch (status) {
     case DocumentStatus.PENDING:
       return 'yellow'
@@ -117,7 +118,7 @@ export function getDocumentStatusColor(status?: DocumentStatus): string {
  */
 export function getSegmentMethodText(method?: SegmentMethod): string {
   if (!method) return '未知方式'
-  
+
   switch (method) {
     case SegmentMethod.SENTENCE:
       return '按句子分段'
@@ -128,4 +129,4 @@ export function getSegmentMethodText(method?: SegmentMethod): string {
     default:
       return '未知方式'
   }
-} 
+}

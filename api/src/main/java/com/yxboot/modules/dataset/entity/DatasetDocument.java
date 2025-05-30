@@ -42,6 +42,9 @@ public class DatasetDocument {
     @Schema(description = "文件大小")
     private Integer fileSize;
 
+    @Schema(description = "文件hash值")
+    private String fileHash;
+
     @Schema(description = "分段方式")
     private SegmentMethod segmentMethod;
 

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -26,6 +27,27 @@ import lombok.RequiredArgsConstructor;
 public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, DatasetDocument> {
 
     /**
+     * 检查指定知识库中是否已存在相同hash的文档
+     * 
+     * @param tenantId  租户ID
+     * @param datasetId 知识库ID
+     * @param fileHash  文件hash值
+     * @return 存在的文档，如果不存在则返回null
+     */
+    public DatasetDocument checkDocumentExistsByHash(Long tenantId, Long datasetId, String fileHash) {
+        if (fileHash == null || fileHash.trim().isEmpty()) {
+            return null;
+        }
+
+        LambdaQueryWrapper<DatasetDocument> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(DatasetDocument::getTenantId, tenantId)
+                .eq(DatasetDocument::getDatasetId, datasetId)
+                .eq(DatasetDocument::getFileHash, fileHash);
+
+        return getOne(queryWrapper);
+    }
+
+    /**
      * 创建文档
      * 
      * @param tenantId         租户ID
@@ -33,6 +55,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
      * @param fileId           文件ID
      * @param fileName         文件名称
      * @param fileSize         文件大小
+     * @param fileHash         文件hash值
      * @param segmentMethod    分段方式
      * @param maxSegmentLength 分段最大长度
      * @param overlapLength    重叠长度
@@ -45,6 +68,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
             Long fileId,
             String fileName,
             Integer fileSize,
+            String fileHash,
             SegmentMethod segmentMethod,
             Integer maxSegmentLength,
             Integer overlapLength) {
@@ -55,6 +79,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
         document.setFileId(fileId);
         document.setFileName(fileName);
         document.setFileSize(fileSize);
+        document.setFileHash(fileHash);
         document.setSegmentMethod(segmentMethod);
         document.setMaxSegmentLength(maxSegmentLength);
         document.setOverlapLength(overlapLength);
