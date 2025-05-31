@@ -359,7 +359,7 @@ export default function AppConfigPage() {
               )}
             </div>
 
-            {/* 关联知识库部分 */}
+            {/* 知识库部分 */}
             <div className="bg-background rounded-lg overflow-hidden">
               <button
                 type="button"
@@ -368,7 +368,7 @@ export default function AppConfigPage() {
               >
                 <div className="flex items-center">
                   <Database className="h-4 w-4 mr-2 text-primary" />
-                  <span className="font-medium text-sm">关联知识库</span>
+                  <span className="font-medium text-sm">知识库</span>
                 </div>
                 {sectionState.datasetSection ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
