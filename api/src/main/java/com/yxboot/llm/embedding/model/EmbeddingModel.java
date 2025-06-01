@@ -41,6 +41,14 @@ public interface EmbeddingModel {
     void configure(EmbeddingConfig config);
 
     /**
+     * 设置API密钥
+     *
+     * @param apiKey API密钥
+     * @return 当前模型实例，支持链式调用
+     */
+    EmbeddingModel withApiKey(String apiKey);
+
+    /**
      * 获取模型名称
      *
      * @return 模型名称

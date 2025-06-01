@@ -55,7 +55,7 @@ public class EmbeddingModelFactory {
             log.debug("为提供商 {} 解析出模型提供者类型: {}", providerName, targetProvider);
 
             // 根据提供商类型创建对应的EmbeddingModel实例
-            return createModelByProvider(targetProvider, provider);
+            return createModelByProvider(targetProvider, provider).withApiKey(provider.getApiKey());
         });
     }
 

@@ -72,6 +72,19 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
+     * 设置API密钥的默认实现
+     * 子类应该覆盖此方法以提供实际的API密钥设置逻辑
+     *
+     * @param apiKey API密钥
+     * @return 当前模型实例
+     */
+    @Override
+    public EmbeddingModel withApiKey(String apiKey) {
+        // 默认实现：什么都不做，子类应该覆盖此方法
+        return this;
+    }
+
+    /**
      * 默认实现：调用单文本嵌入方法
      * 子类可以覆盖此方法以提供更高效的批处理实现
      */

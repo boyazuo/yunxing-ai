@@ -28,7 +28,59 @@ spring:
             enable: true #  开启
             required: true #  必须
 
+
 yxboot:
+  # llm 客户端配置
+  llm:
+    client:
+      # 缓存配置
+      cache-enabled: true
+      max-cache-size: 100
+      cache-expire-minutes: 30
+      
+      # 超时配置
+      default-timeout-seconds: 60
+      
+      # 健康检查配置
+      health-check-enabled: true
+      health-check-interval-minutes: 5
+      
+      # 重试配置
+      retry:
+        enabled: true
+        max-attempts: 3
+        delay-millis: 1000
+        multiplier: 2.0
+
+    embedding:
+      client:
+        # 缓存配置
+        cache-enabled: true
+        max-cache-size: 100
+        cache-expire-minutes: 30
+        
+        # 超时配置
+        default-timeout-seconds: 60
+        
+        # 健康检查配置
+        health-check-enabled: true
+        health-check-interval-minutes: 5
+        
+        # 重试配置
+        retry:
+          enabled: true
+          max-attempts: 3
+          delay-millis: 1000
+          multiplier: 2.0
+
+      qdrant:
+        host: localhost
+        port: 6333
+        grpc-port: 6334
+        https: false
+        api-key: 
+        default-collection-name: documents
+
   upload:
     model: local
     local:
@@ -43,19 +95,3 @@ yxboot:
       secretKey: xxx
       bucketName: xxx
       rewrite-file-name: true
-
-# 嵌入服务配置
-  llm:
-    embedding:
-      zhipuai:
-        api-key: your-zhipuai-api-key
-        model-name: embedding-2
-        embedding-dimension: 1024
-        batch-size: 32
-      qdrant:
-        host: localhost
-        port: 6333
-        grpc-port: 6334
-        https: false
-        api-key: 
-        default-collection-name: documents

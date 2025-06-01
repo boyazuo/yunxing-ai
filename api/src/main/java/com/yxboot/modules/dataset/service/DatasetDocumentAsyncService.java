@@ -15,11 +15,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.yxboot.llm.client.embedding.EmbeddingClient;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.service.DocumentProcessorService;
-import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.embedding.model.EmbeddingModelFactory;
-import com.yxboot.llm.provider.zhipu.ZhipuAIEmbeddingConfig;
 import com.yxboot.llm.storage.VectorStore;
 import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
@@ -50,7 +48,7 @@ public class DatasetDocumentAsyncService {
     private final SysFileService sysFileService;
     private final ModelService modelService;
     private final ProviderService providerService;
-    private final EmbeddingModelFactory embeddingModelFactory;
+    private final EmbeddingClient embeddingClient;
     private final VectorStore vectorStore;
 
     /**
@@ -156,15 +154,15 @@ public class DatasetDocumentAsyncService {
                 return CompletableFuture.completedFuture(false);
             }
 
-            // 获取嵌入模型和提供商
-            EmbeddingModel embeddingModel = getEmbeddingModel(dataset.getEmbeddingModelId());
-            if (embeddingModel == null) {
-                log.error("获取嵌入模型失败, embeddingModelId: {}", dataset.getEmbeddingModelId());
+            // 获取提供商信息
+            Provider provider = getProvider(dataset.getEmbeddingModelId());
+            if (provider == null) {
+                log.error("获取提供商失败, embeddingModelId: {}", dataset.getEmbeddingModelId());
                 datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.FAILED);
                 return CompletableFuture.completedFuture(false);
             }
 
-            vectorizeSegments(document, segments, embeddingModel);
+            vectorizeSegments(document, segments, provider);
 
             // 8. 更新文档状态为已完成
             datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.COMPLETED);
@@ -180,12 +178,12 @@ public class DatasetDocumentAsyncService {
     }
 
     /**
-     * 根据嵌入模型ID获取嵌入模型实例
+     * 根据嵌入模型ID获取提供商信息
      * 
      * @param embeddingModelId 嵌入模型ID
-     * @return 嵌入模型实例
+     * @return 提供商信息
      */
-    private EmbeddingModel getEmbeddingModel(Long embeddingModelId) {
+    private Provider getProvider(Long embeddingModelId) {
         try {
             // 获取模型信息
             Model model = modelService.getById(embeddingModelId);
@@ -201,24 +199,9 @@ public class DatasetDocumentAsyncService {
                 return null;
             }
 
-            // 使用工厂创建嵌入模型实例
-            EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider);
-
-            // 配置模型
-            ZhipuAIEmbeddingConfig config = ZhipuAIEmbeddingConfig.builder()
-                    .apiKey(provider.getApiKey())
-                    .modelName(model.getModelName())
-                    .build();
-
-            // if (provider.getEndpoint() != null && !provider.getEndpoint().isEmpty()) {
-            // config.setBaseUrl(provider.getEndpoint());
-            // }
-
-            embeddingModel.configure(config);
-
-            return embeddingModel;
+            return provider;
         } catch (Exception e) {
-            log.error("获取嵌入模型失败, embeddingModelId: {}", embeddingModelId, e);
+            log.error("获取提供商失败, embeddingModelId: {}", embeddingModelId, e);
             return null;
         }
     }
@@ -275,14 +258,14 @@ public class DatasetDocumentAsyncService {
     /**
      * 向量化文档分段
      *
-     * @param document       文档
-     * @param segments       分段列表
-     * @param embeddingModel 嵌入模型实例
+     * @param document 文档
+     * @param segments 分段列表
+     * @param provider 提供商信息
      */
     private void vectorizeSegments(DatasetDocument document, List<DocumentSegment> segments,
-            EmbeddingModel embeddingModel) {
-        log.info("开始向量化, documentId: {}, 分段数量: {}, 使用模型: {}",
-                document.getDocumentId(), segments.size(), embeddingModel.getModelName());
+            Provider provider) {
+        log.info("开始向量化, documentId: {}, 分段数量: {}, 使用提供商: {}",
+                document.getDocumentId(), segments.size(), provider.getProviderName());
 
         try {
             List<String> ids = new ArrayList<>();
@@ -302,8 +285,8 @@ public class DatasetDocumentAsyncService {
                     batchTexts.add(segment.getContent());
                 }
 
-                // 批量生成向量
-                List<float[]> batchVectors = embeddingModel.embedAll(batchTexts);
+                // 使用 EmbeddingClient 批量生成向量
+                List<float[]> batchVectors = embeddingClient.embedAll(provider, batchTexts);
 
                 // 准备存储数据
                 for (int j = 0; j < batch.size(); j++) {

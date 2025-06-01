@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 import com.yxboot.llm.embedding.model.AbstractEmbeddingModel;
+import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.embedding.model.EmbeddingRequest;
 import com.yxboot.llm.embedding.model.EmbeddingResponse;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
@@ -45,6 +46,21 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
     @Override
     public void configure(EmbeddingConfig config) {
         this.config = (ZhipuAIEmbeddingConfig) config;
+    }
+
+    /**
+     * 设置API密钥
+     *
+     * @param apiKey API密钥
+     * @return 当前模型实例
+     */
+    @Override
+    public EmbeddingModel withApiKey(String apiKey) {
+        if (this.config == null) {
+            this.config = new ZhipuAIEmbeddingConfig();
+        }
+        this.config.setApiKey(apiKey);
+        return this;
     }
 
     /**
