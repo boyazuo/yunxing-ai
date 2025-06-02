@@ -1,44 +1,47 @@
 {
-	"editor.formatOnSave": true,
-	"editor.codeActionsOnSave": {
-		"source.organizeImports": "explicit",
-		"source.addMissingImports": "explicit",
-		"source.fixAll": "explicit",
-		"source.fixAll.eslint": "explicit"
-	},
-	"files.associations": {
-		"*.css": "tailwindcss"
-	},
-	"[javascript]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescriptreact]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[css]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"typescript.tsdk": "node_modules/typescript/lib",
-	"biome.lspBin": "web/node_modules/.bin/biome",
-	"biome.projects": [
-		{
-			"path": "web"
-		}
-	],
-	"java.saveActions.organizeImports": true,
-	"java.saveActions.cleanup": true,
-	"java.compile.nullAnalysis.mode": "disabled",
-	"java.configuration.updateBuildConfiguration": "automatic",
-	"java.project.explorer.showNonJavaResources": false,
-	"java.dependency.syncWithFolderExplorer": true,
-	"i18n-ally.enabledFrameworks": ["next-intl"],
-	"i18n-ally.localesPaths": ["web/i18n/messages"],
-	"i18n-ally.keystyle": "nested",   
-	"i18n-ally.displayLanguage": "zh",           // 插件界面显示语言
-	"i18n-ally.sortKeys": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.addMissingImports": "explicit",
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "biome.lsp.bin": "web/node_modules/.bin/biome",
+  "biome.projects": [
+    {
+      "path": "web"
+    }
+  ],
 
-	"workbench.tree.indent": 20
+  "java.format.settings.url": ".vscode/eclipse-java-google-style.xml",
+  "java.saveActions.organizeImports": true,
+  "java.saveActions.cleanup": true,
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.project.explorer.showNonJavaResources": false,
+  "java.dependency.syncWithFolderExplorer": true,
+
+  "i18n-ally.enabledFrameworks": ["next-intl"],
+  "i18n-ally.localesPaths": ["web/i18n/messages"],
+  "i18n-ally.keystyle": "nested",
+  "i18n-ally.displayLanguage": "zh", // 插件界面显示语言
+  "i18n-ally.sortKeys": true,
+
+  "workbench.tree.indent": 20
 }
