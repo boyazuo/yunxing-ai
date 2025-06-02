@@ -115,7 +115,7 @@ public class DatasetController {
     }
 
     @DeleteMapping("/{datasetId}")
-    @Operation(summary = "删除知识库", description = "删除指定知识库")
+    @Operation(summary = "删除知识库", description = "删除指定知识库及其相关数据")
     public Result<Void> deleteDataset(@PathVariable Long datasetId) {
         // 验证知识库是否存在
         Dataset existingDataset = datasetService.getById(datasetId);
@@ -123,8 +123,8 @@ public class DatasetController {
             return Result.error(ResultCode.NOT_FOUND, "知识库不存在");
         }
 
-        // 删除知识库
-        boolean removed = datasetService.removeById(datasetId);
+        // 删除知识库及其相关数据（包括向量数据）
+        boolean removed = datasetService.deleteDatasetWithVectors(datasetId);
         if (!removed) {
             return Result.error(ResultCode.FAIL, "知识库删除失败");
         }

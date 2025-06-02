@@ -55,8 +55,10 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 添加单个向量
      */
     @Override
-    public boolean addVector(String id, float[] vector, Map<String, Object> metadata, String text) {
-        return addVectors(Collections.singletonList(id),
+    public boolean addVector(String collectionName, String id, float[] vector, Map<String, Object> metadata,
+            String text) {
+        return addVectors(collectionName,
+                Collections.singletonList(id),
                 Collections.singletonList(vector),
                 Collections.singletonList(metadata),
                 Collections.singletonList(text)) == 1;
@@ -66,13 +68,20 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 批量添加向量
      */
     @Override
-    public int addVectors(List<String> ids, List<float[]> vectors, List<Map<String, Object>> metadataList,
+    public int addVectors(String collectionName, List<String> ids, List<float[]> vectors,
+            List<Map<String, Object>> metadataList,
             List<String> texts) {
         try {
+            // 确保集合存在
+            if (!ensureCollection(collectionName, embeddingModel.getEmbeddingDimension())) {
+                log.error("确保集合存在失败: {}", collectionName);
+                return 0;
+            }
+
             // 构建请求URL
             String url = String.format("%s/collections/%s/points",
                     config.getHttpUrl(),
-                    defaultCollectionName);
+                    collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -124,20 +133,20 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 根据ID删除向量
      */
     @Override
-    public boolean deleteVector(String id) {
-        return deleteVectors(Collections.singletonList(id)) == 1;
+    public boolean deleteVector(String collectionName, String id) {
+        return deleteVectors(collectionName, Collections.singletonList(id)) == 1;
     }
 
     /**
      * 批量删除向量
      */
     @Override
-    public int deleteVectors(List<String> ids) {
+    public int deleteVectors(String collectionName, List<String> ids) {
         try {
             // 构建请求URL
             String url = String.format("%s/collections/%s/points/delete",
                     config.getHttpUrl(),
-                    defaultCollectionName);
+                    collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -167,12 +176,12 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 根据过滤条件删除向量
      */
     @Override
-    public int deleteVectorsByFilter(Map<String, Object> filter) {
+    public int deleteVectorsByFilter(String collectionName, Map<String, Object> filter) {
         try {
             // 构建请求URL
             String url = String.format("%s/collections/%s/points/delete",
                     config.getHttpUrl(),
-                    defaultCollectionName);
+                    collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();

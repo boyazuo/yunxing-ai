@@ -10,11 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-
 import com.yxboot.llm.client.embedding.EmbeddingClient;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.service.DocumentProcessorService;
@@ -25,11 +23,11 @@ import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
+import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
 import com.yxboot.modules.system.entity.SysFile;
 import com.yxboot.modules.system.service.SysFileService;
 import com.yxboot.util.HttpClient;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,7 +53,7 @@ public class DatasetDocumentAsyncService {
      * 异步处理文档
      *
      * @param documentId 文档ID
-     * @param userId     用户ID（为避免SecurityContext在异步线程中丢失，显式传递）
+     * @param userId 用户ID（为避免SecurityContext在异步线程中丢失，显式传递）
      * @return CompletableFuture<Boolean> 处理结果
      */
     @Async("documentTaskExecutor")
@@ -132,19 +130,15 @@ public class DatasetDocumentAsyncService {
             }
 
             // 6. 保存文档分段
-            List<String> contents = new ArrayList<>();
-            List<String> titles = new ArrayList<>();
-
-            for (DocumentSegment segment : segments) {
-                contents.add(segment.getContent());
-                titles.add(segment.getTitle());
-            }
-
             log.info("保存文档分段, documentId: {}, 分段数量: {}", documentId, segments.size());
-            int savedCount = documentSegmentService.batchCreateSegments(documentId, contents, titles);
+            List<DatasetDocumentSegment> savedSegments = documentSegmentService.batchCreateSegments(document, segments);
+
+            // 更新文档的分段数
+            document.setSegmentNum(savedSegments.size());
+            datasetDocumentService.updateById(document);
 
             // 7. 向量化处理
-            log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, segments.size());
+            log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
 
             // 获取知识库信息
             Dataset dataset = datasetService.getById(document.getDatasetId());
@@ -162,11 +156,11 @@ public class DatasetDocumentAsyncService {
                 return CompletableFuture.completedFuture(false);
             }
 
-            vectorizeSegments(document, segments, provider);
+            vectorizeSegments(document, savedSegments, provider);
 
             // 8. 更新文档状态为已完成
             datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.COMPLETED);
-            log.info("文档处理完成, documentId: {}, 分段数量: {}", documentId, savedCount);
+            log.info("文档处理完成, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
 
             return CompletableFuture.completedFuture(true);
         } catch (Exception e) {
@@ -209,7 +203,7 @@ public class DatasetDocumentAsyncService {
     /**
      * 从文件加载并分割文档
      * 
-     * @param file     文件对象
+     * @param file 文件对象
      * @param document 文档对象
      * @return 分段列表
      */
@@ -219,16 +213,13 @@ public class DatasetDocumentAsyncService {
         }
 
         log.info("开始处理文档, documentId: {}, filePath: {}", document.getDocumentId(), file.getAbsolutePath());
-        return documentProcessorService.loadAndSplitDocument(
-                file,
-                document.getMaxSegmentLength(),
-                document.getOverlapLength());
+        return documentProcessorService.loadAndSplitDocument(file, document.getMaxSegmentLength(), document.getOverlapLength());
     }
 
     /**
      * 从URL下载文件到临时目录
      * 
-     * @param fileUrl  文件URL
+     * @param fileUrl 文件URL
      * @param fileName 文件名
      * @return 下载的临时文件
      */
@@ -262,12 +253,25 @@ public class DatasetDocumentAsyncService {
      * @param segments 分段列表
      * @param provider 提供商信息
      */
-    private void vectorizeSegments(DatasetDocument document, List<DocumentSegment> segments,
-            Provider provider) {
-        log.info("开始向量化, documentId: {}, 分段数量: {}, 使用提供商: {}",
-                document.getDocumentId(), segments.size(), provider.getProviderName());
+    private void vectorizeSegments(DatasetDocument document, List<DatasetDocumentSegment> segments, Provider provider) {
+        log.info("开始向量化, documentId: {}, 分段数量: {}, 使用提供商: {}", document.getDocumentId(), segments.size(), provider.getProviderName());
 
         try {
+            // 使用 Dataset ID 作为集合名称
+            String collectionName = "dataset_" + document.getDatasetId();
+
+            // 确保集合存在，如果不存在则创建
+            Dataset dataset = datasetService.getById(document.getDatasetId());
+            if (dataset == null) {
+                throw new RuntimeException("知识库不存在: " + document.getDatasetId());
+            }
+
+            // 获取嵌入模型维度
+            int dimension = embeddingClient.getEmbeddingDimension(provider);
+            if (!vectorStore.ensureCollection(collectionName, dimension)) {
+                throw new RuntimeException("创建或确保集合存在失败: " + collectionName);
+            }
+
             List<String> ids = new ArrayList<>();
             List<float[]> vectors = new ArrayList<>();
             List<Map<String, Object>> metadataList = new ArrayList<>();
@@ -277,11 +281,11 @@ public class DatasetDocumentAsyncService {
             int batchSize = 20;
             for (int i = 0; i < segments.size(); i += batchSize) {
                 int end = Math.min(i + batchSize, segments.size());
-                List<DocumentSegment> batch = segments.subList(i, end);
+                List<DatasetDocumentSegment> batch = segments.subList(i, end);
 
                 // 准备批量向量化的数据
                 List<String> batchTexts = new ArrayList<>();
-                for (DocumentSegment segment : batch) {
+                for (DatasetDocumentSegment segment : batch) {
                     batchTexts.add(segment.getContent());
                 }
 
@@ -290,10 +294,10 @@ public class DatasetDocumentAsyncService {
 
                 // 准备存储数据
                 for (int j = 0; j < batch.size(); j++) {
-                    DocumentSegment segment = batch.get(j);
+                    DatasetDocumentSegment segment = batch.get(j);
 
-                    // 生成唯一ID
-                    String vectorId = segment.getId();
+                    // 使用分段ID作为向量ID
+                    String vectorId = segment.getVectorId();
 
                     // 元数据
                     Map<String, Object> metadata = new HashMap<>();
@@ -309,8 +313,8 @@ public class DatasetDocumentAsyncService {
                     texts.add(segment.getContent());
                 }
 
-                // 批量保存向量
-                vectorStore.addVectors(ids, vectors, metadataList, texts);
+                // 批量保存向量到指定集合
+                vectorStore.addVectors(collectionName, ids, vectors, metadataList, texts);
 
                 // 清空当前批次的数据，准备下一批次
                 ids.clear();
@@ -321,7 +325,10 @@ public class DatasetDocumentAsyncService {
                 log.info("向量化进度: {}/{}", end, segments.size());
             }
 
-            log.info("向量化完成, documentId: {}", document.getDocumentId());
+            // 批量更新分段的向量ID
+            documentSegmentService.batchUpdateVectorIds(segments);
+
+            log.info("向量化完成, documentId: {}, 集合名称: {}", document.getDocumentId(), collectionName);
         } catch (Exception e) {
             log.error("向量化失败, documentId: {}", document.getDocumentId(), e);
             throw new RuntimeException("向量化失败: " + e.getMessage());

@@ -1,7 +1,6 @@
 package com.yxboot.modules.dataset.controller;
 
 import java.util.List;
-
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
@@ -22,11 +20,9 @@ import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
 import com.yxboot.modules.dataset.enums.SegmentMethod;
 import com.yxboot.modules.dataset.service.DatasetDocumentAsyncService;
-import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
 import com.yxboot.modules.system.entity.SysFile;
 import com.yxboot.modules.system.service.SysFileService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,13 +42,11 @@ public class DatasetDocumentController {
 
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentAsyncService datasetDocumentAsyncService;
-    private final DatasetDocumentSegmentService datasetDocumentSegmentService;
     private final SysFileService sysFileService;
 
     @GetMapping
     @Operation(summary = "获取文档列表", description = "根据知识库ID获取文档列表")
-    public Result<List<DatasetDocumentDTO>> getDocumentsByDatasetId(
-            @Parameter(description = "知识库ID") @RequestParam Long datasetId) {
+    public Result<List<DatasetDocumentDTO>> getDocumentsByDatasetId(@Parameter(description = "知识库ID") @RequestParam Long datasetId) {
         if (datasetId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
@@ -62,8 +56,7 @@ public class DatasetDocumentController {
 
     @GetMapping("/page")
     @Operation(summary = "分页获取文档列表", description = "根据知识库ID分页获取文档列表")
-    public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(
-            @Parameter(description = "知识库ID") @RequestParam Long datasetId,
+    public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(@Parameter(description = "知识库ID") @RequestParam Long datasetId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size) {
         if (datasetId == null) {
@@ -85,9 +78,7 @@ public class DatasetDocumentController {
 
     @PostMapping
     @Operation(summary = "创建文档", description = "创建新的文档")
-    public Result<DatasetDocument> createDocument(
-            @AuthenticationPrincipal SecurityUser securityUser,
-            @RequestBody DocumentRequest documentRequest) {
+    public Result<DatasetDocument> createDocument(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody DocumentRequest documentRequest) {
         // 参数验证
         if (documentRequest.getTenantId() == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
@@ -123,27 +114,17 @@ public class DatasetDocumentController {
         // 检查是否已存在相同hash的文档
         String fileHash = existingFile.getHash();
         if (fileHash != null && !fileHash.trim().isEmpty()) {
-            DatasetDocument existingDocument = datasetDocumentService.checkDocumentExistsByHash(
-                    documentRequest.getTenantId(),
-                    documentRequest.getDatasetId(),
-                    fileHash);
+            DatasetDocument existingDocument =
+                    datasetDocumentService.checkDocumentExistsByHash(documentRequest.getTenantId(), documentRequest.getDatasetId(), fileHash);
             if (existingDocument != null) {
-                return Result.error(ResultCode.VALIDATE_FAILED,
-                        "该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
+                return Result.error(ResultCode.VALIDATE_FAILED, "该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
             }
         }
 
         // 创建文档
-        DatasetDocument document = datasetDocumentService.createDocument(
-                documentRequest.getTenantId(),
-                documentRequest.getDatasetId(),
-                documentRequest.getFileId(),
-                documentRequest.getFileName(),
-                documentRequest.getFileSize(),
-                fileHash,
-                documentRequest.getSegmentMethod(),
-                documentRequest.getMaxSegmentLength(),
-                documentRequest.getOverlapLength());
+        DatasetDocument document = datasetDocumentService.createDocument(documentRequest.getTenantId(), documentRequest.getDatasetId(),
+                documentRequest.getFileId(), documentRequest.getFileName(), documentRequest.getFileSize(), fileHash,
+                documentRequest.getSegmentMethod(), documentRequest.getMaxSegmentLength(), documentRequest.getOverlapLength());
 
         // 触发异步文档处理，传递用户ID
         datasetDocumentAsyncService.processDocumentAsync(document.getDocumentId(), securityUser.getUserId());
@@ -167,19 +148,16 @@ public class DatasetDocumentController {
     }
 
     @DeleteMapping("/{documentId}")
-    @Operation(summary = "删除文档", description = "删除指定文档")
-    public Result<Void> deleteDocument(@PathVariable Long documentId) {
+    @Operation(summary = "删除文档", description = "删除指定文档及其相关数据")
+    public Result<Void> deleteDocument(@PathVariable Long documentId, @AuthenticationPrincipal SecurityUser currentUser) {
         // 验证文档是否存在
         DatasetDocument existingDocument = datasetDocumentService.getById(documentId);
         if (existingDocument == null) {
             return Result.error(ResultCode.NOT_FOUND, "文档不存在");
         }
 
-        // 删除文档分段
-        datasetDocumentSegmentService.deleteSegmentsByDocumentId(documentId);
-
-        // 删除文档
-        boolean removed = datasetDocumentService.removeById(documentId);
+        // 删除文档及其相关数据（包括向量数据）
+        boolean removed = datasetDocumentService.deleteDocumentWithVectors(documentId);
         if (!removed) {
             return Result.error(ResultCode.FAIL, "文档删除失败");
         }

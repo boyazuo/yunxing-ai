@@ -47,7 +47,7 @@ public abstract class AbstractVectorStore implements VectorStore {
      * 使用向量添加文档块的默认实现
      */
     @Override
-    public int addDocumentSegments(List<DocumentSegment> segments, List<float[]> vectors) {
+    public int addDocumentSegments(String collectionName, List<DocumentSegment> segments, List<float[]> vectors) {
         if (segments == null || segments.isEmpty()) {
             return 0;
         }
@@ -68,11 +68,11 @@ public abstract class AbstractVectorStore implements VectorStore {
                 .map(segment -> segment.getTitle() + " " + segment.getContent())
                 .collect(Collectors.toList());
 
-        // 更新chunk的ID，确保每个chunk都有ID
+        // 更新segment的ID，确保每个segment都有ID
         IntStream.range(0, segments.size())
                 .forEach(i -> segments.get(i).setId(ids.get(i)));
 
-        return addVectors(ids, vectors, metadataList, texts);
+        return addVectors(collectionName, ids, vectors, metadataList, texts);
     }
 
     /**

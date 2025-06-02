@@ -1,13 +1,11 @@
 package com.yxboot.modules.dataset.entity;
 
 import java.time.LocalDateTime;
-
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,6 +31,9 @@ public class DatasetDocumentSegment {
 
     @Schema(description = "文档ID")
     private Long documentId;
+
+    @Schema(description = "向量ID")
+    private String vectorId;
 
     @Schema(description = "位置")
     private Integer position;

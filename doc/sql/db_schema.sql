@@ -105,6 +105,7 @@ CREATE TABLE `dataset_document_segment` (
   `tenant_id` bigint(20) DEFAULT NULL COMMENT '所属租户ID',
   `dataset_id` bigint(20) DEFAULT NULL COMMENT '知识库ID',
   `document_id` bigint(20) DEFAULT NULL COMMENT '文档 ID',
+  `vector_id` varchar(255) DEFAULT NULL COMMENT '向量 ID',
   `position` int(11) DEFAULT NULL COMMENT '位置',
   `title` varchar(255) DEFAULT NULL COMMENT '标题',
   `content` text COMMENT '内容',
