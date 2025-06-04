@@ -3,17 +3,13 @@ package com.yxboot.modules.dataset.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.stereotype.Service;
-
-import com.yxboot.llm.client.embedding.EmbeddingClient;
 import com.yxboot.llm.storage.VectorStore;
 import com.yxboot.llm.storage.query.QueryResult;
 import com.yxboot.llm.storage.query.VectorQuery;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.entity.Dataset;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DatasetSearchService {
 
     private final VectorStore vectorStore;
-    private final EmbeddingClient embeddingClient;
     private final DatasetService datasetService;
     private final ProviderService providerService;
 
@@ -36,9 +31,9 @@ public class DatasetSearchService {
      * 在指定知识库中搜索相关内容
      * 
      * @param datasetId 知识库ID
-     * @param query     查询文本
-     * @param limit     返回结果数量限制
-     * @param minScore  最小相似度阈值
+     * @param query 查询文本
+     * @param limit 返回结果数量限制
+     * @param minScore 最小相似度阈值
      * @return 搜索结果列表
      */
     public List<QueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore) {
@@ -49,14 +44,13 @@ public class DatasetSearchService {
      * 在指定知识库中搜索相关内容（带过滤条件）
      * 
      * @param datasetId 知识库ID
-     * @param query     查询文本
-     * @param limit     返回结果数量限制
-     * @param minScore  最小相似度阈值
-     * @param filter    额外过滤条件
+     * @param query 查询文本
+     * @param limit 返回结果数量限制
+     * @param minScore 最小相似度阈值
+     * @param filter 额外过滤条件
      * @return 搜索结果列表
      */
-    public List<QueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore,
-            Map<String, Object> filter) {
+    public List<QueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore, Map<String, Object> filter) {
         try {
             // 获取知识库信息
             Dataset dataset = datasetService.getById(datasetId);
@@ -91,13 +85,8 @@ public class DatasetSearchService {
             }
 
             // 构建向量查询
-            VectorQuery vectorQuery = VectorQuery.builder()
-                    .queryText(query)
-                    .collectionName(collectionName)
-                    .limit(limit)
-                    .minScore(minScore)
-                    .filter(queryFilter)
-                    .includeVectors(false) // 通常不需要返回向量数据
+            VectorQuery vectorQuery = VectorQuery.builder().queryText(query).collectionName(collectionName).limit(limit).minScore(minScore)
+                    .filter(queryFilter).includeVectors(false) // 通常不需要返回向量数据
                     .build();
 
             // 执行搜索
@@ -116,13 +105,12 @@ public class DatasetSearchService {
      * 在多个知识库中搜索相关内容
      * 
      * @param datasetIds 知识库ID列表
-     * @param query      查询文本
-     * @param limit      每个知识库返回结果数量限制
-     * @param minScore   最小相似度阈值
+     * @param query 查询文本
+     * @param limit 每个知识库返回结果数量限制
+     * @param minScore 最小相似度阈值
      * @return 搜索结果映射，key为知识库ID，value为搜索结果列表
      */
-    public Map<Long, List<QueryResult>> searchInMultipleDatasets(List<Long> datasetIds, String query, int limit,
-            float minScore) {
+    public Map<Long, List<QueryResult>> searchInMultipleDatasets(List<Long> datasetIds, String query, int limit, float minScore) {
         Map<Long, List<QueryResult>> results = new HashMap<>();
 
         for (Long datasetId : datasetIds) {
@@ -141,15 +129,14 @@ public class DatasetSearchService {
     /**
      * 在指定文档中搜索相关内容
      * 
-     * @param datasetId  知识库ID
+     * @param datasetId 知识库ID
      * @param documentId 文档ID
-     * @param query      查询文本
-     * @param limit      返回结果数量限制
-     * @param minScore   最小相似度阈值
+     * @param query 查询文本
+     * @param limit 返回结果数量限制
+     * @param minScore 最小相似度阈值
      * @return 搜索结果列表
      */
-    public List<QueryResult> searchInDocument(Long datasetId, Long documentId, String query, int limit,
-            float minScore) {
+    public List<QueryResult> searchInDocument(Long datasetId, Long documentId, String query, int limit, float minScore) {
         Map<String, Object> filter = new HashMap<>();
         filter.put("document_id", documentId);
 

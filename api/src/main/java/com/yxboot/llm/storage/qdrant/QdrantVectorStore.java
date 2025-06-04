@@ -6,20 +6,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.storage.AbstractVectorStore;
 import com.yxboot.llm.storage.query.QueryResult;
 import com.yxboot.llm.storage.query.VectorQuery;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -36,7 +33,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     /**
      * 构造函数
      *
-     * @param config         配置
+     * @param config 配置
      * @param embeddingModel 嵌入模型
      */
     public QdrantVectorStore(QdrantConfig config, EmbeddingModel embeddingModel) {
@@ -55,12 +52,8 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 添加单个向量
      */
     @Override
-    public boolean addVector(String collectionName, String id, float[] vector, Map<String, Object> metadata,
-            String text) {
-        return addVectors(collectionName,
-                Collections.singletonList(id),
-                Collections.singletonList(vector),
-                Collections.singletonList(metadata),
+    public boolean addVector(String collectionName, String id, float[] vector, Map<String, Object> metadata, String text) {
+        return addVectors(collectionName, Collections.singletonList(id), Collections.singletonList(vector), Collections.singletonList(metadata),
                 Collections.singletonList(text)) == 1;
     }
 
@@ -68,8 +61,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 批量添加向量
      */
     @Override
-    public int addVectors(String collectionName, List<String> ids, List<float[]> vectors,
-            List<Map<String, Object>> metadataList,
+    public int addVectors(String collectionName, List<String> ids, List<float[]> vectors, List<Map<String, Object>> metadataList,
             List<String> texts) {
         try {
             // 确保集合存在
@@ -79,9 +71,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
             }
 
             // 构建请求URL
-            String url = String.format("%s/collections/%s/points",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s/points", config.getHttpUrl(), collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -144,9 +134,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     public int deleteVectors(String collectionName, List<String> ids) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s/points/delete",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s/points/delete", config.getHttpUrl(), collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -179,9 +167,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     public int deleteVectorsByFilter(String collectionName, Map<String, Object> filter) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s/points/delete",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s/points/delete", config.getHttpUrl(), collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -198,6 +184,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
+            log.info("删除向量请求体: {}", objectMapper.writeValueAsString(requestBody));
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
             // 解析响应，无法确切知道删除了多少向量，所以返回1表示操作成功
@@ -220,9 +207,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     protected List<QueryResult> doSimilaritySearch(VectorQuery query) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s/points/search",
-                    config.getHttpUrl(),
-                    query.getCollectionName());
+            String url = String.format("%s/collections/%s/points/search", config.getHttpUrl(), query.getCollectionName());
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -277,13 +262,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
 
                     // 只有分数超过阈值的结果才会返回
                     if (score >= query.getMinScore()) {
-                        results.add(QueryResult.builder()
-                                .id(id)
-                                .text(text)
-                                .score(score)
-                                .vector(vector)
-                                .metadata(metadata)
-                                .build());
+                        results.add(QueryResult.builder().id(id).text(text).score(score).vector(vector).metadata(metadata).build());
                     }
                 }
 
@@ -310,9 +289,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
             }
 
             // 构建请求URL
-            String url = String.format("%s/collections/%s",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -345,9 +322,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     public boolean deleteCollection(String collectionName) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 发送请求
             HttpHeaders headers = createHeaders();
@@ -370,9 +345,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
     public boolean collectionExists(String collectionName) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s",
-                    config.getHttpUrl(),
-                    collectionName);
+            String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 发送请求
             HttpHeaders headers = createHeaders();
@@ -409,14 +382,12 @@ public class QdrantVectorStore extends AbstractVectorStore {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         for (Map.Entry<String, Object> entry : filter.entrySet()) {
-            Map<String, Object> condition = new HashMap<>();
 
             Map<String, Object> matchCondition = new HashMap<>();
             matchCondition.put("key", entry.getKey());
             matchCondition.put("match", Collections.singletonMap("value", entry.getValue()));
 
-            condition.put("key", matchCondition);
-            conditions.add(condition);
+            conditions.add(matchCondition);
         }
 
         return conditions;
