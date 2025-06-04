@@ -43,5 +43,5 @@
   "i18n-ally.displayLanguage": "zh", // 插件界面显示语言
   "i18n-ally.sortKeys": true,
 
-  "workbench.tree.indent": 20
+  "workbench.tree.indent": 16
 }
