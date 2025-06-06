@@ -1,51 +1,40 @@
-package com.yxboot.modules.dataset.infrastructure;
+package com.yxboot.llm.client.storage;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import com.yxboot.llm.client.embedding.EmbeddingClient;
 import com.yxboot.llm.storage.VectorStore;
 import com.yxboot.modules.ai.entity.Provider;
-import com.yxboot.modules.ai.service.ProviderService;
-import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
-import com.yxboot.modules.dataset.service.DatasetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 向量存储基础设施服务 专门处理向量相关的操作，避免业务Service层的复杂依赖
+ * 向量存储客户端 专门处理向量相关的操作，避免业务Service层的复杂依赖
  * 
  * @author Boya
  */
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class VectorServiceImpl {
+public class VectorClient {
 
     private final VectorStore vectorStore;
     private final EmbeddingClient embeddingClient;
-    private final ProviderService providerService;
-    private final DatasetService datasetService;
 
     /**
      * 确保向量集合存在
      * 
      * @param datasetId 知识库ID
+     * @param provider 提供商信息
      * @return 是否成功
      */
-    public boolean ensureVectorCollection(Long datasetId) {
+    public boolean ensureVectorCollection(Long datasetId, Provider provider) {
         try {
-            Dataset dataset = datasetService.getById(datasetId);
-            if (dataset == null) {
-                log.error("知识库不存在, datasetId: {}", datasetId);
-                return false;
-            }
-
-            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
             if (provider == null) {
-                log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
+                log.error("提供商信息为空, datasetId: {}", datasetId);
                 return false;
             }
 
@@ -63,26 +52,20 @@ public class VectorServiceImpl {
      * 为分段生成并存储向量
      * 
      * @param segment 分段对象
+     * @param provider 提供商信息
      * @return 是否成功
      */
-    public boolean createSegmentVector(DatasetDocumentSegment segment) {
+    public boolean createSegmentVector(DatasetDocumentSegment segment, Provider provider) {
         try {
-            Dataset dataset = datasetService.getById(segment.getDatasetId());
-            if (dataset == null) {
-                log.error("知识库不存在, datasetId: {}", segment.getDatasetId());
-                return false;
-            }
-
-            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
             if (provider == null) {
-                log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
+                log.error("提供商信息为空, segmentId: {}", segment.getSegmentId());
                 return false;
             }
 
             String collectionName = "dataset_" + segment.getDatasetId();
 
             // 确保集合存在
-            if (!ensureVectorCollection(segment.getDatasetId())) {
+            if (!ensureVectorCollection(segment.getDatasetId(), provider)) {
                 log.error("确保集合存在失败, datasetId: {}", segment.getDatasetId());
                 return false;
             }
@@ -118,30 +101,24 @@ public class VectorServiceImpl {
      * 
      * @param segments 分段列表
      * @param datasetId 知识库ID
+     * @param provider 提供商信息
      * @return 成功处理的数量
      */
-    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId) {
+    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId, Provider provider) {
         if (segments == null || segments.isEmpty()) {
             return 0;
         }
 
         try {
-            Dataset dataset = datasetService.getById(datasetId);
-            if (dataset == null) {
-                log.error("知识库不存在, datasetId: {}", datasetId);
-                return 0;
-            }
-
-            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
             if (provider == null) {
-                log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
+                log.error("提供商信息为空, datasetId: {}", datasetId);
                 return 0;
             }
 
             String collectionName = "dataset_" + datasetId;
 
             // 确保集合存在
-            if (!ensureVectorCollection(datasetId)) {
+            if (!ensureVectorCollection(datasetId, provider)) {
                 log.error("确保集合存在失败, datasetId: {}", datasetId);
                 return 0;
             }
@@ -182,11 +159,12 @@ public class VectorServiceImpl {
      * 更新分段向量
      * 
      * @param segment 分段对象
+     * @param provider 提供商信息
      * @return 是否成功
      */
-    public boolean updateSegmentVector(DatasetDocumentSegment segment) {
+    public boolean updateSegmentVector(DatasetDocumentSegment segment, Provider provider) {
         // 更新操作其实就是重新创建
-        return createSegmentVector(segment);
+        return createSegmentVector(segment, provider);
     }
 
     /**

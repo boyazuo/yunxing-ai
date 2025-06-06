@@ -10,14 +10,18 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.yxboot.llm.client.storage.VectorClient;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.service.DocumentProcessorService;
+import com.yxboot.modules.ai.entity.Provider;
+import com.yxboot.modules.ai.service.ProviderService;
+import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
-import com.yxboot.modules.dataset.infrastructure.VectorServiceImpl;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
+import com.yxboot.modules.dataset.service.DatasetService;
 import com.yxboot.modules.system.entity.SysFile;
 import com.yxboot.modules.system.service.SysFileService;
 import com.yxboot.util.HttpClient;
@@ -38,7 +42,9 @@ public class DatasetDocumentProcessingApplicationService {
     private final DatasetDocumentSegmentService segmentService;
     private final SysFileService sysFileService;
     private final DocumentProcessorService documentProcessorService;
-    private final VectorServiceImpl vectorService;
+    private final VectorClient vectorService;
+    private final ProviderService providerService;
+    private final DatasetService datasetService;
 
     /**
      * 异步处理文档 协调文档解析、分段创建、向量化等完整流程
@@ -90,15 +96,30 @@ public class DatasetDocumentProcessingApplicationService {
             document.setSegmentNum(savedSegments.size());
             datasetDocumentService.updateById(document);
 
-            // 7. 向量化处理
+            // 7. 获取知识库和提供商信息
+            Dataset dataset = datasetService.getById(document.getDatasetId());
+            if (dataset == null) {
+                log.error("知识库不存在, datasetId: {}", document.getDatasetId());
+                updateDocumentStatusToFailed(documentId);
+                return CompletableFuture.completedFuture(false);
+            }
+
+            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
+            if (provider == null) {
+                log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
+                updateDocumentStatusToFailed(documentId);
+                return CompletableFuture.completedFuture(false);
+            }
+
+            // 8. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
-            int vectorizedCount = vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId());
+            int vectorizedCount = vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider);
 
             if (vectorizedCount != savedSegments.size()) {
                 log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());
             }
 
-            // 8. 更新文档状态为已完成
+            // 9. 更新文档状态为已完成
             datasetDocumentService.updateDocumentStatus(documentId, DocumentStatus.COMPLETED);
             log.info("文档处理完成, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
 

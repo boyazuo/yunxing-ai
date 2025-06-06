@@ -4,10 +4,14 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yxboot.llm.client.storage.VectorClient;
+import com.yxboot.modules.ai.entity.Provider;
+import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
+import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
-import com.yxboot.modules.dataset.infrastructure.VectorServiceImpl;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
+import com.yxboot.modules.dataset.service.DatasetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 public class DatasetDocumentSegmentApplicationService {
 
     private final DatasetDocumentSegmentService segmentService;
-    private final VectorServiceImpl vectorService;
+    private final VectorClient vectorClient;
+    private final ProviderService providerService;
+    private final DatasetService datasetService;
 
     /**
      * 更新分段内容并同步向量 协调数据库更新和向量更新
@@ -46,9 +52,20 @@ public class DatasetDocumentSegmentApplicationService {
         // 2. 更新向量
         DatasetDocumentSegment segment = segmentService.getById(segmentId);
         if (segment != null) {
-            boolean vectorUpdateSuccess = vectorService.updateSegmentVector(segment);
-            if (!vectorUpdateSuccess) {
-                log.warn("向量更新失败, segmentId: {}, 但数据库更新成功", segmentId);
+            // 获取知识库和提供商信息
+            Dataset dataset = datasetService.getById(segment.getDatasetId());
+            if (dataset != null) {
+                Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
+                if (provider != null) {
+                    boolean vectorUpdateSuccess = vectorClient.updateSegmentVector(segment, provider);
+                    if (!vectorUpdateSuccess) {
+                        log.warn("向量更新失败, segmentId: {}, 但数据库更新成功", segmentId);
+                    }
+                } else {
+                    log.warn("提供商不存在, embeddingModelId: {}, 跳过向量更新", dataset.getEmbeddingModelId());
+                }
+            } else {
+                log.warn("知识库不存在, datasetId: {}, 跳过向量更新", segment.getDatasetId());
             }
         }
 
@@ -73,7 +90,7 @@ public class DatasetDocumentSegmentApplicationService {
         }
 
         // 2. 删除向量
-        boolean vectorDeleteSuccess = vectorService.deleteSegmentVector(segment);
+        boolean vectorDeleteSuccess = vectorClient.deleteSegmentVector(segment);
         if (!vectorDeleteSuccess) {
             log.warn("向量删除失败, segmentId: {}", segmentId);
         }
@@ -112,7 +129,7 @@ public class DatasetDocumentSegmentApplicationService {
         // 2. 按知识库分组批量删除向量
         segments.stream().collect(java.util.stream.Collectors.groupingBy(DatasetDocumentSegment::getDatasetId))
                 .forEach((datasetId, datasetSegments) -> {
-                    int deletedCount = vectorService.batchDeleteSegmentVectors(datasetSegments, datasetId);
+                    int deletedCount = vectorClient.batchDeleteSegmentVectors(datasetSegments, datasetId);
                     log.info("批量删除向量, datasetId: {}, 删除数量: {}", datasetId, deletedCount);
                 });
 
