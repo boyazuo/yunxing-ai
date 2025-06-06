@@ -33,7 +33,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 知识库文档异步处理服务
+ * 
+ * @deprecated 请使用
+ *             {@link com.yxboot.modules.dataset.application.DatasetDocumentProcessingApplicationService}
+ *             替代 此类存在架构问题：依赖过多Service，职责不清晰，违反分层架构原则
  */
+@Deprecated
 @Slf4j
 @Service
 @RequiredArgsConstructor

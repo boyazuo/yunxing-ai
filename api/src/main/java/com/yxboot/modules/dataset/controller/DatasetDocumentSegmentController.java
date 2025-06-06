@@ -12,11 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
+import com.yxboot.modules.dataset.application.DatasetDocumentApplicationService;
+import com.yxboot.modules.dataset.application.DatasetDocumentSegmentApplicationService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
-import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
-import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
-import com.yxboot.modules.dataset.service.DatasetDocumentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,8 +33,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DatasetDocumentSegmentController {
 
-    private final DatasetDocumentSegmentService segmentService;
-    private final DatasetDocumentService datasetDocumentService;
+    private final DatasetDocumentSegmentApplicationService datasetDocumentSegmentApplicationService;
+    private final DatasetDocumentApplicationService datasetDocumentApplicationService;
 
     @GetMapping("/page")
     @Operation(summary = "分页获取文档分段", description = "根据文档ID分页获取分段列表，支持搜索过滤")
@@ -53,10 +52,10 @@ public class DatasetDocumentSegmentController {
 
             if (keyword != null && !keyword.trim().isEmpty()) {
                 // 带搜索的分页查询
-                segments = segmentService.pageSegmentsWithSearch(current, size, documentId, keyword.trim());
+                segments = datasetDocumentSegmentApplicationService.pageSegmentsWithSearch(current, size, documentId, keyword.trim());
             } else {
                 // 普通分页查询
-                segments = segmentService.pageSegmentsByDocumentId((int) current, (int) size, documentId);
+                segments = datasetDocumentSegmentApplicationService.pageSegmentsByDocumentId(current, size, documentId);
             }
 
             return Result.success("查询成功", segments);
@@ -68,7 +67,7 @@ public class DatasetDocumentSegmentController {
     @GetMapping("/{segmentId}")
     @Operation(summary = "获取分段详情", description = "根据分段ID获取分段详情")
     public Result<DatasetDocumentSegment> getSegmentById(@PathVariable Long segmentId) {
-        DatasetDocumentSegment segment = segmentService.getById(segmentId);
+        DatasetDocumentSegment segment = datasetDocumentSegmentApplicationService.getSegmentById(segmentId);
         if (segment == null) {
             return Result.error(ResultCode.NOT_FOUND, "分段不存在");
         }
@@ -85,7 +84,7 @@ public class DatasetDocumentSegmentController {
         }
 
         try {
-            boolean success = segmentService.updateSegmentContent(segmentId, request.getContent().trim(),
+            boolean success = datasetDocumentSegmentApplicationService.updateSegmentContent(segmentId, request.getContent().trim(),
                     request.getTitle() != null ? request.getTitle().trim() : null);
 
             if (!success) {
@@ -102,23 +101,23 @@ public class DatasetDocumentSegmentController {
     @Operation(summary = "删除分段", description = "删除指定分段并同步删除向量库中对应的存储")
     public Result<Void> deleteSegment(@PathVariable Long segmentId) {
         try {
-            // 验证分段是否存在
-            DatasetDocumentSegment segment = segmentService.getById(segmentId);
+            // 1. 获取分段信息
+            DatasetDocumentSegment segment = datasetDocumentSegmentApplicationService.getSegmentById(segmentId);
             if (segment == null) {
                 return Result.error(ResultCode.NOT_FOUND, "分段不存在");
             }
 
-            // 删除分段并同步删除向量
-            boolean success = segmentService.deleteSegmentWithVector(segmentId);
+            // 2. 删除分段并同步删除向量
+            boolean success = datasetDocumentSegmentApplicationService.deleteSegmentCompletely(segmentId);
             if (!success) {
                 return Result.error(ResultCode.FAIL, "删除失败");
             }
 
-            // 更新文档分段数量
-            DatasetDocument document = datasetDocumentService.getById(segment.getDocumentId());
-            boolean success2 = datasetDocumentService.updateDocumentSegmentNum(document.getDocumentId(), document.getSegmentNum() - 1);
-            if (!success2) {
-                return Result.error(ResultCode.FAIL, "更新文档分段数量失败");
+            // 3. 更新文档分段数量（通过文档应用服务）
+            // 获取当前文档信息
+            var document = datasetDocumentApplicationService.getDocumentById(segment.getDocumentId());
+            if (document != null && document.getSegmentNum() > 0) {
+                datasetDocumentApplicationService.updateDocumentSegmentNum(document.getDocumentId(), document.getSegmentNum() - 1);
             }
 
             return Result.success("删除成功");
@@ -135,10 +134,33 @@ public class DatasetDocumentSegmentController {
         }
 
         try {
-            // 批量删除分段并同步删除向量
-            boolean success = segmentService.batchDeleteSegmentsWithVectors(request.getSegmentIds());
+            // 1. 获取要删除的分段信息（用于后续更新文档分段数）
+            List<DatasetDocumentSegment> segmentsToDelete = request.getSegmentIds().stream()
+                    .map(datasetDocumentSegmentApplicationService::getSegmentById).filter(segment -> segment != null).toList();
+
+            if (segmentsToDelete.isEmpty()) {
+                return Result.error(ResultCode.NOT_FOUND, "未找到任何有效的分段");
+            }
+
+            // 2. 按文档ID分组，统计每个文档要删除的分段数
+            var segmentCountByDocument = segmentsToDelete.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(DatasetDocumentSegment::getDocumentId, java.util.stream.Collectors.counting()));
+
+            // 3. 批量删除分段并同步删除向量
+            boolean success = datasetDocumentSegmentApplicationService.batchDeleteSegmentsCompletely(request.getSegmentIds());
             if (!success) {
                 return Result.error(ResultCode.FAIL, "批量删除失败");
+            }
+
+            // 4. 更新相关文档的分段数量
+            for (var entry : segmentCountByDocument.entrySet()) {
+                Long documentId = entry.getKey();
+                Long deletedCount = entry.getValue();
+
+                var document = datasetDocumentApplicationService.getDocumentById(documentId);
+                if (document != null && document.getSegmentNum() >= deletedCount) {
+                    datasetDocumentApplicationService.updateDocumentSegmentNum(documentId, document.getSegmentNum() - deletedCount.intValue());
+                }
             }
 
             return Result.success("批量删除成功");

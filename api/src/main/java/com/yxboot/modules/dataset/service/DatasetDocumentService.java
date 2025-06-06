@@ -1,15 +1,12 @@
 package com.yxboot.modules.dataset.service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.llm.storage.VectorStore;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
@@ -28,8 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, DatasetDocument> {
 
-    private final DatasetDocumentSegmentService datasetDocumentSegmentService;
-    private final VectorStore vectorStore;
+
 
     /**
      * 检查指定知识库中是否已存在相同hash的文档
@@ -155,53 +151,26 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
     }
 
     /**
-     * 删除文档及其相关数据（包括向量数据）
+     * 删除文档记录（仅删除文档本身，不处理分段和向量） 注意：分段和向量的删除应该在应用服务层进行编排
      * 
      * @param documentId 文档ID
      * @return 是否成功
      */
-    @Transactional(rollbackFor = Exception.class)
-    public boolean deleteDocumentWithVectors(Long documentId) {
-        try {
-            // 获取文档信息
-            DatasetDocument document = getById(documentId);
-            if (document == null) {
-                log.warn("文档不存在, documentId: {}", documentId);
-                return false;
-            }
-
-            // 1. 删除向量数据
-            String collectionName = "dataset_" + document.getDatasetId();
-            Map<String, Object> filter = new HashMap<>();
-            filter.put("document_id", documentId);
-
-            try {
-                int deletedVectors = vectorStore.deleteVectorsByFilter(collectionName, filter);
-                log.info("删除文档向量数据成功, documentId: {}, 删除数量: {}", documentId, deletedVectors);
-            } catch (Exception e) {
-                log.error("删除文档向量数据失败, documentId: {}", documentId, e);
-                // 向量删除失败不影响数据库删除，只记录日志
-            }
-
-            // 2. 删除文档分段
-            boolean segmentsDeleted = datasetDocumentSegmentService.deleteSegmentsByDocumentId(documentId);
-            if (!segmentsDeleted) {
-                log.error("删除文档分段失败, documentId: {}", documentId);
-                return false;
-            }
-
-            // 3. 删除文档记录
-            boolean documentDeleted = removeById(documentId);
-            if (!documentDeleted) {
-                log.error("删除文档记录失败, documentId: {}", documentId);
-                return false;
-            }
-
-            log.info("文档删除成功, documentId: {}", documentId);
-            return true;
-        } catch (Exception e) {
-            log.error("删除文档失败, documentId: {}", documentId, e);
-            throw e; // 重新抛出异常，让事务回滚
+    public boolean deleteDocument(Long documentId) {
+        DatasetDocument document = getById(documentId);
+        if (document == null) {
+            log.warn("文档不存在, documentId: {}", documentId);
+            return false;
         }
+
+        boolean success = removeById(documentId);
+        if (success) {
+            log.info("文档删除成功, documentId: {}", documentId);
+        } else {
+            log.error("文档删除失败, documentId: {}", documentId);
+        }
+        return success;
     }
+
+
 }
