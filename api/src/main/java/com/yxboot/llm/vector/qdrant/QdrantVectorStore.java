@@ -1,4 +1,4 @@
-package com.yxboot.llm.storage.qdrant;
+package com.yxboot.llm.vector.qdrant;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,13 +14,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.storage.AbstractVectorStore;
-import com.yxboot.llm.storage.query.QueryResult;
-import com.yxboot.llm.storage.query.VectorQuery;
+import com.yxboot.llm.vector.AbstractVectorStore;
+import com.yxboot.llm.vector.query.QueryResult;
+import com.yxboot.llm.vector.query.VectorQuery;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * QDrant向量存储实现
+ * 
+ * <p>
+ * 该实现使用命名向量配置，确保：
+ * </p>
+ * <ul>
+ * <li>创建集合时明确声明向量名称和维度</li>
+ * <li>插入和搜索时使用一致的向量名称</li>
+ * <li>支持自定义向量名称配置</li>
+ * <li>验证集合配置的一致性</li>
+ * </ul>
  */
 @Slf4j
 @SuppressWarnings("unchecked")
@@ -42,9 +52,15 @@ public class QdrantVectorStore extends AbstractVectorStore {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
 
+        // 验证配置
+        validateConfig();
+
         // 确保默认集合存在
         if (!collectionExists(config.getDefaultCollectionName())) {
             createCollection(config.getDefaultCollectionName(), embeddingModel.getEmbeddingDimension());
+        } else {
+            // 验证现有集合的向量配置是否匹配
+            validateCollectionVectorConfig(config.getDefaultCollectionName());
         }
     }
 
@@ -82,7 +98,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
                 Map<String, Object> point = new HashMap<>();
                 // 使用ID，如果为null则生成UUID
                 point.put("id", ids.get(i) != null ? ids.get(i) : UUID.randomUUID().toString());
-                point.put("vector", vectors.get(i));
+
+                // 使用命名向量格式
+                Map<String, Object> vectorData = new HashMap<>();
+                vectorData.put(config.getVectorName(), vectors.get(i));
+                point.put("vector", vectorData);
 
                 // 设置payload（元数据+文本）
                 Map<String, Object> payload = new HashMap<>();
@@ -104,6 +124,7 @@ public class QdrantVectorStore extends AbstractVectorStore {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
+            log.info("添加向量请求体: {}", objectMapper.writeValueAsString(requestBody));
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
 
             // 解析响应
@@ -211,7 +232,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("vector", query.getQueryVector());
+            // 对于命名向量配置的集合，需要指定向量名称
+            Map<String, Object> namedVector = new HashMap<>();
+            namedVector.put("vector", query.getQueryVector());
+            namedVector.put("name", config.getVectorName());
+            requestBody.put("vector", namedVector);
             requestBody.put("limit", query.getLimit());
 
             // 添加过滤条件
@@ -253,10 +278,26 @@ public class QdrantVectorStore extends AbstractVectorStore {
                     // 如果需要向量数据
                     float[] vector = null;
                     if (query.isIncludeVectors() && resultItem.containsKey("vector")) {
-                        List<Number> vectorList = (List<Number>) resultItem.get("vector");
-                        vector = new float[vectorList.size()];
-                        for (int i = 0; i < vectorList.size(); i++) {
-                            vector[i] = vectorList.get(i).floatValue();
+                        Object vectorData = resultItem.get("vector");
+                        List<Number> vectorList;
+
+                        // 处理不同格式的向量数据
+                        if (vectorData instanceof Map) {
+                            // 命名向量格式: {"vectorName": [0.1, 0.2, ...]}
+                            Map<String, Object> vectorMap = (Map<String, Object>) vectorData;
+                            vectorList = (List<Number>) vectorMap.get(config.getVectorName());
+                        } else if (vectorData instanceof List) {
+                            // 直接向量数组格式: [0.1, 0.2, ...]
+                            vectorList = (List<Number>) vectorData;
+                        } else {
+                            vectorList = null;
+                        }
+
+                        if (vectorList != null) {
+                            vector = new float[vectorList.size()];
+                            for (int i = 0; i < vectorList.size(); i++) {
+                                vector[i] = vectorList.get(i).floatValue();
+                            }
                         }
                     }
 
@@ -294,11 +335,14 @@ public class QdrantVectorStore extends AbstractVectorStore {
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
 
+            // 使用命名向量配置，创建指定名称的向量，与搜索时保持一致
             Map<String, Object> vectorConfig = new HashMap<>();
             vectorConfig.put("size", dimension);
             vectorConfig.put("distance", "Cosine"); // 使用余弦相似度
 
-            requestBody.put("vectors", Collections.singletonMap("default", vectorConfig));
+            Map<String, Object> vectorsConfig = new HashMap<>();
+            vectorsConfig.put(config.getVectorName(), vectorConfig);
+            requestBody.put("vectors", vectorsConfig);
 
             // 发送请求
             HttpHeaders headers = createHeaders();
@@ -359,6 +403,65 @@ public class QdrantVectorStore extends AbstractVectorStore {
             // 请求异常，说明集合不存在
             return false;
         }
+    }
+
+    /**
+     * 验证集合的向量配置是否与当前配置匹配
+     */
+    public boolean validateCollectionVectorConfig(String collectionName) {
+        try {
+            // 构建请求URL
+            String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
+
+            // 发送请求
+            HttpHeaders headers = createHeaders();
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
+                Map<String, Object> result = (Map<String, Object>) responseBody.get("result");
+                Map<String, Object> config = (Map<String, Object>) result.get("config");
+                Map<String, Object> params = (Map<String, Object>) config.get("params");
+                Map<String, Object> vectors = (Map<String, Object>) params.get("vectors");
+
+                // 检查是否包含配置的向量名称
+                boolean hasConfiguredVector = vectors.containsKey(this.config.getVectorName());
+
+                if (hasConfiguredVector) {
+                    log.info("集合 {} 包含向量配置: {}", collectionName, this.config.getVectorName());
+                } else {
+                    log.warn("集合 {} 不包含向量配置: {}，现有向量: {}", collectionName, this.config.getVectorName(), vectors.keySet());
+                }
+
+                return hasConfiguredVector;
+            }
+
+            return false;
+        } catch (Exception e) {
+            log.error("验证集合向量配置失败: {}", collectionName, e);
+            return false;
+        }
+    }
+
+    /**
+     * 验证配置参数
+     */
+    private void validateConfig() {
+        if (config == null) {
+            throw new IllegalArgumentException("QdrantConfig 不能为空");
+        }
+
+        if (config.getVectorName() == null || config.getVectorName().trim().isEmpty()) {
+            throw new IllegalArgumentException("向量名称不能为空");
+        }
+
+        if (config.getDefaultCollectionName() == null || config.getDefaultCollectionName().trim().isEmpty()) {
+            throw new IllegalArgumentException("默认集合名称不能为空");
+        }
+
+        log.info("QDrant配置验证通过 - 向量名称: {}, 默认集合: {}", config.getVectorName(), config.getDefaultCollectionName());
     }
 
     /**

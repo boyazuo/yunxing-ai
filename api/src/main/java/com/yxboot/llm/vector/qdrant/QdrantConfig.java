@@ -1,4 +1,4 @@
-package com.yxboot.llm.storage.qdrant;
+package com.yxboot.llm.vector.qdrant;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +48,12 @@ public class QdrantConfig {
      */
     @Builder.Default
     private String defaultCollectionName = "documents";
+
+    /**
+     * 向量名称，用于命名向量配置
+     */
+    @Builder.Default
+    private String vectorName = "default";
 
     /**
      * 构造数据库URL

@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import com.yxboot.llm.client.storage.VectorClient;
+import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.service.DocumentProcessorService;
 import com.yxboot.modules.ai.entity.Provider;
@@ -42,7 +42,7 @@ public class DatasetDocumentProcessingApplicationService {
     private final DatasetDocumentSegmentService segmentService;
     private final SysFileService sysFileService;
     private final DocumentProcessorService documentProcessorService;
-    private final VectorClient vectorService;
+    private final VectorStoreClient vectorService;
     private final ProviderService providerService;
     private final DatasetService datasetService;
 

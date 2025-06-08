@@ -1,17 +1,14 @@
 package com.yxboot.modules.dataset.service;
 
 import java.util.List;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.llm.storage.VectorStore;
+import com.yxboot.llm.vector.VectorStore;
 import com.yxboot.modules.dataset.dto.DatasetDTO;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.enums.DatasetStatus;
 import com.yxboot.modules.dataset.mapper.DatasetMapper;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

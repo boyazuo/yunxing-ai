@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.yxboot.llm.client.storage.VectorClient;
+import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
@@ -26,7 +26,7 @@ public class DatasetDocumentApplicationService {
 
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentSegmentService segmentService;
-    private final VectorClient vectorService;
+    private final VectorStoreClient vectorService;
 
     /**
      * 创建文档记录 注意：异步处理需要在Controller层单独调用DatasetDocumentProcessingApplicationService

@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.yxboot.llm.client.storage.VectorClient;
+import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DatasetDocumentSegmentApplicationService {
 
     private final DatasetDocumentSegmentService segmentService;
-    private final VectorClient vectorClient;
+    private final VectorStoreClient vectorClient;
     private final ProviderService providerService;
     private final DatasetService datasetService;
 

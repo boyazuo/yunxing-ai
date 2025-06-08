@@ -1,7 +1,6 @@
-package com.yxboot.llm.storage.query;
+package com.yxboot.llm.vector.query;
 
 import java.util.Map;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

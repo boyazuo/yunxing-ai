@@ -1,11 +1,11 @@
-package com.yxboot.llm.client.storage;
+package com.yxboot.llm.client.vector;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import com.yxboot.llm.client.embedding.EmbeddingClient;
-import com.yxboot.llm.storage.VectorStore;
+import com.yxboot.llm.vector.VectorStore;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class VectorClient {
+public class VectorStoreClient {
 
     private final VectorStore vectorStore;
     private final EmbeddingClient embeddingClient;

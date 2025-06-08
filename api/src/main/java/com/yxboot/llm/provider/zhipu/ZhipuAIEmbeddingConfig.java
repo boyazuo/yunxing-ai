@@ -1,7 +1,6 @@
 package com.yxboot.llm.provider.zhipu;
 
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,7 +36,7 @@ public class ZhipuAIEmbeddingConfig implements EmbeddingConfig {
      * 向量维度
      */
     @Builder.Default
-    private int embeddingDimension = 1024;
+    private int embeddingDimension = 2048;
 
     /**
      * 批处理大小

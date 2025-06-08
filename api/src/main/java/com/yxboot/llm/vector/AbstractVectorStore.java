@@ -1,16 +1,14 @@
-package com.yxboot.llm.storage;
+package com.yxboot.llm.vector;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-import com.yxboot.llm.storage.query.QueryResult;
-import com.yxboot.llm.storage.query.VectorQuery;
-
+import com.yxboot.llm.vector.query.QueryResult;
+import com.yxboot.llm.vector.query.VectorQuery;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

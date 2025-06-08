@@ -1,11 +1,10 @@
-package com.yxboot.llm.storage;
+package com.yxboot.llm.vector;
 
 import java.util.List;
 import java.util.Map;
-
 import com.yxboot.llm.document.DocumentSegment;
-import com.yxboot.llm.storage.query.QueryResult;
-import com.yxboot.llm.storage.query.VectorQuery;
+import com.yxboot.llm.vector.query.QueryResult;
+import com.yxboot.llm.vector.query.VectorQuery;
 
 /**
  * 向量存储接口，用于存储和检索向量数据

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
@@ -15,7 +14,6 @@ import com.yxboot.llm.embedding.model.EmbeddingResponse;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.TokenUsage;
 import com.yxboot.util.HttpClient;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -95,6 +93,9 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             requestBody.put("model", config.getModelName());
             requestBody.put("input", batch);
 
+            // 添加维度参数，确保 ZhipuAI 返回指定维度的向量
+            requestBody.put("dimensions", config.getEmbeddingDimension());
+
             // 准备请求头
             Map<String, String> headers = createHeaders();
 
@@ -128,8 +129,7 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
     }
 
     /**
-     * 处理嵌入请求并返回嵌入响应
-     * 直接调用智谱AI的嵌入API，优化性能
+     * 处理嵌入请求并返回嵌入响应 直接调用智谱AI的嵌入API，优化性能
      *
      * @param request 嵌入请求对象
      * @return 嵌入响应对象
@@ -137,9 +137,7 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
     @Override
     public EmbeddingResponse embedRequest(EmbeddingRequest request) {
         if (request == null || request.getInput() == null || request.getInput().isEmpty()) {
-            return EmbeddingResponse.builder()
-                    .modelName(getModelName())
-                    .build();
+            return EmbeddingResponse.builder().modelName(getModelName()).build();
         }
 
         try {
@@ -175,8 +173,7 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             // 提取token使用情况
             TokenUsage tokenUsage = null;
             if (usageNode != null) {
-                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt()
-                        : calculateTokens(request.getInput());
+                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt() : calculateTokens(request.getInput());
 
                 tokenUsage = TokenUsage.of(inputTokens);
             } else {
@@ -196,11 +193,7 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
                     embedding[j] = (float) embeddingNode.get(j).asDouble();
                 }
 
-                results.add(EmbeddingResult.builder()
-                        .index(index)
-                        .object(object)
-                        .embedding(embedding)
-                        .build());
+                results.add(EmbeddingResult.builder().index(index).object(object).embedding(embedding).build());
             }
 
             // 构建元数据
@@ -214,12 +207,7 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             }
 
             // 构建并返回响应
-            return EmbeddingResponse.builder()
-                    .modelName(config.getModelName())
-                    .data(results)
-                    .tokenUsage(tokenUsage)
-                    .metadata(metadata)
-                    .build();
+            return EmbeddingResponse.builder().modelName(config.getModelName()).data(results).tokenUsage(tokenUsage).metadata(metadata).build();
 
         } catch (Exception e) {
             log.error("嵌入处理失败", e);
