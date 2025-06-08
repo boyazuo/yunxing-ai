@@ -57,8 +57,17 @@ public class ChatController {
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
     public SseEmitter chatCompletion(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody ChatRequestDTO request) throws Exception {
         Long userId = securityUser.getUserId();
+
+        // 处理会话
+        Long conversationId = handleConversation(userId, request);
+        request.setConversationId(conversationId);
+
+        // 创建消息记录
+        Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
+
         // 获取提供商信息
         Provider provider = providerService.getProviderByModelId(request.getModelId());
+
         // 获取应用配置
         AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
 
@@ -81,13 +90,6 @@ public class ChatController {
                 request.setMaxTokens(Integer.parseInt(modelConfig.getMaxTokens()));
             }
         }
-
-        // 处理会话
-        Long conversationId = handleConversation(userId, request);
-        request.setConversationId(conversationId);
-
-        // 创建消息记录
-        Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
 
         // 创建SSE发射器，设置超时时间为5分钟
         SseEmitter emitter = new SseEmitter(300000L);
