@@ -221,7 +221,6 @@ public class ChatController {
 
             String enhancedPrompt = knowledgeContext.toString();
             log.info("成功检索到 {} 条相关内容，增强后的prompt长度: {}", allResults.size(), enhancedPrompt.length());
-            log.info("增强后的prompt: {}", enhancedPrompt);
             return enhancedPrompt;
 
         } catch (Exception e) {

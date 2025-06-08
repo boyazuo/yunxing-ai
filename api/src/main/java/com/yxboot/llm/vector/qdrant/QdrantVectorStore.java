@@ -124,7 +124,6 @@ public class QdrantVectorStore extends AbstractVectorStore {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            log.info("添加向量请求体: {}", objectMapper.writeValueAsString(requestBody));
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
 
             // 解析响应

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yxboot.common.exception.ApiException;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.config.security.SecurityUser;
@@ -46,7 +47,8 @@ public class DatasetDocumentController {
 
     @GetMapping
     @Operation(summary = "获取文档列表", description = "根据知识库ID获取文档列表")
-    public Result<List<DatasetDocumentDTO>> getDocumentsByDatasetId(@Parameter(description = "知识库ID") @RequestParam Long datasetId) {
+    public Result<List<DatasetDocumentDTO>> getDocumentsByDatasetId(
+            @Parameter(description = "知识库ID") @RequestParam Long datasetId) {
         if (datasetId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
@@ -56,13 +58,15 @@ public class DatasetDocumentController {
 
     @GetMapping("/page")
     @Operation(summary = "分页获取文档列表", description = "根据知识库ID分页获取文档列表")
-    public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(@Parameter(description = "知识库ID") @RequestParam Long datasetId,
+    public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(
+            @Parameter(description = "知识库ID") @RequestParam Long datasetId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size) {
         if (datasetId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
-        IPage<DatasetDocumentDTO> documents = datasetDocumentApplicationService.getDocumentsByDatasetId(datasetId, current, size);
+        IPage<DatasetDocumentDTO> documents = datasetDocumentApplicationService.getDocumentsByDatasetId(datasetId,
+                current, size);
         return Result.success("查询成功", documents);
     }
 
@@ -78,33 +82,8 @@ public class DatasetDocumentController {
 
     @PostMapping
     @Operation(summary = "创建文档", description = "创建新的文档")
-    public Result<DatasetDocument> createDocument(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody DocumentRequest documentRequest) {
-        // 参数验证
-        if (documentRequest.getTenantId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
-        }
-        if (documentRequest.getDatasetId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
-        }
-        if (documentRequest.getFileId() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "文件ID不能为空");
-        }
-        if (documentRequest.getFileName() == null || documentRequest.getFileName().trim().isEmpty()) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "文件名称不能为空");
-        }
-        if (documentRequest.getFileSize() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "文件大小不能为空");
-        }
-        if (documentRequest.getSegmentMethod() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "分段方式不能为空");
-        }
-        if (documentRequest.getMaxSegmentLength() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "分段最大长度不能为空");
-        }
-        if (documentRequest.getOverlapLength() == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "重叠长度不能为空");
-        }
-
+    public Result<DatasetDocument> createDocument(@AuthenticationPrincipal SecurityUser securityUser,
+            @RequestBody DocumentRequest documentRequest) {
         // 检查文件是否存在
         SysFile existingFile = sysFileService.getById(documentRequest.getFileId());
         if (existingFile == null) {
@@ -113,20 +92,23 @@ public class DatasetDocumentController {
 
         try {
             // 创建文档（包含重复检查）
-            DatasetDocument document = datasetDocumentApplicationService.createDocument(documentRequest.getTenantId(), documentRequest.getDatasetId(),
-                    documentRequest.getFileId(), documentRequest.getFileName(), documentRequest.getFileSize(), existingFile.getHash(),
-                    documentRequest.getSegmentMethod(), documentRequest.getMaxSegmentLength(), documentRequest.getOverlapLength());
+            DatasetDocument document = datasetDocumentApplicationService.createDocument(
+                    documentRequest.getTenantId(),
+                    documentRequest.getDatasetId(),
+                    documentRequest.getFileId(),
+                    documentRequest.getFileName(),
+                    documentRequest.getFileSize(),
+                    existingFile.getHash(),
+                    documentRequest.getSegmentMethod(),
+                    documentRequest.getMaxSegmentLength(),
+                    documentRequest.getOverlapLength());
 
             // 触发异步文档处理，传递用户ID
             datasetDocumentProcessingApplicationService.processDocumentAsync(document.getDocumentId(), securityUser.getUserId());
 
             return Result.success("文档创建成功，正在后台处理", document);
-        } catch (RuntimeException e) {
-            // 如果是业务异常（如文档重复），返回具体错误信息
-            if (e.getMessage() != null && e.getMessage().contains("已存在于知识库中")) {
-                return Result.error(ResultCode.VALIDATE_FAILED, e.getMessage());
-            }
-            return Result.error(ResultCode.FAIL, "文档创建失败: " + e.getMessage());
+        } catch (ApiException e) {
+            return Result.error(e.getResultCode(), "文档创建失败: " + e.getMessage());
         } catch (Exception e) {
             return Result.error(ResultCode.FAIL, "文档创建失败: " + e.getMessage());
         }
@@ -149,7 +131,8 @@ public class DatasetDocumentController {
 
     @DeleteMapping("/{documentId}")
     @Operation(summary = "删除文档", description = "删除指定文档及其相关数据")
-    public Result<Void> deleteDocument(@PathVariable Long documentId, @AuthenticationPrincipal SecurityUser currentUser) {
+    public Result<Void> deleteDocument(@PathVariable Long documentId,
+            @AuthenticationPrincipal SecurityUser currentUser) {
         // 验证文档是否存在
         DatasetDocument existingDocument = datasetDocumentApplicationService.getDocumentById(documentId);
         if (existingDocument == null) {

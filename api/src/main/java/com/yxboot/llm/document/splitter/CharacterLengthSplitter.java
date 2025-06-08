@@ -18,12 +18,12 @@ public class CharacterLengthSplitter extends AbstractSplitter {
     /**
      * 默认块的最大字符数
      */
-    private int maxChunkSize = 1000;
+    private int maxChunkSize = 500;
 
     /**
      * 默认块的重叠字符数
      */
-    private int overlapSize = 200;
+    private int overlapSize = 100;
 
     /**
      * 创建一个默认配置的字符长度分割器

@@ -4,6 +4,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yxboot.common.api.ResultCode;
+import com.yxboot.common.exception.ApiException;
 import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
@@ -52,7 +54,7 @@ public class DatasetDocumentApplicationService {
         DatasetDocument existingDocument = datasetDocumentService.checkDocumentExistsByHash(tenantId, datasetId, fileHash);
         if (existingDocument != null) {
             log.warn("文档已存在, fileHash: {}, documentId: {}", fileHash, existingDocument.getDocumentId());
-            throw new RuntimeException("该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
+            throw new ApiException(ResultCode.VALIDATE_FAILED, "该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
         }
 
         // 2. 创建文档记录
