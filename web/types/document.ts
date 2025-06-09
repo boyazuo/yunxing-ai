@@ -13,9 +13,8 @@ export enum DocumentStatus {
  * 文档分段方式枚举
  */
 export enum SegmentMethod {
-  SENTENCE = 'sentence', // 按句子分段
   PARAGRAPH = 'paragraph', // 按段落分段
-  CUSTOM = 'custom', // 自定义分段
+  CHAPTER = 'chapter', // 按章节分段
 }
 
 /**
@@ -120,12 +119,10 @@ export function getSegmentMethodText(method?: SegmentMethod): string {
   if (!method) return '未知方式'
 
   switch (method) {
-    case SegmentMethod.SENTENCE:
-      return '按句子分段'
     case SegmentMethod.PARAGRAPH:
       return '按段落分段'
-    case SegmentMethod.CUSTOM:
-      return '自定义分段'
+    case SegmentMethod.CHAPTER:
+      return '按章节分段'
     default:
       return '未知方式'
   }

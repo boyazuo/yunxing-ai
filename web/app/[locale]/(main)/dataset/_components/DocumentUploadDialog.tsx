@@ -3,14 +3,7 @@
 import { documentService } from '@/api/document'
 import { fileService } from '@/api/file'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -27,19 +20,13 @@ interface DocumentUploadDialogProps {
   onSuccess: () => void
 }
 
-export function DocumentUploadDialog({
-  open,
-  onOpenChange,
-  tenantId,
-  datasetId,
-  onSuccess,
-}: DocumentUploadDialogProps) {
+export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, onSuccess }: DocumentUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [segmentMethod, setSegmentMethod] = useState<SegmentMethod>(SegmentMethod.PARAGRAPH)
-  const [maxSegmentLength, setMaxSegmentLength] = useState<number>(1000)
-  const [overlapLength, setOverlapLength] = useState<number>(100)
+  const [maxSegmentLength, setMaxSegmentLength] = useState<number>(500)
+  const [overlapLength, setOverlapLength] = useState<number>(50)
 
   // 文件拖放处理
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -129,9 +116,7 @@ export function DocumentUploadDialog({
 
         {/* 文件上传区域 */}
         <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center ${
-            file ? 'border-primary' : 'border-muted-foreground/20'
-          } transition-colors`}
+          className={`border-2 border-dashed rounded-lg p-6 text-center ${file ? 'border-primary' : 'border-muted-foreground/20'} transition-colors`}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
@@ -147,13 +132,7 @@ export function DocumentUploadDialog({
                 </div>
                 <span className="text-xs text-muted-foreground">支持 PDF, DOCX, TXT 等常见文档格式</span>
               </div>
-              <Input
-                id="file-upload"
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.txt,.md,.csv"
-              />
+              <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt,.md,.csv" />
             </>
           ) : (
             <div className="space-y-2">
@@ -177,11 +156,7 @@ export function DocumentUploadDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="segmentMethod">分段方式</Label>
-            <RadioGroup
-              value={segmentMethod}
-              onValueChange={(value) => setSegmentMethod(value as SegmentMethod)}
-              className="flex flex-col space-y-1"
-            >
+            <RadioGroup value={segmentMethod} onValueChange={(value) => setSegmentMethod(value as SegmentMethod)} className="flex flex-col space-y-1">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={SegmentMethod.PARAGRAPH} id="paragraph" />
                 <Label htmlFor="paragraph" className="cursor-pointer">
@@ -189,15 +164,9 @@ export function DocumentUploadDialog({
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value={SegmentMethod.SENTENCE} id="sentence" />
-                <Label htmlFor="sentence" className="cursor-pointer">
-                  按句子分段
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value={SegmentMethod.CUSTOM} id="custom" />
-                <Label htmlFor="custom" className="cursor-pointer">
-                  自定义分段
+                <RadioGroupItem value={SegmentMethod.CHAPTER} id="chapter" />
+                <Label htmlFor="chapter" className="cursor-pointer">
+                  按章节分段
                 </Label>
               </div>
             </RadioGroup>
@@ -206,28 +175,14 @@ export function DocumentUploadDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="maxSegmentLength">最大分段长度</Label>
-              <Input
-                id="maxSegmentLength"
-                type="number"
-                value={maxSegmentLength}
-                onChange={(e) => setMaxSegmentLength(Number(e.target.value))}
-                min={100}
-                max={5000}
-              />
-              <p className="text-xs text-muted-foreground">建议值：500-2000</p>
+              <Input id="maxSegmentLength" type="number" value={maxSegmentLength} onChange={(e) => setMaxSegmentLength(Number(e.target.value))} min={100} max={5000} />
+              <p className="text-xs text-muted-foreground">建议值：500-1000</p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="overlapLength">重叠长度</Label>
-              <Input
-                id="overlapLength"
-                type="number"
-                value={overlapLength}
-                onChange={(e) => setOverlapLength(Number(e.target.value))}
-                min={0}
-                max={500}
-              />
-              <p className="text-xs text-muted-foreground">建议值：0-200</p>
+              <Input id="overlapLength" type="number" value={overlapLength} onChange={(e) => setOverlapLength(Number(e.target.value))} min={0} max={500} />
+              <p className="text-xs text-muted-foreground">建议值：0-100</p>
             </div>
           </div>
         </div>
