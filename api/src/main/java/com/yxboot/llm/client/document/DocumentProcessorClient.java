@@ -1,4 +1,4 @@
-package com.yxboot.llm.document.service;
+package com.yxboot.llm.client.document;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,30 +7,30 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.tika.Tika;
-import org.springframework.stereotype.Service;
-
+import org.springframework.stereotype.Component;
 import com.yxboot.llm.document.Document;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.loader.DocumentLoader;
 import com.yxboot.llm.document.loader.PdfDocumentLoader;
 import com.yxboot.llm.document.loader.WordDocumentLoader;
-import com.yxboot.llm.document.splitter.CharacterLengthSplitter;
+import com.yxboot.llm.document.splitter.ChapterSplitter;
+import com.yxboot.llm.document.splitter.CharacterSplitter;
 import com.yxboot.llm.document.splitter.DocumentSplitter;
-
+import com.yxboot.llm.document.splitter.SplitMode;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 文档处理服务实现
+ * 文档处理客户端
  */
-@Service
+@Component
 @RequiredArgsConstructor
-public class DocumentProcessorService {
+public class DocumentProcessorClient {
 
     private final PdfDocumentLoader pdfDocumentLoader;
     private final WordDocumentLoader wordDocumentLoader;
-    private final CharacterLengthSplitter characterLengthSplitter;
+    private final CharacterSplitter characterLengthSplitter;
+    private final ChapterSplitter smartChapterSplitter;
 
     // 扩展名到加载器的映射
     private final Map<String, DocumentLoader> extensionToLoader = new ConcurrentHashMap<>();
@@ -56,9 +56,9 @@ public class DocumentProcessorService {
     /**
      * 注册加载器
      * 
-     * @param loader    加载器
+     * @param loader 加载器
      * @param extension 文件扩展名
-     * @param mimeType  MIME类型
+     * @param mimeType MIME类型
      */
     private void registerLoader(DocumentLoader loader, String extension, String mimeType) {
         extensionToLoader.put(extension.toLowerCase(), loader);
@@ -93,7 +93,7 @@ public class DocumentProcessorService {
     /**
      * 根据文件名和内容获取适合的加载器
      * 
-     * @param bytes    文件内容
+     * @param bytes 文件内容
      * @param filename 文件名
      * @return 加载器
      */
@@ -182,7 +182,7 @@ public class DocumentProcessorService {
     }
 
     public List<DocumentSegment> splitDocument(Document document, int maxChunkSize, int overlapSize) {
-        DocumentSplitter splitter = new CharacterLengthSplitter(maxChunkSize, overlapSize);
+        DocumentSplitter splitter = new CharacterSplitter(maxChunkSize, overlapSize);
         return splitter.split(document);
     }
 
@@ -204,5 +204,130 @@ public class DocumentProcessorService {
     public List<DocumentSegment> loadAndSplitDocument(File file, int maxChunkSize, int overlapSize) {
         Document document = loadDocument(file);
         return splitDocument(document, maxChunkSize, overlapSize);
+    }
+
+    /**
+     * 使用智能章节分割器分割文档
+     * 
+     * @param document 文档对象
+     * @return 章节分段列表
+     */
+    public List<DocumentSegment> splitDocumentBySmartChapter(Document document) {
+        return smartChapterSplitter.split(document);
+    }
+
+    /**
+     * 使用自定义配置的智能章节分割器分割文档
+     * 
+     * @param document 文档对象
+     * @param includeSubChapters 是否包含子章节
+     * @param minChapterLength 最小章节长度
+     * @param maxChapterLength 最大章节长度
+     * @return 章节分段列表
+     */
+    public List<DocumentSegment> splitDocumentBySmartChapter(Document document,
+            boolean includeSubChapters, int minChapterLength, int maxChapterLength) {
+        ChapterSplitter splitter = new ChapterSplitter(
+                smartChapterSplitter.getPdfAnalyzer(),
+                smartChapterSplitter.getWordAnalyzer(),
+                smartChapterSplitter.getTextAnalyzer())
+                        .setIncludeSubChapters(includeSubChapters)
+                        .setMinChapterLength(minChapterLength)
+                        .setMaxChapterLength(maxChapterLength);
+
+        return splitter.split(document);
+    }
+
+    /**
+     * 加载并使用智能章节分割器分割文档
+     * 
+     * @param file 文件对象
+     * @return 章节分段列表
+     */
+    public List<DocumentSegment> loadAndSplitDocumentBySmartChapter(File file) {
+        Document document = loadDocument(file);
+        return splitDocumentBySmartChapter(document);
+    }
+
+    /**
+     * 加载并使用自定义配置的智能章节分割器分割文档
+     * 
+     * @param file 文件对象
+     * @param includeSubChapters 是否包含子章节
+     * @param minChapterLength 最小章节长度
+     * @param maxChapterLength 最大章节长度
+     * @return 章节分段列表
+     */
+    public List<DocumentSegment> loadAndSplitDocumentBySmartChapter(File file,
+            boolean includeSubChapters, int minChapterLength, int maxChapterLength) {
+        Document document = loadDocument(file);
+        return splitDocumentBySmartChapter(document, includeSubChapters, minChapterLength, maxChapterLength);
+    }
+
+    /**
+     * 根据分段方式加载并分割文档
+     * 
+     * @param file 文件对象
+     * @param splitMode 分段方式
+     * @param maxChunkSize 对于字符长度分割：最大分段长度；对于智能章节分割：最大章节长度
+     * @param overlapSize 对于字符长度分割：重叠长度；对于智能章节分割：最小章节长度
+     * @return 分段列表
+     */
+    public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode,
+            int maxChunkSize, int overlapSize) {
+        Document document = loadDocument(file);
+        return splitDocumentBySplitMode(document, splitMode, maxChunkSize, overlapSize);
+    }
+
+    /**
+     * 根据分段方式加载并分割文档（使用默认参数）
+     * 
+     * @param file 文件对象
+     * @param splitMode 分段方式
+     * @return 分段列表
+     */
+    public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode) {
+        Document document = loadDocument(file);
+        return splitDocumentBySplitMode(document, splitMode);
+    }
+
+    /**
+     * 根据分段方式分割文档
+     * 
+     * @param document 文档对象
+     * @param splitMode 分段方式
+     * @param maxChunkSize 对于字符长度分割：最大分段长度；对于智能章节分割：最大章节长度
+     * @param overlapSize 对于字符长度分割：重叠长度；对于智能章节分割：最小章节长度
+     * @return 分段列表
+     */
+    public List<DocumentSegment> splitDocumentBySplitMode(Document document, SplitMode splitMode,
+            int maxChunkSize, int overlapSize) {
+        switch (splitMode) {
+            case CHARACTER_SPLITTER:
+                return splitDocument(document, maxChunkSize, overlapSize);
+            case CHAPTER_SPLITTER:
+                // 对于智能章节分割，maxChunkSize作为最大章节长度，overlapSize作为最小章节长度
+                return splitDocumentBySmartChapter(document, true, overlapSize, maxChunkSize);
+            default:
+                throw new IllegalArgumentException("不支持的分段方式: " + splitMode);
+        }
+    }
+
+    /**
+     * 根据分段方式分割文档（使用默认参数）
+     * 
+     * @param document 文档对象
+     * @param splitMode 分段方式
+     * @return 分段列表
+     */
+    public List<DocumentSegment> splitDocumentBySplitMode(Document document, SplitMode splitMode) {
+        switch (splitMode) {
+            case CHARACTER_SPLITTER:
+                return splitDocument(document);
+            case CHAPTER_SPLITTER:
+                return splitDocumentBySmartChapter(document);
+            default:
+                throw new IllegalArgumentException("不支持的分段方式: " + splitMode);
+        }
     }
 }

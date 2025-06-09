@@ -2,7 +2,6 @@ package com.yxboot.modules.dataset.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
-
 import lombok.Getter;
 
 /**
@@ -12,10 +11,8 @@ import lombok.Getter;
  */
 @Getter
 public enum SegmentMethod {
-    FIXED_LENGTH("fixed_length", "固定长度"),
     PARAGRAPH("paragraph", "段落"),
-    SENTENCE("sentence", "句子"),
-    HYBRID("hybrid", "混合方式");
+    CHAPTER("chapter", "章节");
 
     @EnumValue
     private final String value;

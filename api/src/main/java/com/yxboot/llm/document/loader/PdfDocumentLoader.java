@@ -3,12 +3,10 @@ package com.yxboot.llm.document.loader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
-
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Component;
-
 import com.yxboot.llm.document.Document;
 
 /**
@@ -29,6 +27,7 @@ public class PdfDocumentLoader extends AbstractDocumentLoader {
                 // 添加元数据
                 metadata.put("page_count", document.getNumberOfPages());
                 metadata.put("document_type", "pdf");
+                metadata.put("raw_bytes", pdfBytes); // 保存原始字节数据用于结构分析
 
                 return Document.of(text, metadata);
             }

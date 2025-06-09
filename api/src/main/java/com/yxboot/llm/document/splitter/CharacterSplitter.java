@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  * 基于字符长度的文档分割器
  */
 @Component
-public class CharacterLengthSplitter extends AbstractSplitter {
+public class CharacterSplitter extends AbstractSplitter {
 
     private static final Pattern PARAGRAPH_PATTERN = Pattern.compile("\\n\\s*\\n");
     private static final Pattern SENTENCE_PATTERN = Pattern.compile("(?<=[.!?。！？])(\\s+)");
@@ -28,7 +28,7 @@ public class CharacterLengthSplitter extends AbstractSplitter {
     /**
      * 创建一个默认配置的字符长度分割器
      */
-    public CharacterLengthSplitter() {
+    public CharacterSplitter() {
     }
 
     /**
@@ -37,7 +37,7 @@ public class CharacterLengthSplitter extends AbstractSplitter {
      * @param maxChunkSize 块的最大字符数
      * @param overlapSize  块的重叠字符数
      */
-    public CharacterLengthSplitter(int maxChunkSize, int overlapSize) {
+    public CharacterSplitter(int maxChunkSize, int overlapSize) {
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException("最大块大小必须为正数");
         }
@@ -153,7 +153,7 @@ public class CharacterLengthSplitter extends AbstractSplitter {
      * @param maxChunkSize 最大块大小
      * @return 当前分割器实例
      */
-    public CharacterLengthSplitter setMaxChunkSize(int maxChunkSize) {
+    public CharacterSplitter setMaxChunkSize(int maxChunkSize) {
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException("最大块大小必须为正数");
         }
@@ -171,7 +171,7 @@ public class CharacterLengthSplitter extends AbstractSplitter {
      * @param overlapSize 重叠大小
      * @return 当前分割器实例
      */
-    public CharacterLengthSplitter setOverlapSize(int overlapSize) {
+    public CharacterSplitter setOverlapSize(int overlapSize) {
         if (overlapSize < 0) {
             throw new IllegalArgumentException("重叠大小不能为负数");
         }

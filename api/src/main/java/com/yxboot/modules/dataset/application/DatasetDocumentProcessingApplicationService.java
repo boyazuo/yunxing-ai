@@ -10,15 +10,17 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.yxboot.llm.client.document.DocumentProcessorClient;
 import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.llm.document.DocumentSegment;
-import com.yxboot.llm.document.service.DocumentProcessorService;
+import com.yxboot.llm.document.splitter.SplitMode;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
+import com.yxboot.modules.dataset.enums.SegmentMethod;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
 import com.yxboot.modules.dataset.service.DatasetService;
@@ -41,7 +43,7 @@ public class DatasetDocumentProcessingApplicationService {
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentSegmentService segmentService;
     private final SysFileService sysFileService;
-    private final DocumentProcessorService documentProcessorService;
+    private final DocumentProcessorClient documentProcessorClient;
     private final VectorStoreClient vectorService;
     private final ProviderService providerService;
     private final DatasetService datasetService;
@@ -113,7 +115,8 @@ public class DatasetDocumentProcessingApplicationService {
 
             // 8. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
-            int vectorizedCount = vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider);
+            int vectorizedCount =
+                    vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider);
 
             if (vectorizedCount != savedSegments.size()) {
                 log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());
@@ -157,7 +160,7 @@ public class DatasetDocumentProcessingApplicationService {
             file = path.toFile();
             if (file.exists()) {
                 log.info("从本地路径加载文档: {}", filePath);
-                segments = loadAndSplitDocument(file, document.getMaxSegmentLength(), document.getOverlapLength());
+                segments = loadAndSplitDocument(file, document);
             } else {
                 log.warn("本地文件不存在, path: {}, 尝试从URL加载", filePath);
             }
@@ -168,7 +171,7 @@ public class DatasetDocumentProcessingApplicationService {
             log.info("从URL加载文档: {}", fileUrl);
             file = downloadFromUrl(fileUrl, sysFile.getFileName());
             if (file != null) {
-                segments = loadAndSplitDocument(file, document.getMaxSegmentLength(), document.getOverlapLength());
+                segments = loadAndSplitDocument(file, document);
 
                 // 处理完成后删除临时文件
                 try {
@@ -199,20 +202,25 @@ public class DatasetDocumentProcessingApplicationService {
      * 加载并分割文档
      * 
      * @param file 文件对象
-     * @param maxSegmentLength 最大分段长度
-     * @param overlapLength 重叠长度
+     * @param document 文档对象（包含分段配置信息）
      * @return 分段列表
      */
-    private List<DocumentSegment> loadAndSplitDocument(File file, Integer maxSegmentLength, Integer overlapLength) {
+    private List<DocumentSegment> loadAndSplitDocument(File file, DatasetDocument document) {
         if (file == null || !file.exists()) {
             log.error("文件不存在或为空: {}", file != null ? file.getAbsolutePath() : "null");
             return null;
         }
 
         try {
-            log.info("开始处理文档, filePath: {}, maxSegmentLength: {}, overlapLength: {}", file.getAbsolutePath(), maxSegmentLength, overlapLength);
+            SplitMode splitMode = convertSegmentMethodToSplitMode(document.getSegmentMethod());
+            Integer maxSegmentLength = document.getMaxSegmentLength();
+            Integer overlapLength = document.getOverlapLength();
 
-            List<DocumentSegment> segments = documentProcessorService.loadAndSplitDocument(file, maxSegmentLength, overlapLength);
+            log.info("开始处理文档, filePath: {}, splitMode: {}, maxSegmentLength: {}, overlapLength: {}",
+                    file.getAbsolutePath(), splitMode, maxSegmentLength, overlapLength);
+
+            List<DocumentSegment> segments = documentProcessorClient.loadAndSplitDocument(
+                    file, splitMode, maxSegmentLength, overlapLength);
 
             log.info("文档处理完成, filePath: {}, 分段数量: {}", file.getAbsolutePath(), segments != null ? segments.size() : 0);
 
@@ -220,6 +228,29 @@ public class DatasetDocumentProcessingApplicationService {
         } catch (Exception e) {
             log.error("文档处理失败, filePath: {}", file.getAbsolutePath(), e);
             return null;
+        }
+    }
+
+    /**
+     * 将SegmentMethod转换为SplitMode
+     * 
+     * @param segmentMethod 分段方式
+     * @return SplitMode
+     */
+    private SplitMode convertSegmentMethodToSplitMode(SegmentMethod segmentMethod) {
+        if (segmentMethod == null) {
+            // 默认使用字符长度分割
+            return SplitMode.CHARACTER_SPLITTER;
+        }
+
+        switch (segmentMethod) {
+            case PARAGRAPH:
+                return SplitMode.CHARACTER_SPLITTER;
+            case CHAPTER:
+                return SplitMode.CHAPTER_SPLITTER;
+            default:
+                log.warn("未知的分段方式: {}, 使用默认的字符长度分割", segmentMethod);
+                return SplitMode.CHARACTER_SPLITTER;
         }
     }
 
