@@ -41,7 +41,8 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
         }
 
         LambdaQueryWrapper<DatasetDocument> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(DatasetDocument::getTenantId, tenantId).eq(DatasetDocument::getDatasetId, datasetId).eq(DatasetDocument::getFileHash,
+        queryWrapper.eq(DatasetDocument::getTenantId, tenantId).eq(DatasetDocument::getDatasetId, datasetId).eq(
+                DatasetDocument::getFileHash,
                 fileHash);
 
         return getOne(queryWrapper, false);
@@ -62,7 +63,8 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
      * @return 文档对象
      */
     @Transactional
-    public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize, String fileHash,
+    public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize,
+            String fileHash,
             SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength) {
 
         DatasetDocument document = new DatasetDocument();
@@ -160,16 +162,12 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
         DatasetDocument document = getById(documentId);
         if (document == null) {
             log.warn("文档不存在, documentId: {}", documentId);
-            return false;
+            return true; // 文档不存在视为删除成功
         }
 
-        boolean success = removeById(documentId);
-        if (success) {
-            log.info("文档删除成功, documentId: {}", documentId);
-        } else {
-            log.error("文档删除失败, documentId: {}", documentId);
-        }
-        return success;
+        removeById(documentId);
+        log.info("文档删除完成, documentId: {}", documentId);
+        return true;
     }
 
 

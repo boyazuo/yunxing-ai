@@ -117,7 +117,8 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
      * @param keyword 搜索关键词
      * @return 分页结果
      */
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId, String keyword) {
+    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+            String keyword) {
         Page<DatasetDocumentSegmentDTO> pageParam = new Page<>(current, size);
         return baseMapper.pageSegmentsWithSearch(pageParam, documentId, keyword);
     }
@@ -186,17 +187,12 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         DatasetDocumentSegment segment = getById(segmentId);
         if (segment == null) {
             log.warn("分段不存在, segmentId: {}", segmentId);
-            return false;
+            return true; // 分段不存在视为删除成功
         }
 
-        boolean success = removeById(segmentId);
-        if (success) {
-            log.info("分段删除成功, segmentId: {}", segmentId);
-        } else {
-            log.error("分段删除失败, segmentId: {}", segmentId);
-        }
-
-        return success;
+        removeById(segmentId);
+        log.info("分段删除完成, segmentId: {}", segmentId);
+        return true;
     }
 
     /**
@@ -211,17 +207,10 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
             return true;
         }
 
-        boolean success = removeByIds(segmentIds);
-        if (success) {
-            log.info("批量删除分段成功, count: {}", segmentIds.size());
-        } else {
-            log.error("批量删除分段失败, segmentIds: {}", segmentIds);
-        }
-
-        return success;
+        removeByIds(segmentIds);
+        log.info("批量删除分段完成, count: {}", segmentIds.size());
+        return true;
     }
-
-
 
     /**
      * 删除文档的所有分段
@@ -234,7 +223,8 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<DatasetDocumentSegment> queryWrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         queryWrapper.eq(DatasetDocumentSegment::getDocumentId, documentId);
-        boolean success = remove(queryWrapper);
-        return success;
+        remove(queryWrapper);
+        log.info("删除文档分段完成, documentId: {}", documentId);
+        return true;
     }
 }

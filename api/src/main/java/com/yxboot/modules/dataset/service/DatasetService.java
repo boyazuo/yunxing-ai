@@ -27,9 +27,9 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
     /**
      * 创建知识库
      * 
-     * @param tenantId         租户ID
-     * @param datasetName      知识库名称
-     * @param datasetDesc      知识库描述
+     * @param tenantId 租户ID
+     * @param datasetName 知识库名称
+     * @param datasetDesc 知识库描述
      * @param embeddingModelId 嵌入模型ID
      * @return 知识库对象
      */
@@ -58,7 +58,7 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
      * 更新知识库状态
      * 
      * @param datasetId 知识库ID
-     * @param status    新状态
+     * @param status 新状态
      * @return 是否成功
      */
     public boolean updateDatasetStatus(Long datasetId, DatasetStatus status) {
@@ -79,13 +79,6 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDatasetWithVectors(Long datasetId) {
         try {
-            // 获取知识库信息
-            Dataset dataset = getById(datasetId);
-            if (dataset == null) {
-                log.warn("知识库不存在, datasetId: {}", datasetId);
-                return false;
-            }
-
             // 1. 删除向量集合
             String collectionName = "dataset_" + datasetId;
             try {
@@ -105,13 +98,8 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
             }
 
             // 2. 删除知识库记录
-            boolean datasetDeleted = removeById(datasetId);
-            if (!datasetDeleted) {
-                log.error("删除知识库记录失败, datasetId: {}", datasetId);
-                return false;
-            }
-
-            log.info("知识库删除成功, datasetId: {}", datasetId);
+            removeById(datasetId);
+            log.info("知识库删除完成, datasetId: {}", datasetId);
             return true;
         } catch (Exception e) {
             log.error("删除知识库失败, datasetId: {}", datasetId, e);
