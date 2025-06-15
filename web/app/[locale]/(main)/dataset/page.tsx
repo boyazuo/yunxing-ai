@@ -143,12 +143,7 @@ export default function DatasetsPage() {
           </Select>
         </div>
         <div className="flex items-center space-x-2">
-          <Input
-            placeholder="搜索知识库..."
-            className="w-[250px]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="搜索知识库..." className="w-[250px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <Button onClick={handleCreateDataset}>
             <Plus className="mr-2 h-4 w-4" />
             新建知识库
@@ -177,27 +172,15 @@ export default function DatasetsPage() {
               <div className="px-4 pt-4 pb-0 flex items-start justify-between">
                 <div className="flex space-x-2.5">
                   <div className="flex-shrink-0">
-                    <div
-                      className="h-10 w-10 rounded-md flex items-center justify-center text-xl shadow-sm border"
-                      style={{ backgroundColor: '#f0f0f0' }}
-                    >
+                    <div className="h-10 w-10 rounded-md flex items-center justify-center text-xl shadow-sm border" style={{ backgroundColor: '#f0f0f0' }}>
                       <Database className="h-5 w-5" />
                     </div>
                   </div>
                   <div>
                     <h3 className="font-medium text-sm leading-tight mb-1">{dataset.datasetName}</h3>
-                    <Badge
-                      variant={dataset.status === DatasetStatus.ACTIVE ? 'secondary' : 'outline'}
-                      className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal"
-                    >
+                    <Badge variant={dataset.status === DatasetStatus.ACTIVE ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal">
                       <Database className="h-3 w-3" />
-                      <span>
-                        {dataset.status === DatasetStatus.ACTIVE
-                          ? '正常'
-                          : dataset.status === DatasetStatus.DISABLED
-                            ? '已禁用'
-                            : '未知状态'}
-                      </span>
+                      <span>{dataset.status === DatasetStatus.ACTIVE ? '正常' : dataset.status === DatasetStatus.DISABLED ? '已禁用' : '未知状态'}</span>
                     </Badge>
                   </div>
                 </div>
@@ -252,13 +235,7 @@ export default function DatasetsPage() {
                         <AvatarFallback className="text-[9px]">{dataset.creatorAvatar}</AvatarFallback>
                       )
                     ) : (
-                      <AvatarFallback>
-                        {dataset.creatorUsername ? (
-                          dataset.creatorUsername.slice(0, 1).toUpperCase()
-                        ) : (
-                          <User className="h-2 w-2" />
-                        )}
-                      </AvatarFallback>
+                      <AvatarFallback>{dataset.creatorUsername ? dataset.creatorUsername.slice(0, 1).toUpperCase() : <User className="h-2 w-2" />}</AvatarFallback>
                     )}
                   </Avatar>
                   <span className="text-[12px] text-muted-foreground">{dataset.creatorUsername || '创建者'}</span>
@@ -280,13 +257,7 @@ export default function DatasetsPage() {
       </div>
 
       {/* 知识库表单弹窗 */}
-      <DatasetFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        dataset={currentDataset}
-        onSuccess={loadDatasets}
-        tenantId={tenantId}
-      />
+      <DatasetFormDialog open={isFormOpen} onOpenChange={setIsFormOpen} dataset={currentDataset} onSuccess={loadDatasets} tenantId={tenantId} />
 
       {/* 删除确认对话框 */}
 

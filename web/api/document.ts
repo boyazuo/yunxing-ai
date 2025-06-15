@@ -64,8 +64,9 @@ export const documentService = {
   /**
    * 删除文档
    */
-  deleteDocument: async (documentId: string): Promise<void> => {
-    await api.delete(`/dataset-documents/${documentId}`)
+  deleteDocument: async (documentId: string): Promise<ApiResponse<void>> => {
+    const response = await api.delete<void>(`/dataset-documents/${documentId}`)
+    return response
   },
 }
 

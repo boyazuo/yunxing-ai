@@ -133,17 +133,22 @@ export default function DatasetDocumentsPage() {
 
   // 删除文档
   const confirmDeleteDocument = (document: DatasetDocument) => {
-    setDocumentToDelete(document)
-    setDeleteDialogOpen(true)
+    setTimeout(() => {
+      setDocumentToDelete(document)
+      setDeleteDialogOpen(true)
+    }, 0)
   }
 
   const handleDeleteDocument = async () => {
     try {
       if (!documentToDelete) return
 
-      await documentService.deleteDocument(documentToDelete.documentId.toString())
-
-      toast.success('文档已成功删除')
+      const res = await documentService.deleteDocument(documentToDelete.documentId.toString())
+      if (res.code === 0) {
+        toast.success('文档已成功删除')
+      } else {
+        toast.error(res.msg)
+      }
 
       loadDocuments()
     } catch (error) {
@@ -205,12 +210,7 @@ export default function DatasetDocumentsPage() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Input
-            placeholder="搜索文档名称..."
-            className="w-[250px]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="搜索文档名称..." className="w-[250px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       </div>
 
@@ -269,10 +269,7 @@ export default function DatasetDocumentsPage() {
                         <File className="h-4 w-4 text-muted-foreground" />
                       </div>
                       {document.status === DocumentStatus.COMPLETED ? (
-                        <Link
-                          href={`/dataset/${datasetId}/document/${document.documentId}`}
-                          className="font-medium text-primary hover:underline cursor-pointer"
-                        >
+                        <Link href={`/dataset/${datasetId}/document/${document.documentId}`} className="font-medium text-primary hover:underline cursor-pointer">
                           {document.fileName}
                         </Link>
                       ) : (
@@ -303,13 +300,7 @@ export default function DatasetDocumentsPage() {
                         {document.creatorAvatar ? (
                           <AvatarImage src={document.creatorAvatar} alt={document.creatorUsername} />
                         ) : (
-                          <AvatarFallback>
-                            {document.creatorUsername ? (
-                              document.creatorUsername.slice(0, 1).toUpperCase()
-                            ) : (
-                              <User className="h-3 w-3" />
-                            )}
-                          </AvatarFallback>
+                          <AvatarFallback>{document.creatorUsername ? document.creatorUsername.slice(0, 1).toUpperCase() : <User className="h-3 w-3" />}</AvatarFallback>
                         )}
                       </Avatar>
                       <span className="text-sm">{document.creatorUsername}</span>
@@ -370,13 +361,7 @@ export default function DatasetDocumentsPage() {
       )}
 
       {/* 上传文档对话框 */}
-      <DocumentUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        tenantId={tenantId}
-        datasetId={datasetId}
-        onSuccess={loadDocuments}
-      />
+      <DocumentUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} tenantId={tenantId} datasetId={datasetId} onSuccess={loadDocuments} />
 
       {/* 删除确认对话框 */}
 
