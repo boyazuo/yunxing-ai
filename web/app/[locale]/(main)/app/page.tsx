@@ -15,7 +15,7 @@ import { AppType } from '@/types/app'
 import { Bot, Edit, GitBranch, MessageSquare, MoreHorizontal, Plus, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 
 export default function SpacePage() {
   const router = useRouter()
@@ -30,6 +30,7 @@ export default function SpacePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [appToDelete, setAppToDelete] = useState<App | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
@@ -76,12 +77,11 @@ export default function SpacePage() {
 
   // 打开删除确认对话框
   const confirmDeleteApp = (app: App) => {
-    // 关闭任何可能打开的其他UI组件
-    // 使用setTimeout确保React完成当前渲染循环
-    setTimeout(() => {
+    // 使用startTransition确保React完成当前渲染循环
+    startTransition(() => {
       setAppToDelete(app)
       setDeleteDialogOpen(true)
-    }, 0)
+    })
   }
 
   // 删除应用
@@ -163,12 +163,7 @@ export default function SpacePage() {
           </Select>
         </div>
         <div className="flex items-center space-x-2">
-          <Input
-            placeholder="搜索应用..."
-            className="w-[250px]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="搜索应用..." className="w-[250px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <Button onClick={handleCreateApp}>
             <Plus className="mr-2 h-4 w-4" />
             新建应用
@@ -197,33 +192,20 @@ export default function SpacePage() {
               <div className="px-4 pt-4 pb-0 flex items-start justify-between">
                 <div className="flex space-x-2.5">
                   <div className="flex-shrink-0">
-                    <div
-                      className="h-10 w-10 rounded-md flex items-center justify-center text-xl shadow-sm border"
-                      style={{ backgroundColor: app.logoBackground || '#f0f0f0' }}
-                    >
+                    <div className="h-10 w-10 rounded-md flex items-center justify-center text-xl shadow-sm border" style={{ backgroundColor: app.logoBackground || '#f0f0f0' }}>
                       {app.logo || app.appName.slice(0, 2).toUpperCase()}
                     </div>
                   </div>
                   <div>
                     <h3 className="font-medium text-sm leading-tight mb-1">{app.appName}</h3>
                     <Badge
-                      variant={
-                        app.type === AppType.CHAT ? 'secondary' : app.type === AppType.AGENT ? 'default' : 'outline'
-                      }
+                      variant={app.type === AppType.CHAT ? 'secondary' : app.type === AppType.AGENT ? 'default' : 'outline'}
                       className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal"
                     >
                       {app.type === AppType.CHAT && <MessageSquare className="h-3 w-3" />}
                       {app.type === AppType.AGENT && <Bot className="h-3 w-3" />}
                       {app.type === AppType.WORKFLOW && <GitBranch className="h-3 w-3" />}
-                      <span>
-                        {app.type === AppType.CHAT
-                          ? '对话应用'
-                          : app.type === AppType.AGENT
-                            ? '智能体'
-                            : app.type === AppType.WORKFLOW
-                              ? '工作流'
-                              : '未知类型'}
-                      </span>
+                      <span>{app.type === AppType.CHAT ? '对话应用' : app.type === AppType.AGENT ? '智能体' : app.type === AppType.WORKFLOW ? '工作流' : '未知类型'}</span>
                     </Badge>
                   </div>
                 </div>
@@ -278,13 +260,7 @@ export default function SpacePage() {
                         <AvatarFallback className="text-[9px]">{app.creatorAvatar}</AvatarFallback>
                       )
                     ) : (
-                      <AvatarFallback>
-                        {app.creatorUsername ? (
-                          app.creatorUsername.slice(0, 1).toUpperCase()
-                        ) : (
-                          <User className="h-2 w-2" />
-                        )}
-                      </AvatarFallback>
+                      <AvatarFallback>{app.creatorUsername ? app.creatorUsername.slice(0, 1).toUpperCase() : <User className="h-2 w-2" />}</AvatarFallback>
                     )}
                   </Avatar>
                   <span className="text-[12px] text-muted-foreground">{app.creatorUsername || '创建者'}</span>
@@ -306,13 +282,7 @@ export default function SpacePage() {
       </div>
 
       {/* 应用表单弹窗 */}
-      <AppFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        app={currentApp}
-        onSuccess={loadApps}
-        tenantId={tenantId}
-      />
+      <AppFormDialog open={isFormOpen} onOpenChange={setIsFormOpen} app={currentApp} onSuccess={loadApps} tenantId={tenantId} />
 
       {/* 删除确认对话框 */}
       <ConfirmDialog

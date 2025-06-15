@@ -1,12 +1,6 @@
 'use client'
 
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Search, Trash2, X } from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
-
+import { documentService, segmentService } from '@/api/document'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
 import { CustomPagination } from '@/components/blocks/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -17,10 +11,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-
-import { documentService, segmentService } from '@/api/document'
 import type { DatasetDocument, DocumentSegment } from '@/types/document'
-
+import { ArrowLeft, Edit, FileText, MoreHorizontal, Search, Trash2, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { useCallback, useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { SegmentEditDrawer } from './_components/segment-edit-drawer'
 
 // 格式化日期时间
@@ -60,6 +57,7 @@ export default function DocumentSegmentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [segmentToDelete, setSegmentToDelete] = useState<DocumentSegment | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   // 批量删除确认对话框状态
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
@@ -183,8 +181,10 @@ export default function DocumentSegmentsPage() {
 
   // 确认删除单个分段
   const confirmDeleteSegment = (segment: DocumentSegment) => {
-    setSegmentToDelete(segment)
-    setDeleteDialogOpen(true)
+    startTransition(() => {
+      setSegmentToDelete(segment)
+      setDeleteDialogOpen(true)
+    })
   }
 
   // 删除单个分段
@@ -288,12 +288,7 @@ export default function DocumentSegmentsPage() {
                 }}
               />
               {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                  onClick={handleClearSearch}
-                >
+                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6" onClick={handleClearSearch}>
                   <X className="h-3 w-3" />
                 </Button>
               )}
@@ -355,10 +350,7 @@ export default function DocumentSegmentsPage() {
               segments.map((segment) => (
                 <TableRow key={segment.segmentId} className="group">
                   <TableCell>
-                    <Checkbox
-                      checked={selectedSegments.has(segment.segmentId)}
-                      onCheckedChange={(checked) => handleSelectSegment(segment.segmentId, checked as boolean)}
-                    />
+                    <Checkbox checked={selectedSegments.has(segment.segmentId)} onCheckedChange={(checked) => handleSelectSegment(segment.segmentId, checked as boolean)} />
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -384,9 +376,7 @@ export default function DocumentSegmentsPage() {
                         {segment.creatorAvatar ? (
                           <AvatarImage src={segment.creatorAvatar} alt={segment.creatorUsername} />
                         ) : (
-                          <AvatarFallback className="text-xs">
-                            {segment.creatorUsername?.slice(0, 1).toUpperCase() || 'U'}
-                          </AvatarFallback>
+                          <AvatarFallback className="text-xs">{segment.creatorUsername?.slice(0, 1).toUpperCase() || 'U'}</AvatarFallback>
                         )}
                       </Avatar>
                       <span className="text-sm truncate">{segment.creatorUsername}</span>
@@ -408,10 +398,7 @@ export default function DocumentSegmentsPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           编辑
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => confirmDeleteSegment(segment)}
-                        >
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => confirmDeleteSegment(segment)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           删除
                         </DropdownMenuItem>
@@ -430,9 +417,7 @@ export default function DocumentSegmentsPage() {
                     </div>
                     <div>
                       <p className="font-medium">{searchTerm ? '未找到匹配的分段' : '暂无分段'}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {searchTerm ? '尝试调整搜索条件' : '文档还没有分段内容'}
-                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">{searchTerm ? '尝试调整搜索条件' : '文档还没有分段内容'}</p>
                     </div>
                   </div>
                 </TableCell>
@@ -453,12 +438,7 @@ export default function DocumentSegmentsPage() {
       )}
 
       {/* 编辑分段抽屉 */}
-      <SegmentEditDrawer
-        open={editDrawerOpen}
-        onOpenChange={setEditDrawerOpen}
-        editingSegment={editingSegment}
-        onSave={loadSegments}
-      />
+      <SegmentEditDrawer open={editDrawerOpen} onOpenChange={setEditDrawerOpen} editingSegment={editingSegment} onSave={loadSegments} />
 
       {/* 删除单个分段确认对话框 */}
       <ConfirmDialog

@@ -19,7 +19,7 @@ import { ArrowLeft, Download, File, FileText, MoreHorizontal, Plus, Trash, Uploa
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 // 将字节大小转换为易读的格式
@@ -72,6 +72,7 @@ export default function DatasetDocumentsPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<DatasetDocument | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
@@ -133,10 +134,10 @@ export default function DatasetDocumentsPage() {
 
   // 删除文档
   const confirmDeleteDocument = (document: DatasetDocument) => {
-    setTimeout(() => {
+    startTransition(() => {
       setDocumentToDelete(document)
       setDeleteDialogOpen(true)
-    }, 0)
+    })
   }
 
   const handleDeleteDocument = async () => {

@@ -15,7 +15,7 @@ import { DatasetStatus } from '@/types/dataset'
 import { Database, Edit, MoreHorizontal, Plus, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 
 export default function DatasetsPage() {
   const router = useRouter()
@@ -28,6 +28,7 @@ export default function DatasetsPage() {
   const [currentDataset, setCurrentDataset] = useState<Dataset | undefined>(undefined)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [datasetToDelete, setDatasetToDelete] = useState<Dataset | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   // 从会话中获取租户ID
   const tenantId = session?.tenant?.tenantId || ''
@@ -72,11 +73,11 @@ export default function DatasetsPage() {
 
   // 打开删除确认对话框
   const confirmDeleteDataset = (dataset: Dataset) => {
-    // 使用setTimeout确保React完成当前渲染循环
-    setTimeout(() => {
+    // 使用startTransition确保React完成当前渲染循环
+    startTransition(() => {
       setDatasetToDelete(dataset)
       setDeleteDialogOpen(true)
-    }, 0)
+    })
   }
 
   // 删除知识库
@@ -260,7 +261,6 @@ export default function DatasetsPage() {
       <DatasetFormDialog open={isFormOpen} onOpenChange={setIsFormOpen} dataset={currentDataset} onSuccess={loadDatasets} tenantId={tenantId} />
 
       {/* 删除确认对话框 */}
-
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
