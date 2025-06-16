@@ -45,20 +45,23 @@ public class DatasetDocumentApplicationService {
      * @return 文档对象
      */
     @Transactional
-    public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize, String fileHash,
+    public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize,
+            String fileHash,
             SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength) {
 
         log.info("开始创建文档, fileName: {}, datasetId: {}", fileName, datasetId);
 
         // 1. 检查文档是否已存在
-        DatasetDocument existingDocument = datasetDocumentService.checkDocumentExistsByHash(tenantId, datasetId, fileHash);
+        DatasetDocument existingDocument =
+                datasetDocumentService.checkDocumentExistsByHash(tenantId, datasetId, fileHash);
         if (existingDocument != null) {
             log.warn("文档已存在, fileHash: {}, documentId: {}", fileHash, existingDocument.getDocumentId());
             throw new ApiException(ResultCode.VALIDATE_FAILED, "该文档已存在于知识库中，文档名称：" + existingDocument.getFileName());
         }
 
         // 2. 创建文档记录
-        DatasetDocument document = datasetDocumentService.createDocument(tenantId, datasetId, fileId, fileName, fileSize, fileHash, segmentMethod,
+        DatasetDocument document = datasetDocumentService.createDocument(tenantId, datasetId, fileId, fileName,
+                fileSize, fileHash, segmentMethod,
                 maxSegmentLength, overlapLength);
 
         log.info("文档创建成功, documentId: {}", document.getDocumentId());
@@ -84,22 +87,13 @@ public class DatasetDocumentApplicationService {
             }
 
             // 2. 删除文档的向量数据
-            int deletedVectors = vectorService.deleteDocumentVectors(documentId, document.getDatasetId());
-            log.info("删除文档向量数据, documentId: {}, 删除数量: {}", documentId, deletedVectors);
+            vectorService.deleteDocumentVectors(documentId, document.getDatasetId());
 
             // 3. 删除文档分段
-            boolean segmentsDeleted = segmentService.deleteSegmentsByDocumentId(documentId);
-            if (!segmentsDeleted) {
-                log.error("删除文档分段失败, documentId: {}", documentId);
-                return false;
-            }
+            segmentService.deleteSegmentsByDocumentId(documentId);
 
             // 4. 删除文档记录
-            boolean documentDeleted = datasetDocumentService.deleteDocument(documentId);
-            if (!documentDeleted) {
-                log.error("删除文档记录失败, documentId: {}", documentId);
-                return false;
-            }
+            datasetDocumentService.deleteDocument(documentId);
 
             log.info("文档删除成功, documentId: {}", documentId);
             return true;

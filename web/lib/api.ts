@@ -22,7 +22,7 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
-      timeout: 30000, // 30秒超时
+      timeout: 120000, // 120秒超时
     })
 
     this.setupInterceptors()
