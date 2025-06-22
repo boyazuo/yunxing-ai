@@ -7,15 +7,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.stereotype.Component;
-
 import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.embedding.model.EmbeddingModelFactory;
 import com.yxboot.llm.embedding.model.EmbeddingRequest;
 import com.yxboot.llm.embedding.model.EmbeddingResponse;
+import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +22,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 /**
- * 增强版嵌入客户端
- * 在基础EmbeddingClient基础上添加重试机制、健康检查等高级功能
+ * 增强版嵌入客户端 在基础EmbeddingClient基础上添加重试机制、健康检查等高级功能
  * 
  * @author Boya
  */
@@ -77,9 +74,9 @@ public class EnhancedEmbeddingClient {
     /**
      * 带重试的简单文本嵌入
      */
-    public float[] embedWithRetry(Provider provider, String text) {
+    public float[] embedWithRetry(Provider provider, Model model, String text) {
         return executeWithRetry(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embed(text);
         });
     }
@@ -87,9 +84,9 @@ public class EnhancedEmbeddingClient {
     /**
      * 带重试的批量文本嵌入
      */
-    public List<float[]> embedAllWithRetry(Provider provider, List<String> texts) {
+    public List<float[]> embedAllWithRetry(Provider provider, Model model, List<String> texts) {
         return executeWithRetry(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embedAll(texts);
         });
     }
@@ -97,9 +94,9 @@ public class EnhancedEmbeddingClient {
     /**
      * 带重试的嵌入请求处理
      */
-    public EmbeddingResponse embedRequestWithRetry(Provider provider, EmbeddingRequest request) {
+    public EmbeddingResponse embedRequestWithRetry(Provider provider, Model model, EmbeddingRequest request) {
         return executeWithRetry(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embedRequest(request);
         });
     }
@@ -107,9 +104,9 @@ public class EnhancedEmbeddingClient {
     /**
      * 异步文本嵌入
      */
-    public Mono<float[]> embedAsync(Provider provider, String text) {
+    public Mono<float[]> embedAsync(Provider provider, Model model, String text) {
         return Mono.fromCallable(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embed(text);
         }).retryWhen(createRetrySpec());
     }
@@ -117,9 +114,9 @@ public class EnhancedEmbeddingClient {
     /**
      * 异步批量文本嵌入
      */
-    public Mono<List<float[]>> embedAllAsync(Provider provider, List<String> texts) {
+    public Mono<List<float[]>> embedAllAsync(Provider provider, Model model, List<String> texts) {
         return Mono.fromCallable(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embedAll(texts);
         }).retryWhen(createRetrySpec());
     }
@@ -127,43 +124,17 @@ public class EnhancedEmbeddingClient {
     /**
      * 异步嵌入请求处理
      */
-    public Mono<EmbeddingResponse> embedRequestAsync(Provider provider, EmbeddingRequest request) {
+    public Mono<EmbeddingResponse> embedRequestAsync(Provider provider, Model model, EmbeddingRequest request) {
         return Mono.fromCallable(() -> {
-            EmbeddingModel embeddingModel = getEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = getEmbeddingModel(provider, model);
             return embeddingModel.embedRequest(request);
         }).retryWhen(createRetrySpec());
     }
 
     /**
-     * 批量处理多个提供商的嵌入请求
-     */
-    public Map<String, EmbeddingResponse> batchEmbedRequest(Map<Provider, EmbeddingRequest> requests) {
-        Map<String, EmbeddingResponse> results = new ConcurrentHashMap<>();
-
-        requests.entrySet().parallelStream().forEach(entry -> {
-            Provider provider = entry.getKey();
-            EmbeddingRequest request = entry.getValue();
-
-            try {
-                EmbeddingResponse response = embedRequestWithRetry(provider, request);
-                results.put(provider.getProviderName(), response);
-            } catch (Exception e) {
-                log.error("提供商 {} 的嵌入请求失败: {}", provider.getProviderName(), e.getMessage());
-                // 创建错误响应
-                EmbeddingResponse errorResponse = EmbeddingResponse.builder()
-                        .modelName(provider.getProviderName())
-                        .build();
-                results.put(provider.getProviderName(), errorResponse);
-            }
-        });
-
-        return results;
-    }
-
-    /**
      * 健康检查
      */
-    public boolean healthCheck(Provider provider) {
+    public boolean healthCheck(Provider provider, Model model) {
         String cacheKey = generateCacheKey(provider);
 
         // 检查缓存的健康状态
@@ -173,7 +144,7 @@ public class EnhancedEmbeddingClient {
         }
 
         // 执行实际健康检查
-        boolean isHealthy = performHealthCheck(provider);
+        boolean isHealthy = performHealthCheck(provider, model);
         healthStatusCache.put(cacheKey, isHealthy);
 
         return isHealthy;
@@ -263,12 +234,12 @@ public class EnhancedEmbeddingClient {
     /**
      * 获取或创建EmbeddingModel实例
      */
-    private EmbeddingModel getEmbeddingModel(Provider provider) {
+    private EmbeddingModel getEmbeddingModel(Provider provider, Model model) {
         String cacheKey = generateCacheKey(provider);
 
         CachedEmbeddingModel cachedModel = modelCache.computeIfAbsent(cacheKey, key -> {
             log.debug("为提供商 {} 创建新的EmbeddingModel实例", provider.getProviderName());
-            EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider, model);
             embeddingModel.withApiKey(provider.getApiKey());
             return CachedEmbeddingModel.of(embeddingModel);
         });
@@ -280,7 +251,7 @@ public class EnhancedEmbeddingClient {
         if (config.isCacheEnabled() && cachedModel.isExpired(config.getCacheExpireMinutes())) {
             log.debug("提供商 {} 的缓存已过期，重新创建", provider.getProviderName());
             modelCache.remove(cacheKey);
-            EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider);
+            EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider, model);
             embeddingModel.withApiKey(provider.getApiKey());
             cachedModel = CachedEmbeddingModel.of(embeddingModel);
             modelCache.put(cacheKey, cachedModel);
@@ -299,10 +270,10 @@ public class EnhancedEmbeddingClient {
     /**
      * 执行健康检查
      */
-    private boolean performHealthCheck(Provider provider) {
+    private boolean performHealthCheck(Provider provider, Model model) {
         try {
             String testText = "健康检查测试文本";
-            float[] result = getEmbeddingModel(provider).embed(testText);
+            float[] result = getEmbeddingModel(provider, model).embed(testText);
             return result != null && result.length > 0;
         } catch (Exception e) {
             log.warn("提供商 {} 健康检查失败: {}", provider.getProviderName(), e.getMessage());

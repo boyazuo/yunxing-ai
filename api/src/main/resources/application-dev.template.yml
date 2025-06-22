@@ -53,6 +53,17 @@ yxboot:
         multiplier: 2.0
 
     embedding:
+      # 默认提供商
+      default-provider: zhipuai
+      
+      # 智谱AI嵌入模型配置
+      zhipuai:
+        api-key: your-zhipu-api-key # 请填入你的智谱AI API密钥
+        model-name: embedding-3
+        base-url: https://open.bigmodel.cn/api/paas/v4/embeddings
+        embedding-dimension: 2048
+        batch-size: 32
+      
       client:
         # 缓存配置
         cache-enabled: true
@@ -73,6 +84,7 @@ yxboot:
           delay-millis: 1000
           multiplier: 2.0
 
+    vector:
       qdrant:
         host: localhost
         port: 6333
@@ -80,6 +92,31 @@ yxboot:
         https: false
         api-key: 
         default-collection-name: documents
+    
+    retriever:
+      client:
+        # 默认返回结果数量限制
+        default-limit: 10
+        # 默认最小相似度阈值
+        default-min-score: 0.0
+        # 集合名称前缀
+        collection-prefix: dataset_
+        # 是否启用Provider缓存
+        provider-cache-enabled: true
+        # Provider缓存最大大小
+        max-provider-cache-size: 100
+        # Provider缓存过期时间（分钟）
+        provider-cache-expire-minutes: 60
+        # 是否启用健康检查
+        health-check-enabled: true
+        # 健康检查间隔（分钟）
+        health-check-interval-minutes: 10
+        # 混合检索配置
+        hybrid:
+          enabled: false
+          semantic-weight: 0.7
+          keyword-weight: 0.3
+          rerank-algorithm: rrf
 
   upload:
     model: local

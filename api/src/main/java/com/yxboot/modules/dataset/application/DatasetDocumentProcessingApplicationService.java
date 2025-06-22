@@ -14,7 +14,9 @@ import com.yxboot.llm.client.document.DocumentProcessorClient;
 import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.llm.document.DocumentSegment;
 import com.yxboot.llm.document.splitter.SplitMode;
+import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
+import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
@@ -47,6 +49,7 @@ public class DatasetDocumentProcessingApplicationService {
     private final VectorStoreClient vectorService;
     private final ProviderService providerService;
     private final DatasetService datasetService;
+    private final ModelService modelService;
 
     /**
      * 异步处理文档 协调文档解析、分段创建、向量化等完整流程
@@ -106,7 +109,14 @@ public class DatasetDocumentProcessingApplicationService {
                 return CompletableFuture.completedFuture(false);
             }
 
-            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
+            Model model = modelService.getById(dataset.getEmbeddingModelId());
+            if (model == null) {
+                log.error("模型不存在, modelId: {}", dataset.getEmbeddingModelId());
+                updateDocumentStatusToFailed(documentId);
+                return CompletableFuture.completedFuture(false);
+            }
+
+            Provider provider = providerService.getProviderByModelId(model.getModelId());
             if (provider == null) {
                 log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
                 updateDocumentStatusToFailed(documentId);
@@ -116,7 +126,7 @@ public class DatasetDocumentProcessingApplicationService {
             // 8. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
             int vectorizedCount =
-                    vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider);
+                    vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider, model);
 
             if (vectorizedCount != savedSegments.size()) {
                 log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());

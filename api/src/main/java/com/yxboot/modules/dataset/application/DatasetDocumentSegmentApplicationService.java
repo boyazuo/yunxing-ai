@@ -5,7 +5,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yxboot.llm.client.vector.VectorStoreClient;
+import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
+import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.Dataset;
@@ -29,6 +31,7 @@ public class DatasetDocumentSegmentApplicationService {
     private final VectorStoreClient vectorClient;
     private final ProviderService providerService;
     private final DatasetService datasetService;
+    private final ModelService modelService;
 
     /**
      * 更新分段内容并同步向量 协调数据库更新和向量更新
@@ -54,10 +57,11 @@ public class DatasetDocumentSegmentApplicationService {
         if (segment != null) {
             // 获取知识库和提供商信息
             Dataset dataset = datasetService.getById(segment.getDatasetId());
+            Model model = modelService.getById(dataset.getEmbeddingModelId());
             if (dataset != null) {
                 Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
                 if (provider != null) {
-                    boolean vectorUpdateSuccess = vectorClient.updateSegmentVector(segment, provider);
+                    boolean vectorUpdateSuccess = vectorClient.updateSegmentVector(segment, provider, model);
                     if (!vectorUpdateSuccess) {
                         log.warn("向量更新失败, segmentId: {}, 但数据库更新成功", segmentId);
                     }
@@ -174,7 +178,8 @@ public class DatasetDocumentSegmentApplicationService {
      * @param keyword 搜索关键词
      * @return 分页结果
      */
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId, String keyword) {
+    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+            String keyword) {
         return segmentService.pageSegmentsWithSearch(current, size, documentId, keyword);
     }
 

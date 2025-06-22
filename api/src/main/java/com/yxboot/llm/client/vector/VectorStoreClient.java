@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import com.yxboot.llm.client.embedding.EmbeddingClient;
 import com.yxboot.llm.vector.VectorStore;
+import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import lombok.RequiredArgsConstructor;
@@ -29,17 +30,13 @@ public class VectorStoreClient {
      * 
      * @param datasetId 知识库ID
      * @param provider 提供商信息
+     * @param model 模型信息
      * @return 是否成功
      */
-    public boolean ensureVectorCollection(Long datasetId, Provider provider) {
+    public boolean ensureVectorCollection(Long datasetId, Provider provider, com.yxboot.modules.ai.entity.Model model) {
         try {
-            if (provider == null) {
-                log.error("提供商信息为空, datasetId: {}", datasetId);
-                return false;
-            }
-
             String collectionName = "dataset_" + datasetId;
-            int dimension = embeddingClient.getEmbeddingDimension(provider);
+            int dimension = embeddingClient.getEmbeddingDimension(provider, model);
 
             return vectorStore.ensureCollection(collectionName, dimension);
         } catch (Exception e) {
@@ -53,25 +50,31 @@ public class VectorStoreClient {
      * 
      * @param segment 分段对象
      * @param provider 提供商信息
+     * @param model 模型信息
      * @return 是否成功
      */
-    public boolean createSegmentVector(DatasetDocumentSegment segment, Provider provider) {
+    public boolean createSegmentVector(DatasetDocumentSegment segment, Provider provider,
+            com.yxboot.modules.ai.entity.Model model) {
         try {
             if (provider == null) {
                 log.error("提供商信息为空, segmentId: {}", segment.getSegmentId());
+                return false;
+            }
+            if (model == null) {
+                log.error("模型信息为空, segmentId: {}", segment.getSegmentId());
                 return false;
             }
 
             String collectionName = "dataset_" + segment.getDatasetId();
 
             // 确保集合存在
-            if (!ensureVectorCollection(segment.getDatasetId(), provider)) {
+            if (!ensureVectorCollection(segment.getDatasetId(), provider, model)) {
                 log.error("确保集合存在失败, datasetId: {}", segment.getDatasetId());
                 return false;
             }
 
             // 生成向量
-            float[] vector = embeddingClient.embed(provider, segment.getContent());
+            float[] vector = embeddingClient.embed(provider, model, segment.getContent());
 
             // 准备元数据
             Map<String, Object> metadata = new HashMap<>();
@@ -81,7 +84,8 @@ public class VectorStoreClient {
             metadata.put("title", segment.getTitle());
 
             // 存储向量
-            boolean success = vectorStore.addVector(collectionName, segment.getVectorId(), vector, metadata, segment.getContent());
+            boolean success = vectorStore.addVector(collectionName, segment.getVectorId(), vector, metadata,
+                    segment.getContent());
 
             if (success) {
                 log.debug("分段向量创建成功, segmentId: {}, vectorId: {}", segment.getSegmentId(), segment.getVectorId());
@@ -102,23 +106,20 @@ public class VectorStoreClient {
      * @param segments 分段列表
      * @param datasetId 知识库ID
      * @param provider 提供商信息
+     * @param model 模型信息
      * @return 成功处理的数量
      */
-    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId, Provider provider) {
+    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId, Provider provider,
+            Model model) {
         if (segments == null || segments.isEmpty()) {
             return 0;
         }
 
         try {
-            if (provider == null) {
-                log.error("提供商信息为空, datasetId: {}", datasetId);
-                return 0;
-            }
-
             String collectionName = "dataset_" + datasetId;
 
             // 确保集合存在
-            if (!ensureVectorCollection(datasetId, provider)) {
+            if (!ensureVectorCollection(datasetId, provider, model)) {
                 log.error("确保集合存在失败, datasetId: {}", datasetId);
                 return 0;
             }
@@ -127,7 +128,7 @@ public class VectorStoreClient {
             List<String> texts = segments.stream().map(DatasetDocumentSegment::getContent).toList();
 
             // 批量生成向量
-            List<float[]> vectors = embeddingClient.embedAll(provider, texts);
+            List<float[]> vectors = embeddingClient.embedAll(provider, model, texts);
 
             // 批量存储
             int successCount = 0;
@@ -141,7 +142,8 @@ public class VectorStoreClient {
                 metadata.put("tenant_id", segment.getTenantId());
                 metadata.put("title", segment.getTitle());
 
-                boolean success = vectorStore.addVector(collectionName, segment.getVectorId(), vector, metadata, segment.getContent());
+                boolean success = vectorStore.addVector(collectionName, segment.getVectorId(), vector, metadata,
+                        segment.getContent());
                 if (success) {
                     successCount++;
                 }
@@ -160,11 +162,13 @@ public class VectorStoreClient {
      * 
      * @param segment 分段对象
      * @param provider 提供商信息
+     * @param model 模型信息
      * @return 是否成功
      */
-    public boolean updateSegmentVector(DatasetDocumentSegment segment, Provider provider) {
+    public boolean updateSegmentVector(DatasetDocumentSegment segment, Provider provider,
+            com.yxboot.modules.ai.entity.Model model) {
         // 更新操作其实就是重新创建
-        return createSegmentVector(segment, provider);
+        return createSegmentVector(segment, provider, model);
     }
 
     /**
@@ -221,7 +225,8 @@ public class VectorStoreClient {
 
             // 收集向量ID
             List<String> vectorIds =
-                    segments.stream().map(DatasetDocumentSegment::getVectorId).filter(id -> id != null && !id.trim().isEmpty()).toList();
+                    segments.stream().map(DatasetDocumentSegment::getVectorId)
+                            .filter(id -> id != null && !id.trim().isEmpty()).toList();
 
             if (vectorIds.isEmpty()) {
                 log.warn("没有有效的向量ID, datasetId: {}", datasetId);

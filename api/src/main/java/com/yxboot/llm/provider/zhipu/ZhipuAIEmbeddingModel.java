@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yxboot.llm.chat.ModelProvider;
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 import com.yxboot.llm.embedding.model.AbstractEmbeddingModel;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
@@ -39,6 +40,14 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
         super(config.getBatchSize());
         this.config = config;
         this.objectMapper = new ObjectMapper();
+    }
+
+    /**
+     * 获取提供商信息
+     */
+    @Override
+    public ModelProvider getProvider() {
+        return ModelProvider.ZHIPU;
     }
 
     @Override
@@ -173,7 +182,8 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             // 提取token使用情况
             TokenUsage tokenUsage = null;
             if (usageNode != null) {
-                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt() : calculateTokens(request.getInput());
+                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt()
+                        : calculateTokens(request.getInput());
 
                 tokenUsage = TokenUsage.of(inputTokens);
             } else {
@@ -207,7 +217,8 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             }
 
             // 构建并返回响应
-            return EmbeddingResponse.builder().modelName(config.getModelName()).data(results).tokenUsage(tokenUsage).metadata(metadata).build();
+            return EmbeddingResponse.builder().modelName(config.getModelName()).data(results).tokenUsage(tokenUsage)
+                    .metadata(metadata).build();
 
         } catch (Exception e) {
             log.error("嵌入处理失败", e);

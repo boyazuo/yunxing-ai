@@ -9,6 +9,7 @@ import org.mockito.MockitoAnnotations;
 import com.yxboot.llm.client.document.DocumentProcessorClient;
 import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.llm.document.splitter.SplitMode;
+import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.enums.SegmentMethod;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
@@ -44,6 +45,9 @@ class DatasetDocumentProcessingApplicationServiceTest {
     @Mock
     private DatasetService datasetService;
 
+    @Mock
+    private ModelService modelService;
+
     private DatasetDocumentProcessingApplicationService applicationService;
 
     @BeforeEach
@@ -56,7 +60,8 @@ class DatasetDocumentProcessingApplicationServiceTest {
                 documentProcessorClient,
                 vectorService,
                 providerService,
-                datasetService);
+                datasetService,
+                modelService);
     }
 
     @Test

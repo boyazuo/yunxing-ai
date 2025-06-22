@@ -7,7 +7,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
 
@@ -50,7 +49,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     /**
      * 构造函数
      *
-     * @param batchSize      批处理大小
+     * @param batchSize 批处理大小
      * @param threadPoolSize 线程池大小
      */
     public AbstractEmbeddingModel(int batchSize, int threadPoolSize) {
@@ -59,8 +58,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
-     * 配置方法的默认实现
-     * 子类应该覆盖此方法以提供自定义实现
+     * 配置方法的默认实现 子类应该覆盖此方法以提供自定义实现
      *
      * @param config 嵌入配置
      */
@@ -72,8 +70,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
-     * 设置API密钥的默认实现
-     * 子类应该覆盖此方法以提供实际的API密钥设置逻辑
+     * 设置API密钥的默认实现 子类应该覆盖此方法以提供实际的API密钥设置逻辑
      *
      * @param apiKey API密钥
      * @return 当前模型实例
@@ -85,8 +82,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
-     * 默认实现：调用单文本嵌入方法
-     * 子类可以覆盖此方法以提供更高效的批处理实现
+     * 默认实现：调用单文本嵌入方法 子类可以覆盖此方法以提供更高效的批处理实现
      */
     @Override
     public List<float[]> embedAll(List<String> texts) {
@@ -171,8 +167,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
-     * 单个批次的嵌入处理
-     * 子类应该覆盖此方法以提供实际的批处理实现
+     * 单个批次的嵌入处理 子类应该覆盖此方法以提供实际的批处理实现
      *
      * @param batch 文本批次
      * @return 向量列表
@@ -185,9 +180,7 @@ public abstract class AbstractEmbeddingModel implements EmbeddingModel {
     }
 
     /**
-     * 计算输入文本的token数量
-     * 默认实现使用简单的空格分词估算
-     * 子类可以覆盖此方法提供更准确的计算
+     * 计算输入文本的token数量 默认实现使用简单的空格分词估算 子类可以覆盖此方法提供更准确的计算
      * 
      * @param texts 输入文本列表
      * @return 估算的token数量

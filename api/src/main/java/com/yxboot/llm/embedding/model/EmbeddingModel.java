@@ -1,13 +1,20 @@
 package com.yxboot.llm.embedding.model;
 
 import java.util.List;
-
+import com.yxboot.llm.chat.ModelProvider;
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 
 /**
  * 嵌入模型接口，用于将文本转换为向量表示
  */
 public interface EmbeddingModel {
+
+    /**
+     * 获取提供商信息
+     * 
+     * @return 提供商信息
+     */
+    ModelProvider getProvider();
 
     /**
      * 将单个文本编码为向量

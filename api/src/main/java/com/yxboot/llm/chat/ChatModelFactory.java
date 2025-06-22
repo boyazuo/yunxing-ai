@@ -5,18 +5,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Component;
-
 import com.yxboot.modules.ai.entity.Provider;
-
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 聊天模型工厂
- * 根据提供商信息选择正确的ChatModel实现
+ * 聊天模型工厂 根据提供商信息选择正确的ChatModel实现
  * 
  * @author Boya
  */
@@ -61,7 +57,7 @@ public class ChatModelFactory {
      * 根据提供商创建ChatModel实例
      * 
      * @param provider 提供商信息
-     * @param model    模型信息
+     * @param model 模型信息
      * @return ChatModel实例
      */
     public ChatModel createChatModel(Provider provider) {
