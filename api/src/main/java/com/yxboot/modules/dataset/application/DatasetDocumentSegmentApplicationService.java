@@ -57,8 +57,8 @@ public class DatasetDocumentSegmentApplicationService {
         if (segment != null) {
             // 获取知识库和提供商信息
             Dataset dataset = datasetService.getById(segment.getDatasetId());
-            Model model = modelService.getById(dataset.getEmbeddingModelId());
             if (dataset != null) {
+                Model model = modelService.getById(dataset.getEmbeddingModelId());
                 Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
                 if (provider != null) {
                     boolean vectorUpdateSuccess = vectorClient.updateSegmentVector(segment, provider, model);
