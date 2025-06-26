@@ -4,12 +4,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-
-import org.springframework.stereotype.Component;
-
 import lombok.Builder;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -22,10 +18,12 @@ import okhttp3.ResponseBody;
 
 /**
  * SSE客户端工具类，用于处理Server-Sent Events流式请求
+ * 
+ * 重构说明： - 移除 @Component 注解，改为静态工具类 - 参考 HttpClient 的设计模式 - 提供静态方法进行 SSE 请求 - 支持自定义超时配置
+ * 
+ * @author Boya
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class SseClient {
 
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -34,27 +32,23 @@ public class SseClient {
     private static final int DEFAULT_WRITE_TIMEOUT = 60;
 
     /**
-     * 创建默认的OkHttpClient实例
-     * 
-     * @return OkHttpClient实例
+     * 默认的OkHttpClient实例
      */
-    private OkHttpClient createDefaultClient() {
-        return new OkHttpClient.Builder()
-                .connectTimeout(DEFAULT_CONNECT_TIMEOUT, TimeUnit.SECONDS)
-                .readTimeout(DEFAULT_READ_TIMEOUT, TimeUnit.SECONDS)
-                .writeTimeout(DEFAULT_WRITE_TIMEOUT, TimeUnit.SECONDS)
-                .build();
-    }
+    private static final OkHttpClient DEFAULT_CLIENT = new OkHttpClient.Builder()
+            .connectTimeout(DEFAULT_CONNECT_TIMEOUT, TimeUnit.SECONDS)
+            .readTimeout(DEFAULT_READ_TIMEOUT, TimeUnit.SECONDS)
+            .writeTimeout(DEFAULT_WRITE_TIMEOUT, TimeUnit.SECONDS)
+            .build();
 
     /**
      * 创建自定义的OkHttpClient实例
      * 
      * @param connectTimeout 连接超时时间（秒）
-     * @param readTimeout    读取超时时间（秒）
-     * @param writeTimeout   写入超时时间（秒）
+     * @param readTimeout 读取超时时间（秒）
+     * @param writeTimeout 写入超时时间（秒）
      * @return OkHttpClient实例
      */
-    private OkHttpClient createCustomClient(int connectTimeout, int readTimeout, int writeTimeout) {
+    public static OkHttpClient customClient(int connectTimeout, int readTimeout, int writeTimeout) {
         return new OkHttpClient.Builder()
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(readTimeout, TimeUnit.SECONDS)
@@ -65,13 +59,13 @@ public class SseClient {
     /**
      * 使用GET方法发起SSE请求
      * 
-     * @param url          请求URL
-     * @param headers      请求头
+     * @param url 请求URL
+     * @param headers 请求头
      * @param eventHandler 事件处理器
      * @param errorHandler 错误处理器
      * @return Call对象，可用于取消请求
      */
-    public Call sseGet(String url, Map<String, String> headers, Consumer<String> eventHandler,
+    public static Call sseGet(String url, Map<String, String> headers, Consumer<String> eventHandler,
             Consumer<Throwable> errorHandler) {
         return sseRequest(url, null, headers, eventHandler, errorHandler, null, HttpMethod.GET);
     }
@@ -79,14 +73,14 @@ public class SseClient {
     /**
      * 使用POST方法发起SSE请求
      * 
-     * @param url          请求URL
-     * @param jsonBody     请求体（JSON格式）
-     * @param headers      请求头
+     * @param url 请求URL
+     * @param jsonBody 请求体（JSON格式）
+     * @param headers 请求头
      * @param eventHandler 事件处理器
      * @param errorHandler 错误处理器
      * @return Call对象，可用于取消请求
      */
-    public Call ssePost(String url, String jsonBody, Map<String, String> headers, Consumer<String> eventHandler,
+    public static Call ssePost(String url, String jsonBody, Map<String, String> headers, Consumer<String> eventHandler,
             Consumer<Throwable> errorHandler) {
         return sseRequest(url, jsonBody, headers, eventHandler, errorHandler, null, HttpMethod.POST);
     }
@@ -94,27 +88,27 @@ public class SseClient {
     /**
      * 使用自定义超时设置发起SSE请求
      * 
-     * @param url           请求URL
-     * @param jsonBody      请求体（JSON格式），GET请求可为null
-     * @param headers       请求头
-     * @param eventHandler  事件处理器
-     * @param errorHandler  错误处理器
+     * @param url 请求URL
+     * @param jsonBody 请求体（JSON格式），GET请求可为null
+     * @param headers 请求头
+     * @param eventHandler 事件处理器
+     * @param errorHandler 错误处理器
      * @param timeoutConfig 超时配置
-     * @param method        HTTP方法
+     * @param method HTTP方法
      * @return Call对象，可用于取消请求
      */
-    public Call sseRequest(String url, String jsonBody, Map<String, String> headers,
+    public static Call sseRequest(String url, String jsonBody, Map<String, String> headers,
             Consumer<String> eventHandler, Consumer<Throwable> errorHandler,
             TimeoutConfig timeoutConfig, HttpMethod method) {
 
         OkHttpClient client;
         if (timeoutConfig != null) {
-            client = createCustomClient(
+            client = customClient(
                     timeoutConfig.getConnectTimeout(),
                     timeoutConfig.getReadTimeout(),
                     timeoutConfig.getWriteTimeout());
         } else {
-            client = createDefaultClient();
+            client = DEFAULT_CLIENT;
         }
 
         Request.Builder requestBuilder = new Request.Builder().url(url);

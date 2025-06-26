@@ -4,8 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * 知启API配置类
- * 统一管理知启API调用参数
+ * 知启API配置类 统一管理知启API调用参数
  * 
  * @author Boya
  */
@@ -64,7 +63,7 @@ public class ZhipuAIChatConfig {
      * 创建带自定义模型的配置
      * 
      * @param apiKey API密钥
-     * @param model  模型名称
+     * @param model 模型名称
      * @return 知启配置
      */
     public static ZhipuAIChatConfig of(String apiKey, String model) {
@@ -82,6 +81,17 @@ public class ZhipuAIChatConfig {
      */
     public ZhipuAIChatConfig withApiKey(String apiKey) {
         this.apiKey = apiKey;
+        return this;
+    }
+
+    /**
+     * 设置模型名称
+     * 
+     * @param model 模型名称
+     * @return 当前配置对象
+     */
+    public ZhipuAIChatConfig withModel(String model) {
+        this.model = model;
         return this;
     }
 

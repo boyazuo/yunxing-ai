@@ -1,111 +1,103 @@
 package com.yxboot.llm.chat;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
+import com.yxboot.llm.provider.zhipu.ZhipuAIChatModel;
 import com.yxboot.modules.ai.entity.Provider;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 聊天模型工厂 根据提供商信息选择正确的ChatModel实现
+ * 聊天模型工厂 根据提供商信息创建对应的ChatModel实例
+ * 
  * 
  * @author Boya
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ChatModelFactory {
 
-    // 所有可用的 ChatModel 实现
-    private final List<ChatModel> chatModels;
-
-    // 提供商名称到ModelProvider的映射
-    private final Map<String, ModelProvider> providerMapping = Map.of(
-            "zhipuai", ModelProvider.ZHIPU,
-            "qianwen", ModelProvider.QIANWEN,
-            "openai", ModelProvider.OPENAI,
-            "azure_openai", ModelProvider.OPENAI);
-
-    // 按ModelProvider分类的ChatModel映射
-    private Map<ModelProvider, ChatModel> modelProviderMap;
-
-    // 缓存已创建的ChatModel实例，避免重复创建
-    private final Map<String, ChatModel> modelCache = new ConcurrentHashMap<>();
-
     /**
-     * 初始化模型提供商映射
-     */
-    @PostConstruct
-    public void initModelProviderMap() {
-        modelProviderMap = chatModels.stream()
-                .collect(Collectors.toMap(
-                        ChatModel::getProvider,
-                        model -> model,
-                        (existing, replacement) -> existing));
-
-        log.info("已初始化 {} 个 ChatModel 实现: {}",
-                chatModels.size(),
-                chatModels.stream().map(m -> m.getClass().getSimpleName()).toList());
-    }
-
-    /**
-     * 根据提供商创建ChatModel实例
+     * 根据提供商创建ChatModel实例 每次调用都会创建新的实例，避免状态共享问题
      * 
      * @param provider 提供商信息
-     * @param model 模型信息
      * @return ChatModel实例
+     * @throws UnsupportedOperationException 不支持的提供商
      */
     public ChatModel createChatModel(Provider provider) {
         String providerName = provider.getProviderName().toLowerCase();
+        log.debug("为提供商 {} 创建ChatModel实例", providerName);
 
-        // 从缓存获取已创建的实例
-        return modelCache.computeIfAbsent(providerName, key -> {
-            ModelProvider targetProvider = resolveModelProvider(providerName);
-            log.debug("为提供商 {} 解析出模型提供者类型: {}", providerName, targetProvider);
-
-            // 从已注册的模型中查找并配置
-            return Optional.ofNullable(modelProviderMap.get(targetProvider))
-                    .map(chatModel -> configureModel(chatModel, provider))
-                    .orElseThrow(() -> new UnsupportedOperationException(
-                            "不支持的模型提供商: " + provider.getProviderName()));
-        });
+        return switch (providerName) {
+            case "zhipuai", "zhipu" -> createZhipuAIChatModel(provider);
+            // TODO: 添加其他提供商的实现
+            // case "qianwen", "qwen" -> createQianwenChatModel(provider);
+            // case "openai" -> createOpenAIChatModel(provider);
+            default -> throw new UnsupportedOperationException(
+                    "不支持的模型提供商: " + provider.getProviderName()
+                            + "。当前支持的提供商: zhipuai");
+        };
     }
 
     /**
-     * 解析提供商名称为ModelProvider枚举
+     * 创建智谱AI聊天模型实例
+     * 
+     * @param provider 提供商信息
+     * @return ZhipuAIChatModel实例
      */
-    private ModelProvider resolveModelProvider(String providerName) {
-        // 直接从映射中查找
-        if (providerMapping.containsKey(providerName)) {
-            return providerMapping.get(providerName);
+    private ChatModel createZhipuAIChatModel(Provider provider) {
+        // ZhipuAIApi 现在是静态工具类，直接传递给 ChatModel
+        return ZhipuAIChatModel.builder()
+                .apiKey(provider.getApiKey())
+                .build();
+    }
+
+    // TODO: 添加其他提供商的创建方法
+    // private ChatModel createQianwenChatModel(Provider provider) {
+    // if (qianwenApi == null) {
+    // throw new IllegalStateException("QianwenApi 未正确注入，无法创建千问聊天模型");
+    // }
+    //
+    // return QianwenChatModel.builder()
+    // .qianwenApi(qianwenApi)
+    // .apiKey(provider.getApiKey())
+    // .build();
+    // }
+
+    /**
+     * 检查提供商是否支持
+     * 
+     * @param providerName 提供商名称
+     * @return 是否支持
+     */
+    public boolean isProviderSupported(String providerName) {
+        if (providerName == null || providerName.trim().isEmpty()) {
+            return false;
         }
 
-        // 智能判断提供商类型
-        if (providerName.contains("zhipu") || providerName.contains("chatglm")) {
-            return ModelProvider.ZHIPU;
-        } else if (providerName.contains("qianwen") || providerName.contains("qwen")
-                || providerName.contains("tongyi")) {
-            return ModelProvider.QIANWEN;
-        } else if (providerName.contains("openai") || providerName.contains("gpt")) {
-            return ModelProvider.OPENAI;
-        }
-
-        return ModelProvider.OTHER;
+        String normalizedName = providerName.toLowerCase();
+        return switch (normalizedName) {
+            case "zhipuai", "zhipu" -> true; // 总是支持，因为 API 客户端会动态创建
+            // TODO: 添加其他提供商的检查
+            // case "qianwen", "qwen" -> true;
+            // case "openai" -> true;
+            default -> false;
+        };
     }
 
     /**
-     * 配置模型实例
+     * 获取支持的提供商列表
+     * 
+     * @return 支持的提供商名称列表
      */
-    private ChatModel configureModel(ChatModel chatModel, Provider provider) {
-        log.info("找到匹配的ChatModel实现: {} 用于提供商: {}",
-                chatModel.getClass().getSimpleName(), provider.getProviderName());
-        // 这里可以根据不同类型的模型进行特定配置
-        chatModel.withApiKey(provider.getApiKey());
-        return chatModel;
+    public java.util.List<String> getSupportedProviders() {
+        java.util.List<String> supported = new java.util.ArrayList<>();
+
+        // 添加当前支持的提供商
+        supported.add("zhipuai");
+
+        // TODO: 添加其他提供商
+        // supported.add("qianwen");
+        // supported.add("openai");
+
+        return supported;
     }
 }

@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import com.yxboot.llm.chat.ChatModel;
 import com.yxboot.llm.chat.ChatResponse;
 import com.yxboot.llm.chat.ChatResponse.TokenUsage;
@@ -20,104 +16,119 @@ import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIApi;
 import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIMessage;
 import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIRequest;
 import com.yxboot.llm.provider.zhipu.kernel.ZhipuAIResponse;
-
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 /**
  * 智谱AI聊天模型实现
  * 
+ * - 设计为不可变对象，所有配置在构建时设置 - 使用 Builder 模式创建实例 - 移除可变状态的 setter 方法
+ * 
  * @author Boya
  */
 @Slf4j
-@Component
-public class ZhipuAIChatModel implements ChatModel {
+public final class ZhipuAIChatModel implements ChatModel {
 
     /**
-     * 默认配置
+     * 智谱AI配置（不可变）
      */
-    private ZhipuAIChatConfig config;
+    private final ZhipuAIChatConfig config;
 
     /**
-     * 智谱API客户端
-     */
-    private ZhipuAIApi zhipuApi;
-
-    /**
-     * 无参构造函数 - 供Spring使用
-     */
-    public ZhipuAIChatModel() {
-        // Spring依赖注入需要此构造函数
-    }
-
-    /**
-     * 构造函数，使用默认配置
+     * 私有构造函数，只能通过 Builder 创建
      * 
-     * @param zhipuApi 智谱API
-     * @param apiKey   API密钥
+     * @param builder 构建器
      */
-    public ZhipuAIChatModel(ZhipuAIApi zhipuApi, String apiKey) {
-        this.zhipuApi = zhipuApi;
-        this.config = ZhipuAIChatConfig.of(apiKey);
-    }
+    private ZhipuAIChatModel(Builder builder) {
+        this.config = builder.config;
 
-    /**
-     * 构造函数，使用自定义配置
-     * 
-     * @param zhipuApi 智谱API
-     * @param config   智谱配置
-     */
-    public ZhipuAIChatModel(ZhipuAIApi zhipuApi, ZhipuAIChatConfig config) {
-        this.zhipuApi = zhipuApi;
-        this.config = config;
-    }
-
-    /**
-     * 设置配置
-     * 
-     * @param config 智谱配置
-     * @return 当前模型实例
-     */
-    public ZhipuAIChatModel withConfig(ZhipuAIChatConfig config) {
-        this.config = config;
-        return this;
-    }
-
-    /**
-     * 设置API密钥
-     * 
-     * @param apiKey API密钥
-     * @return 当前模型实例
-     */
-    public ZhipuAIChatModel withApiKey(String apiKey) {
-        if (this.config != null) {
-            this.config = this.config.withApiKey(apiKey);
-        } else {
-            this.config = ZhipuAIChatConfig.of(apiKey);
+        // 验证必要参数
+        if (config == null) {
+            throw new IllegalArgumentException("ZhipuAIChatConfig 不能为空");
         }
-        return this;
     }
 
     /**
-     * 设置智谱客户端
+     * 创建 Builder 实例
      * 
-     * @param zhipuApi 智谱API
+     * @return Builder 实例
      */
-    @Autowired
-    public void setZhipuApi(ZhipuAIApi zhipuApi) {
-        this.zhipuApi = zhipuApi;
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
-     * 设置客户端
-     * 
-     * @param zhipuApi 智谱API
-     * @return 当前模型实例
+     * Builder 类
      */
-    public ZhipuAIChatModel withClient(ZhipuAIApi zhipuApi) {
-        this.zhipuApi = zhipuApi;
-        return this;
+    public static class Builder {
+        private ZhipuAIChatConfig config;
+
+        private Builder() {}
+
+        /**
+         * 设置配置
+         * 
+         * @param config 配置对象
+         * @return Builder 实例
+         */
+        public Builder config(ZhipuAIChatConfig config) {
+            this.config = config;
+            return this;
+        }
+
+        /**
+         * 设置 API 密钥
+         * 
+         * @param apiKey API 密钥
+         * @return Builder 实例
+         */
+        public Builder apiKey(String apiKey) {
+            if (this.config != null) {
+                this.config = this.config.withApiKey(apiKey);
+            } else {
+                this.config = ZhipuAIChatConfig.of(apiKey);
+            }
+            return this;
+        }
+
+        /**
+         * 设置模型名称
+         * 
+         * @param model 模型名称
+         * @return Builder 实例
+         */
+        public Builder model(String model) {
+            if (this.config != null) {
+                this.config = this.config.withModel(model);
+            } else {
+                this.config = ZhipuAIChatConfig.builder().model(model).build();
+            }
+            return this;
+        }
+
+        /**
+         * 设置温度参数
+         * 
+         * @param temperature 温度参数
+         * @return Builder 实例
+         */
+        public Builder temperature(Float temperature) {
+            if (this.config != null) {
+                this.config = this.config.withTemperature(temperature);
+            } else {
+                this.config = ZhipuAIChatConfig.builder().temperature(temperature).build();
+            }
+            return this;
+        }
+
+        /**
+         * 构建 ZhipuAIChatModel 实例
+         * 
+         * @return ZhipuAIChatModel 实例
+         */
+        public ZhipuAIChatModel build() {
+            return new ZhipuAIChatModel(this);
+        }
     }
 
     /**
@@ -126,7 +137,7 @@ public class ZhipuAIChatModel implements ChatModel {
      * @return API密钥
      */
     public String getApiKey() {
-        return config != null ? config.getApiKey() : null;
+        return config.getApiKey();
     }
 
     /**
@@ -179,7 +190,7 @@ public class ZhipuAIChatModel implements ChatModel {
                     role = "user";
             }
             String content = message.getContent();
-            // 添加到知启消息列表
+            // 添加到智谱消息列表
             result.add(ZhipuAIMessage.builder().role(role).content(content).build());
         }
 
@@ -253,8 +264,8 @@ public class ZhipuAIChatModel implements ChatModel {
         ZhipuAIRequest request = buildRequest(prompt, true);
 
         // 定义数据处理器
-        ZhipuAIApi.StreamDataProcessor dataProcessor = (data, mapper) -> {
-            ZhipuAIResponse response = mapper.readValue(data, ZhipuAIResponse.class);
+        ZhipuAIApi.StreamDataProcessor dataProcessor = (data) -> {
+            ZhipuAIResponse response = cn.hutool.json.JSONUtil.toBean(data, ZhipuAIResponse.class);
 
             // 检查响应状态
             if (response.getCode() != null && response.getCode() != 0) {
@@ -273,7 +284,7 @@ public class ZhipuAIChatModel implements ChatModel {
         };
 
         // 发送流式请求获取字符流
-        Flux<String> contentFlux = zhipuApi.sendStreamRequest(
+        Flux<String> contentFlux = ZhipuAIApi.sendStreamRequest(
                 request,
                 getApiKey(),
                 config.getBaseUrl(),
@@ -307,7 +318,7 @@ public class ZhipuAIChatModel implements ChatModel {
         ZhipuAIRequest request = buildRequest(prompt, false);
 
         // 发送请求
-        ZhipuAIResponse response = zhipuApi.sendRequest(
+        ZhipuAIResponse response = ZhipuAIApi.sendRequest(
                 request,
                 getApiKey(),
                 config.getBaseUrl(),
@@ -366,16 +377,5 @@ public class ZhipuAIChatModel implements ChatModel {
 
         // 否则使用同步调用
         return callSync(prompt);
-    }
-
-    /**
-     * 初始化方法
-     */
-    @PostConstruct
-    public void init() {
-        if (config == null) {
-            // 使用默认配置
-            this.config = ZhipuAIChatConfig.defaultConfig();
-        }
     }
 }
