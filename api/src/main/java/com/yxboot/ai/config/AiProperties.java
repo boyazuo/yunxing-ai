@@ -29,6 +29,8 @@ public class AiProperties {
         private String apiKey;
         private String model = "embedding-3";
         private Integer dimensions = 2048;
+        /** Ollama 专用：服务地址，默认 http://localhost:11434 */
+        private String baseUrl = "http://localhost:11434";
 
         /** 返回向量模型标识，格式 provider:model */
         public String toModelKey() {

@@ -46,10 +46,10 @@ yxboot:
       top-p: 0.95
       max-tokens: 4096
     embedding:
-      provider: zhipuai
-      api-key: ""
-      model: embedding-3
-      dimensions: 2048
+      provider: ollama         # ollama | zhipuai
+      base-url: http://localhost:11434
+      model: qwen3-embedding:4b
+      dimensions: 2560
     retriever:
       default-limit: 10
       default-min-score: 0.0

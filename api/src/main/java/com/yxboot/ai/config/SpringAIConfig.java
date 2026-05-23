@@ -3,6 +3,9 @@ package com.yxboot.ai.config;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.ollama.OllamaEmbeddingModel;
+import org.springframework.ai.ollama.api.OllamaApi;
+import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.zhipuai.ZhiPuAiChatModel;
 import org.springframework.ai.zhipuai.ZhiPuAiChatOptions;
 import org.springframework.ai.zhipuai.ZhiPuAiEmbeddingModel;
@@ -38,6 +41,7 @@ public class SpringAIConfig {
         AiProperties.EmbeddingConfig cfg = props.getEmbedding();
         return switch (cfg.getProvider().toLowerCase()) {
             case "zhipuai", "zhipu" -> buildZhiPuEmbeddingModel(cfg);
+            case "ollama" -> buildOllamaEmbeddingModel(cfg);
             default -> throw new IllegalArgumentException("不支持的 Embedding 提供商: " + cfg.getProvider());
         };
     }
@@ -80,5 +84,18 @@ public class SpringAIConfig {
                 .dimensions(cfg.getDimensions())
                 .build();
         return new ZhiPuAiEmbeddingModel(api, MetadataMode.EMBED, options);
+    }
+
+    private EmbeddingModel buildOllamaEmbeddingModel(AiProperties.EmbeddingConfig cfg) {
+        String baseUrl = StringUtils.hasText(cfg.getBaseUrl()) ? cfg.getBaseUrl() : "http://localhost:11434";
+        OllamaApi ollamaApi = OllamaApi.builder()
+                .baseUrl(baseUrl)
+                .build();
+        return OllamaEmbeddingModel.builder()
+                .ollamaApi(ollamaApi)
+                .defaultOptions(OllamaEmbeddingOptions.builder()
+                        .model(cfg.getModel())
+                        .build())
+                .build();
     }
 }
