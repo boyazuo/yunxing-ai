@@ -2,12 +2,10 @@ package com.yxboot.llm.client.embedding;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-
 import lombok.Data;
 
 /**
- * EmbeddingClient配置类
- * 用于管理EmbeddingClient的配置参数
+ * 嵌入客户端配置
  * 
  * @author Boya
  */
@@ -29,7 +27,7 @@ public class EmbeddingClientConfig {
     /**
      * 缓存过期时间（分钟）
      */
-    private long cacheExpireMinutes = 300;
+    private long cacheExpireMinutes = 30;
 
     /**
      * 默认超时时间（秒）
@@ -39,7 +37,7 @@ public class EmbeddingClientConfig {
     /**
      * 是否启用健康检查
      */
-    private boolean healthCheckEnabled = true;
+    private boolean healthCheckEnabled = false;
 
     /**
      * 健康检查间隔（分钟）
@@ -76,4 +74,4 @@ public class EmbeddingClientConfig {
          */
         private double multiplier = 2.0;
     }
-} 
+}

@@ -3,7 +3,7 @@ import type { Tenant, User } from '@/types/account'
 
 export interface LoginParams {
   email: string
-  password: string,
+  password: string
   token?: string | null
 }
 
@@ -46,9 +46,9 @@ export const authService = {
 
   async changePassword(params: ChangePasswordParams) {
     try {
-      return await api.put<null>('/auth/password', params) 
+      return await api.put<null>('/auth/password', params)
     } catch (error) {
       throw new Error('修改密码失败，请稍后重试')
     }
-  }
+  },
 }

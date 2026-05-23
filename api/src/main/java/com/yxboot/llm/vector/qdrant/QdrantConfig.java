@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
  * QDrant配置类
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class QdrantConfig {

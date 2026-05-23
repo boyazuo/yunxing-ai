@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import com.yxboot.llm.client.embedding.EmbeddingClient;
-import com.yxboot.llm.vector.VectorStore;
 import com.yxboot.llm.vector.query.QueryResult;
 import com.yxboot.llm.vector.query.VectorQuery;
 import com.yxboot.modules.ai.entity.Model;
@@ -31,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class VectorRetrieverClient {
 
-    private final VectorStore vectorStore;
+    private final VectorStoreClient vectorStoreClient;
     private final EmbeddingClient embeddingClient;
     private final DatasetService datasetService;
     private final ProviderService providerService;
@@ -113,12 +112,12 @@ public class VectorRetrieverClient {
                 throw new IllegalArgumentException("知识库不存在, datasetId: " + datasetId);
             }
 
-            // 构建集合名称
-            String collectionName = buildCollectionName(datasetId);
+            Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
+            Model model = modelService.getById(dataset.getEmbeddingModelId());
 
             // 检查集合是否存在
-            if (!vectorStore.collectionExists(collectionName)) {
-                log.warn("知识库对应的向量集合不存在, datasetId: {}, collectionName: {}", datasetId, collectionName);
+            if (!vectorStoreClient.collectionExists(datasetId, dataset.getTenantId())) {
+                log.warn("知识库对应的向量集合不存在, datasetId: {}, tenantId: {}", datasetId, dataset.getTenantId());
                 return List.of(); // 返回空列表
             }
 
@@ -126,13 +125,14 @@ public class VectorRetrieverClient {
             Map<String, Object> queryFilter = buildQueryFilter(datasetId, filter);
 
             // 构建向量查询
-            VectorQuery vectorQuery = VectorQuery.builder().queryVector(queryVector).collectionName(collectionName)
+            VectorQuery vectorQuery = VectorQuery.builder().queryVector(queryVector)
                     .limit(limit).minScore(minScore)
                     .filter(queryFilter).includeVectors(false) // 通常不需要返回向量数据
                     .build();
 
             // 执行检索
-            List<QueryResult> results = vectorStore.similaritySearch(vectorQuery);
+            List<QueryResult> results = vectorStoreClient.similaritySearch(datasetId, dataset.getTenantId(), provider,
+                    model, vectorQuery);
 
             log.info("向量检索完成, datasetId: {}, 结果数量: {}", datasetId, results.size());
             return results;
@@ -250,9 +250,12 @@ public class VectorRetrieverClient {
             }
 
             // 集合信息
-            String collectionName = buildCollectionName(datasetId);
-            stats.put("collectionName", collectionName);
-            stats.put("collectionExists", vectorStore.collectionExists(collectionName));
+            if (dataset != null) {
+                String collectionName = vectorStoreClient.getCollectionName(datasetId, dataset.getTenantId());
+                stats.put("collectionName", collectionName);
+                stats.put("collectionExists",
+                        vectorStoreClient.collectionExists(datasetId, dataset.getTenantId()));
+            }
 
             // Provider信息
             try {
@@ -284,16 +287,6 @@ public class VectorRetrieverClient {
             providerCache.remove(datasetId);
             log.debug("已清除知识库 {} 的Provider缓存", datasetId);
         }
-    }
-
-    /**
-     * 构建集合名称
-     * 
-     * @param datasetId 知识库ID
-     * @return 集合名称
-     */
-    private String buildCollectionName(Long datasetId) {
-        return config.getCollectionPrefix() + datasetId;
     }
 
     /**

@@ -1,15 +1,12 @@
 package com.yxboot.llm.client.embedding;
 
 import java.time.LocalDateTime;
-
 import com.yxboot.llm.embedding.model.EmbeddingModel;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * 缓存的嵌入模型包装类
- * 用于在EmbeddingClient中管理EmbeddingModel实例的缓存
+ * 缓存的嵌入模型包装类 用于在EmbeddingClient中管理EmbeddingModel实例的缓存
  * 
  * @author Boya
  */
@@ -59,4 +56,4 @@ public class CachedEmbeddingModel {
     public boolean isExpired(long expireMinutes) {
         return lastAccessTime.plusMinutes(expireMinutes).isBefore(LocalDateTime.now());
     }
-} 
+}

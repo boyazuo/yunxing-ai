@@ -35,7 +35,7 @@
   "java.compile.nullAnalysis.mode": "disabled",
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.project.explorer.showNonJavaResources": false,
-  "java.dependency.syncWithFolderExplorer": true,
+  "java.dependency.syncWithFolderExplorer": false,
 
   "i18n-ally.enabledFrameworks": ["next-intl"],
   "i18n-ally.localesPaths": ["web/i18n/messages"],

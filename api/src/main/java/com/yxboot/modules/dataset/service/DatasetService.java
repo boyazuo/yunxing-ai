@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.llm.vector.VectorStore;
+import com.yxboot.llm.client.vector.VectorStoreClient;
 import com.yxboot.modules.dataset.dto.DatasetDTO;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.enums.DatasetStatus;
@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
 
-    private final VectorStore vectorStore;
+    private final VectorStoreClient vectorStoreClient;
 
     /**
      * 创建知识库
@@ -79,21 +79,16 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDatasetWithVectors(Long datasetId) {
         try {
+            Dataset dataset = getById(datasetId);
+            if (dataset == null) {
+                return false;
+            }
+
             // 1. 删除向量集合
-            String collectionName = "dataset_" + datasetId;
             try {
-                if (vectorStore.collectionExists(collectionName)) {
-                    boolean collectionDeleted = vectorStore.deleteCollection(collectionName);
-                    if (collectionDeleted) {
-                        log.info("删除知识库向量集合成功, datasetId: {}, collectionName: {}", datasetId, collectionName);
-                    } else {
-                        log.warn("删除知识库向量集合失败, datasetId: {}, collectionName: {}", datasetId, collectionName);
-                    }
-                } else {
-                    log.info("知识库向量集合不存在, datasetId: {}, collectionName: {}", datasetId, collectionName);
-                }
+                vectorStoreClient.deleteCollection(datasetId, dataset.getTenantId());
             } catch (Exception e) {
-                log.error("删除知识库向量集合失败, datasetId: {}, collectionName: {}", datasetId, collectionName, e);
+                log.error("删除知识库向量集合失败, datasetId: {}, tenantId: {}", datasetId, dataset.getTenantId(), e);
                 // 向量集合删除失败不影响数据库删除，只记录日志
             }
 

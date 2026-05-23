@@ -6,17 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.embedding.model.EmbeddingModel;
 import com.yxboot.llm.vector.AbstractVectorStore;
 import com.yxboot.llm.vector.query.QueryResult;
 import com.yxboot.llm.vector.query.VectorQuery;
+import com.yxboot.util.HttpClient;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -30,46 +27,212 @@ import lombok.extern.slf4j.Slf4j;
  * <li>插入和搜索时使用一致的向量名称</li>
  * <li>支持自定义向量名称配置</li>
  * <li>验证集合配置的一致性</li>
+ * <li>使用 Hutool JSONUtil 替换 ObjectMapper</li>
+ * <li>使用项目封装的 HttpClient 替换 RestTemplate</li>
+ * <li>使用 Builder 模式创建，不参与 IoC 管理</li>
  * </ul>
+ * 
+ * <p>
+ * 使用示例：
+ * </p>
+ * 
+ * <pre>
+ * QdrantVectorStore vectorStore = QdrantVectorStore.builder()
+ *         .config(qdrantConfig)
+ *         .embeddingModel(embeddingModel)
+ *         .autoCreateCollection(true)
+ *         .build();
+ * </pre>
  */
 @Slf4j
 @SuppressWarnings("unchecked")
-public class QdrantVectorStore extends AbstractVectorStore {
+public final class QdrantVectorStore extends AbstractVectorStore {
 
     private final QdrantConfig config;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private final boolean autoCreateCollection;
 
     /**
-     * 构造函数
-     *
-     * @param config 配置
-     * @param embeddingModel 嵌入模型
+     * 私有构造函数，只能通过 Builder 创建
+     * 
+     * @param builder 构建器
      */
-    public QdrantVectorStore(QdrantConfig config, EmbeddingModel embeddingModel) {
-        super(config.getDefaultCollectionName(), embeddingModel);
-        this.config = config;
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
+    private QdrantVectorStore(Builder builder) {
+        super(builder.config.getDefaultCollectionName(), builder.embeddingModel);
+        this.config = builder.config;
+        this.autoCreateCollection = builder.autoCreateCollection;
 
         // 验证配置
         validateConfig();
 
-        // 确保默认集合存在
-        if (!collectionExists(config.getDefaultCollectionName())) {
-            createCollection(config.getDefaultCollectionName(), embeddingModel.getEmbeddingDimension());
-        } else {
-            // 验证现有集合的向量配置是否匹配
-            validateCollectionVectorConfig(config.getDefaultCollectionName());
+        // 如果启用自动创建集合
+        if (autoCreateCollection) {
+            // 确保默认集合存在
+            if (!collectionExists(config.getDefaultCollectionName())) {
+                createCollection(config.getDefaultCollectionName(), embeddingModel.getEmbeddingDimension());
+            } else {
+                // 验证现有集合的向量配置是否匹配
+                validateCollectionVectorConfig(config.getDefaultCollectionName());
+            }
         }
+    }
+
+    /**
+     * 创建 Builder 实例
+     * 
+     * @return Builder 实例
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder 类
+     */
+    public static class Builder {
+        private QdrantConfig config;
+        private EmbeddingModel embeddingModel;
+        private boolean autoCreateCollection = true;
+
+        private Builder() {}
+
+        /**
+         * 设置 QDrant 配置
+         * 
+         * @param config QDrant 配置
+         * @return Builder 实例
+         */
+        public Builder config(QdrantConfig config) {
+            this.config = config;
+            return this;
+        }
+
+        /**
+         * 设置嵌入模型
+         * 
+         * @param embeddingModel 嵌入模型
+         * @return Builder 实例
+         */
+        public Builder embeddingModel(EmbeddingModel embeddingModel) {
+            this.embeddingModel = embeddingModel;
+            return this;
+        }
+
+        /**
+         * 设置是否自动创建集合
+         * 
+         * @param autoCreateCollection 是否自动创建集合，默认为 true
+         * @return Builder 实例
+         */
+        public Builder autoCreateCollection(boolean autoCreateCollection) {
+            this.autoCreateCollection = autoCreateCollection;
+            return this;
+        }
+
+        /**
+         * 便捷方法：设置 QDrant 连接信息
+         * 
+         * @param host QDrant 服务器地址
+         * @param port QDrant 服务器端口
+         * @return Builder 实例
+         */
+        public Builder connection(String host, int port) {
+            if (this.config != null) {
+                this.config = this.config.toBuilder().host(host).port(port).build();
+            } else {
+                this.config = QdrantConfig.builder().host(host).port(port).build();
+            }
+            return this;
+        }
+
+        /**
+         * 便捷方法：设置 API 密钥
+         * 
+         * @param apiKey API 密钥
+         * @return Builder 实例
+         */
+        public Builder apiKey(String apiKey) {
+            if (this.config != null) {
+                this.config = this.config.toBuilder().apiKey(apiKey).build();
+            } else {
+                this.config = QdrantConfig.builder().apiKey(apiKey).build();
+            }
+            return this;
+        }
+
+        /**
+         * 便捷方法：设置默认集合名称
+         * 
+         * @param collectionName 默认集合名称
+         * @return Builder 实例
+         */
+        public Builder defaultCollection(String collectionName) {
+            if (this.config != null) {
+                this.config = this.config.toBuilder().defaultCollectionName(collectionName).build();
+            } else {
+                this.config = QdrantConfig.builder().defaultCollectionName(collectionName).build();
+            }
+            return this;
+        }
+
+        /**
+         * 便捷方法：设置向量名称
+         * 
+         * @param vectorName 向量名称
+         * @return Builder 实例
+         */
+        public Builder vectorName(String vectorName) {
+            if (this.config != null) {
+                this.config = this.config.toBuilder().vectorName(vectorName).build();
+            } else {
+                this.config = QdrantConfig.builder().vectorName(vectorName).build();
+            }
+            return this;
+        }
+
+        /**
+         * 构建 QdrantVectorStore 实例
+         * 
+         * @return QdrantVectorStore 实例
+         */
+        public QdrantVectorStore build() {
+            // 验证必要参数
+            if (config == null) {
+                throw new IllegalArgumentException("QdrantConfig 不能为空");
+            }
+            if (embeddingModel == null) {
+                throw new IllegalArgumentException("EmbeddingModel 不能为空");
+            }
+
+            return new QdrantVectorStore(this);
+        }
+    }
+
+    /**
+     * 获取配置信息
+     * 
+     * @return QDrant 配置
+     */
+    public QdrantConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * 是否启用自动创建集合
+     * 
+     * @return 是否自动创建集合
+     */
+    public boolean isAutoCreateCollection() {
+        return autoCreateCollection;
     }
 
     /**
      * 添加单个向量
      */
     @Override
-    public boolean addVector(String collectionName, String id, float[] vector, Map<String, Object> metadata, String text) {
-        return addVectors(collectionName, Collections.singletonList(id), Collections.singletonList(vector), Collections.singletonList(metadata),
+    public boolean addVector(String collectionName, String id, float[] vector, Map<String, Object> metadata,
+            String text) {
+        return addVectors(collectionName, Collections.singletonList(id), Collections.singletonList(vector),
+                Collections.singletonList(metadata),
                 Collections.singletonList(text)) == 1;
     }
 
@@ -77,7 +240,8 @@ public class QdrantVectorStore extends AbstractVectorStore {
      * 批量添加向量
      */
     @Override
-    public int addVectors(String collectionName, List<String> ids, List<float[]> vectors, List<Map<String, Object>> metadataList,
+    public int addVectors(String collectionName, List<String> ids, List<float[]> vectors,
+            List<Map<String, Object>> metadataList,
             List<String> texts) {
         try {
             // 确保集合存在
@@ -120,17 +284,14 @@ public class QdrantVectorStore extends AbstractVectorStore {
             requestBody.put("points", points);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.putJson(url, JSONUtil.toJsonStr(requestBody), headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
-
-            // 解析响应
-            if (response.getStatusCode().is2xxSuccessful()) {
+            // 简单检查响应不为空即认为成功
+            if (StrUtil.isNotBlank(response)) {
                 return ids.size();
             } else {
-                log.error("添加向量失败: {}", response.getBody());
+                log.error("添加向量失败: 响应为空");
                 return 0;
             }
         } catch (Exception e) {
@@ -161,17 +322,14 @@ public class QdrantVectorStore extends AbstractVectorStore {
             requestBody.put("points", ids);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.postJson(url, JSONUtil.toJsonStr(requestBody), headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-            // 解析响应
-            if (response.getStatusCode().is2xxSuccessful()) {
+            // 简单检查响应不为空即认为成功
+            if (StrUtil.isNotBlank(response)) {
                 return ids.size();
             } else {
-                log.error("删除向量失败: {}", response.getBody());
+                log.error("删除向量失败: 响应为空");
                 return 0;
             }
         } catch (Exception e) {
@@ -200,18 +358,16 @@ public class QdrantVectorStore extends AbstractVectorStore {
             requestBody.put("filter", filterMap);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> headers = createHeaders();
+            String jsonBody = JSONUtil.toJsonStr(requestBody);
+            log.info("删除向量请求体: {}", jsonBody);
+            String response = HttpClient.postJson(url, jsonBody, headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            log.info("删除向量请求体: {}", objectMapper.writeValueAsString(requestBody));
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-            // 解析响应，无法确切知道删除了多少向量，所以返回1表示操作成功
-            if (response.getStatusCode().is2xxSuccessful()) {
+            // 简单检查响应不为空即认为操作成功，返回1表示操作成功
+            if (StrUtil.isNotBlank(response)) {
                 return 1;
             } else {
-                log.error("删除向量失败: {}", response.getBody());
+                log.error("删除向量失败: 响应为空");
                 return 0;
             }
         } catch (Exception e) {
@@ -227,7 +383,8 @@ public class QdrantVectorStore extends AbstractVectorStore {
     protected List<QueryResult> doSimilaritySearch(VectorQuery query) {
         try {
             // 构建请求URL
-            String url = String.format("%s/collections/%s/points/search", config.getHttpUrl(), query.getCollectionName());
+            String url =
+                    String.format("%s/collections/%s/points/search", config.getHttpUrl(), query.getCollectionName());
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -251,28 +408,28 @@ public class QdrantVectorStore extends AbstractVectorStore {
             requestBody.put("with_payload", true);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.postJson(url, JSONUtil.toJsonStr(requestBody), headers);
 
             // 解析响应
-            if (response.getStatusCode().is2xxSuccessful()) {
+            if (StrUtil.isNotBlank(response)) {
                 List<QueryResult> results = new ArrayList<>();
-                Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
-                List<Map<String, Object>> resultList = (List<Map<String, Object>>) responseBody.get("result");
+                JSONObject responseJson = JSONUtil.parseObj(response);
+                List<JSONObject> resultList = responseJson.getBeanList("result", JSONObject.class);
 
-                for (Map<String, Object> resultItem : resultList) {
-                    String id = resultItem.get("id").toString();
-                    float score = Float.parseFloat(resultItem.get("score").toString());
+                for (JSONObject resultItem : resultList) {
+                    String id = resultItem.getStr("id");
+                    float score = resultItem.getFloat("score");
 
-                    Map<String, Object> payload = (Map<String, Object>) resultItem.get("payload");
-                    String text = payload.containsKey("text") ? payload.get("text").toString() : "";
+                    JSONObject payload = resultItem.getJSONObject("payload");
+                    String text = payload != null ? payload.getStr("text", "") : "";
 
                     // 创建元数据副本，移除文本字段
-                    Map<String, Object> metadata = new HashMap<>(payload);
-                    metadata.remove("text");
+                    Map<String, Object> metadata = new HashMap<>();
+                    if (payload != null) {
+                        metadata.putAll(payload);
+                        metadata.remove("text");
+                    }
 
                     // 如果需要向量数据
                     float[] vector = null;
@@ -302,13 +459,14 @@ public class QdrantVectorStore extends AbstractVectorStore {
 
                     // 只有分数超过阈值的结果才会返回
                     if (score >= query.getMinScore()) {
-                        results.add(QueryResult.builder().id(id).text(text).score(score).vector(vector).metadata(metadata).build());
+                        results.add(QueryResult.builder().id(id).text(text).score(score).vector(vector)
+                                .metadata(metadata).build());
                     }
                 }
 
                 return results;
             } else {
-                log.error("相似度搜索失败: {}", response.getBody());
+                log.error("相似度搜索失败: 响应为空");
                 return Collections.emptyList();
             }
         } catch (Exception e) {
@@ -344,14 +502,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
             requestBody.put("vectors", vectorsConfig);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.putJson(url, JSONUtil.toJsonStr(requestBody), headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
-
-            // 解析响应
-            return response.getStatusCode().is2xxSuccessful();
+            // 简单检查响应不为空即认为成功
+            return StrUtil.isNotBlank(response);
         } catch (Exception e) {
             log.error("创建集合失败", e);
             return false;
@@ -368,13 +523,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
             String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.delete(url, headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
-
-            // 解析响应
-            return response.getStatusCode().is2xxSuccessful();
+            // 简单检查响应不为空即认为成功
+            return StrUtil.isNotBlank(response);
         } catch (Exception e) {
             log.error("删除集合失败", e);
             return false;
@@ -391,13 +544,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
             String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.get(url, headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-
-            // 解析响应
-            return response.getStatusCode().is2xxSuccessful();
+            // 简单检查响应不为空即认为集合存在
+            return StrUtil.isNotBlank(response);
         } catch (Exception e) {
             // 请求异常，说明集合不存在
             return false;
@@ -413,17 +564,15 @@ public class QdrantVectorStore extends AbstractVectorStore {
             String url = String.format("%s/collections/%s", config.getHttpUrl(), collectionName);
 
             // 发送请求
-            HttpHeaders headers = createHeaders();
+            Map<String, String> headers = createHeaders();
+            String response = HttpClient.get(url, headers);
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
-                Map<String, Object> result = (Map<String, Object>) responseBody.get("result");
-                Map<String, Object> config = (Map<String, Object>) result.get("config");
-                Map<String, Object> params = (Map<String, Object>) config.get("params");
-                Map<String, Object> vectors = (Map<String, Object>) params.get("vectors");
+            if (StrUtil.isNotBlank(response)) {
+                JSONObject responseJson = JSONUtil.parseObj(response);
+                JSONObject result = responseJson.getJSONObject("result");
+                JSONObject config = result.getJSONObject("config");
+                JSONObject params = config.getJSONObject("params");
+                JSONObject vectors = params.getJSONObject("vectors");
 
                 // 检查是否包含配置的向量名称
                 boolean hasConfiguredVector = vectors.containsKey(this.config.getVectorName());
@@ -431,7 +580,8 @@ public class QdrantVectorStore extends AbstractVectorStore {
                 if (hasConfiguredVector) {
                     log.info("集合 {} 包含向量配置: {}", collectionName, this.config.getVectorName());
                 } else {
-                    log.warn("集合 {} 不包含向量配置: {}，现有向量: {}", collectionName, this.config.getVectorName(), vectors.keySet());
+                    log.warn("集合 {} 不包含向量配置: {}，现有向量: {}", collectionName, this.config.getVectorName(),
+                            vectors.keySet());
                 }
 
                 return hasConfiguredVector;
@@ -452,11 +602,11 @@ public class QdrantVectorStore extends AbstractVectorStore {
             throw new IllegalArgumentException("QdrantConfig 不能为空");
         }
 
-        if (config.getVectorName() == null || config.getVectorName().trim().isEmpty()) {
+        if (StrUtil.isBlank(config.getVectorName())) {
             throw new IllegalArgumentException("向量名称不能为空");
         }
 
-        if (config.getDefaultCollectionName() == null || config.getDefaultCollectionName().trim().isEmpty()) {
+        if (StrUtil.isBlank(config.getDefaultCollectionName())) {
             throw new IllegalArgumentException("默认集合名称不能为空");
         }
 
@@ -466,12 +616,12 @@ public class QdrantVectorStore extends AbstractVectorStore {
     /**
      * 创建带认证的HTTP头
      */
-    private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
+    private Map<String, String> createHeaders() {
+        Map<String, String> headers = new HashMap<>();
 
         // 如果配置了API密钥，添加到头信息中
-        if (config.getApiKey() != null && !config.getApiKey().isEmpty()) {
-            headers.set("api-key", config.getApiKey());
+        if (StrUtil.isNotBlank(config.getApiKey())) {
+            headers.put("api-key", config.getApiKey());
         }
 
         return headers;

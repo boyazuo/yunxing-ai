@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yxboot.llm.chat.ModelProvider;
 import com.yxboot.llm.embedding.config.EmbeddingConfig;
 import com.yxboot.llm.embedding.model.AbstractEmbeddingModel;
@@ -15,31 +13,151 @@ import com.yxboot.llm.embedding.model.EmbeddingResponse;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.EmbeddingResult;
 import com.yxboot.llm.embedding.model.EmbeddingResponse.TokenUsage;
 import com.yxboot.util.HttpClient;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 智谱AI嵌入模型实现
+ * 
+ * 重构说明： - 设计为不可变对象，所有配置在构建时设置 - 使用 Builder 模式创建实例 - 移除可变状态的 setter 方法和 configure 方法 - 使用 Hutool
+ * JSONUtil 替换 ObjectMapper
+ * 
+ * @author Boya
  */
 @Slf4j
-public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
+public final class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
 
-    private ZhipuAIEmbeddingConfig config;
-    private ObjectMapper objectMapper;
+    /**
+     * 智谱AI配置（不可变）
+     */
+    private final ZhipuAIEmbeddingConfig config;
 
-    public ZhipuAIEmbeddingModel() {
-        this.config = new ZhipuAIEmbeddingConfig();
-        this.objectMapper = new ObjectMapper();
+    /**
+     * 私有构造函数，只能通过 Builder 创建
+     * 
+     * @param builder 构建器
+     */
+    private ZhipuAIEmbeddingModel(Builder builder) {
+        super(builder.config != null ? builder.config.getBatchSize() : 32);
+        this.config = builder.config;
+
+        // 验证必要参数
+        if (config == null) {
+            throw new IllegalArgumentException("ZhipuAIEmbeddingConfig 不能为空");
+        }
+        if (StrUtil.isBlank(config.getApiKey())) {
+            throw new IllegalArgumentException("API密钥不能为空");
+        }
     }
 
     /**
-     * 构造函数
-     *
-     * @param config 智谱AI配置
+     * 创建 Builder 实例
+     * 
+     * @return Builder 实例
      */
-    public ZhipuAIEmbeddingModel(ZhipuAIEmbeddingConfig config) {
-        super(config.getBatchSize());
-        this.config = config;
-        this.objectMapper = new ObjectMapper();
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder 类
+     */
+    public static class Builder {
+        private ZhipuAIEmbeddingConfig config;
+
+        private Builder() {}
+
+        /**
+         * 设置配置
+         * 
+         * @param config 配置对象
+         * @return Builder 实例
+         */
+        public Builder config(ZhipuAIEmbeddingConfig config) {
+            this.config = config;
+            return this;
+        }
+
+        /**
+         * 设置 API 密钥
+         * 
+         * @param apiKey API 密钥
+         * @return Builder 实例
+         */
+        public Builder apiKey(String apiKey) {
+            if (this.config != null) {
+                this.config = this.config.withApiKey(apiKey);
+            } else {
+                this.config = ZhipuAIEmbeddingConfig.builder().apiKey(apiKey).build();
+            }
+            return this;
+        }
+
+        /**
+         * 设置模型名称
+         * 
+         * @param modelName 模型名称
+         * @return Builder 实例
+         */
+        public Builder modelName(String modelName) {
+            if (this.config != null) {
+                this.config = this.config.withModelName(modelName);
+            } else {
+                this.config = ZhipuAIEmbeddingConfig.builder().modelName(modelName).build();
+            }
+            return this;
+        }
+
+        /**
+         * 设置向量维度
+         * 
+         * @param embeddingDimension 向量维度
+         * @return Builder 实例
+         */
+        public Builder embeddingDimension(int embeddingDimension) {
+            if (this.config != null) {
+                this.config = this.config.withEmbeddingDimension(embeddingDimension);
+            } else {
+                this.config = ZhipuAIEmbeddingConfig.builder().embeddingDimension(embeddingDimension).build();
+            }
+            return this;
+        }
+
+        /**
+         * 设置批处理大小
+         * 
+         * @param batchSize 批处理大小
+         * @return Builder 实例
+         */
+        public Builder batchSize(int batchSize) {
+            if (this.config != null) {
+                this.config = this.config.withBatchSize(batchSize);
+            } else {
+                this.config = ZhipuAIEmbeddingConfig.builder().batchSize(batchSize).build();
+            }
+            return this;
+        }
+
+        /**
+         * 构建 ZhipuAIEmbeddingModel 实例
+         * 
+         * @return ZhipuAIEmbeddingModel 实例
+         */
+        public ZhipuAIEmbeddingModel build() {
+            return new ZhipuAIEmbeddingModel(this);
+        }
+    }
+
+    /**
+     * 获取API密钥
+     * 
+     * @return API密钥
+     */
+    public String getApiKey() {
+        return config.getApiKey();
     }
 
     /**
@@ -50,24 +168,22 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
         return ModelProvider.ZHIPU;
     }
 
+    /**
+     * @deprecated 不再支持动态配置，请使用 Builder 模式创建新实例
+     */
+    @Deprecated
     @Override
     public void configure(EmbeddingConfig config) {
-        this.config = (ZhipuAIEmbeddingConfig) config;
+        throw new UnsupportedOperationException("ZhipuAIEmbeddingModel 是不可变对象，请使用 Builder 模式创建新实例");
     }
 
     /**
-     * 设置API密钥
-     *
-     * @param apiKey API密钥
-     * @return 当前模型实例
+     * @deprecated 不再支持动态设置API密钥，请使用 Builder 模式创建新实例
      */
+    @Deprecated
     @Override
     public EmbeddingModel withApiKey(String apiKey) {
-        if (this.config == null) {
-            this.config = new ZhipuAIEmbeddingConfig();
-        }
-        this.config.setApiKey(apiKey);
-        return this;
+        throw new UnsupportedOperationException("ZhipuAIEmbeddingModel 是不可变对象，请使用 Builder 模式创建新实例");
     }
 
     /**
@@ -109,22 +225,23 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             Map<String, String> headers = createHeaders();
 
             // 序列化请求体
-            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            String jsonBody = JSONUtil.toJsonStr(requestBody);
 
             // 发送请求
             String response = HttpClient.postJson(config.getBaseUrl(), jsonBody, headers);
 
             // 解析响应
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode dataNode = root.get("data");
+            JSONObject root = JSONUtil.parseObj(response);
+            JSONArray dataArray = root.getJSONArray("data");
 
             List<float[]> embeddings = new ArrayList<>();
-            for (JsonNode item : dataNode) {
-                JsonNode embeddingNode = item.get("embedding");
+            for (int i = 0; i < dataArray.size(); i++) {
+                JSONObject item = dataArray.getJSONObject(i);
+                JSONArray embeddingArray = item.getJSONArray("embedding");
 
-                float[] embedding = new float[embeddingNode.size()];
-                for (int i = 0; i < embeddingNode.size(); i++) {
-                    embedding[i] = (float) embeddingNode.get(i).asDouble();
+                float[] embedding = new float[embeddingArray.size()];
+                for (int j = 0; j < embeddingArray.size(); j++) {
+                    embedding[j] = embeddingArray.getFloat(j);
                 }
 
                 embeddings.add(embedding);
@@ -158,6 +275,8 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             // 如果请求中有指定维度，添加到请求体
             if (request.getDimensions() != null) {
                 requestBody.put("dimensions", request.getDimensions());
+            } else {
+                requestBody.put("dimensions", config.getEmbeddingDimension());
             }
 
             // 添加额外参数
@@ -169,22 +288,20 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             Map<String, String> headers = createHeaders();
 
             // 序列化请求体
-            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            String jsonBody = JSONUtil.toJsonStr(requestBody);
 
             // 发送请求
             String responseBody = HttpClient.postJson(config.getBaseUrl(), jsonBody, headers);
 
             // 解析响应
-            JsonNode root = objectMapper.readTree(responseBody);
-            JsonNode dataNode = root.get("data");
-            JsonNode usageNode = root.get("usage");
+            JSONObject root = JSONUtil.parseObj(responseBody);
+            JSONArray dataArray = root.getJSONArray("data");
+            JSONObject usageObject = root.getJSONObject("usage");
 
             // 提取token使用情况
             TokenUsage tokenUsage = null;
-            if (usageNode != null) {
-                int inputTokens = usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt()
-                        : calculateTokens(request.getInput());
-
+            if (usageObject != null) {
+                int inputTokens = usageObject.getInt("prompt_tokens", calculateTokens(request.getInput()));
                 tokenUsage = TokenUsage.of(inputTokens);
             } else {
                 tokenUsage = TokenUsage.of(calculateTokens(request.getInput()));
@@ -192,15 +309,15 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
 
             // 构建结果列表
             List<EmbeddingResult> results = new ArrayList<>();
-            for (int i = 0; i < dataNode.size(); i++) {
-                JsonNode item = dataNode.get(i);
-                JsonNode embeddingNode = item.get("embedding");
-                int index = item.has("index") ? item.get("index").asInt() : i;
-                String object = item.has("object") ? item.get("object").asText() : "embedding";
+            for (int i = 0; i < dataArray.size(); i++) {
+                JSONObject item = dataArray.getJSONObject(i);
+                JSONArray embeddingArray = item.getJSONArray("embedding");
+                int index = item.getInt("index", i);
+                String object = item.getStr("object", "embedding");
 
-                float[] embedding = new float[embeddingNode.size()];
-                for (int j = 0; j < embeddingNode.size(); j++) {
-                    embedding[j] = (float) embeddingNode.get(j).asDouble();
+                float[] embedding = new float[embeddingArray.size()];
+                for (int j = 0; j < embeddingArray.size(); j++) {
+                    embedding[j] = embeddingArray.getFloat(j);
                 }
 
                 results.add(EmbeddingResult.builder().index(index).object(object).embedding(embedding).build());
@@ -209,16 +326,20 @@ public class ZhipuAIEmbeddingModel extends AbstractEmbeddingModel {
             // 构建元数据
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("model", config.getModelName());
-            if (root.has("id")) {
-                metadata.put("id", root.get("id").asText());
+            if (root.containsKey("id")) {
+                metadata.put("id", root.getStr("id"));
             }
-            if (root.has("created")) {
-                metadata.put("created", root.get("created").asLong());
+            if (root.containsKey("created")) {
+                metadata.put("created", root.getLong("created"));
             }
 
             // 构建并返回响应
-            return EmbeddingResponse.builder().modelName(config.getModelName()).data(results).tokenUsage(tokenUsage)
-                    .metadata(metadata).build();
+            return EmbeddingResponse.builder()
+                    .modelName(config.getModelName())
+                    .data(results)
+                    .tokenUsage(tokenUsage)
+                    .metadata(metadata)
+                    .build();
 
         } catch (Exception e) {
             log.error("嵌入处理失败", e);

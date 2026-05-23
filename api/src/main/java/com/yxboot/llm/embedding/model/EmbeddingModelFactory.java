@@ -1,137 +1,179 @@
 package com.yxboot.llm.embedding.model;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import com.yxboot.llm.chat.ModelProvider;
 import com.yxboot.llm.provider.zhipu.ZhipuAIEmbeddingConfig;
 import com.yxboot.llm.provider.zhipu.ZhipuAIEmbeddingModel;
 import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 嵌入模型工厂 根据提供商信息选择正确的EmbeddingModel实现
+ * 嵌入模型工厂 根据提供商信息创建对应的EmbeddingModel实例
+ * 
+ * 重构说明： - 参考 ChatModelFactory 的简化设计 - 移除复杂的缓存机制和依赖注入 - 每次调用都创建新实例，避免状态共享问题 - 使用 switch 表达式提高代码可读性
  * 
  * @author Boya
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class EmbeddingModelFactory {
 
-    // 所有可用的 EmbeddingModel 实现
-    private final List<EmbeddingModel> embeddingModels;
-
-    // 提供商名称到ModelProvider的映射
-    private final Map<String, ModelProvider> providerMapping = Map.of(
-            "zhipuai", ModelProvider.ZHIPU,
-            "zhipu", ModelProvider.ZHIPU,
-            "qianwen", ModelProvider.QIANWEN,
-            "qwen", ModelProvider.QIANWEN,
-            "tongyi", ModelProvider.QIANWEN,
-            "openai", ModelProvider.OPENAI,
-            "open_ai", ModelProvider.OPENAI,
-            "azure_openai", ModelProvider.OPENAI);
-
-    // 按ModelProvider分类的EmbeddingModel映射
-    private Map<ModelProvider, EmbeddingModel> modelProviderMap;
-
-    // 缓存已创建的EmbeddingModel实例，避免重复创建
-    private final Map<String, EmbeddingModel> modelCache = new ConcurrentHashMap<>();
-
     /**
-     * 初始化模型提供商映射
-     */
-    @PostConstruct
-    public void initModelProviderMap() {
-        modelProviderMap = embeddingModels.stream()
-                .collect(Collectors.toMap(
-                        EmbeddingModel::getProvider,
-                        model -> model,
-                        (existing, replacement) -> existing));
-
-        log.info("已初始化 {} 个 EmbeddingModel 实现: {}",
-                embeddingModels.size(),
-                embeddingModels.stream().map(m -> m.getClass().getSimpleName()).toList());
-    }
-
-    /**
-     * 根据提供商和模型创建EmbeddingModel实例（推荐方法）
+     * 根据提供商创建EmbeddingModel实例 每次调用都会创建新的实例，避免状态共享问题
      * 
      * @param provider 提供商信息
      * @param model 模型信息
      * @return EmbeddingModel实例
+     * @throws UnsupportedOperationException 不支持的提供商
      */
     public EmbeddingModel createEmbeddingModel(Provider provider, Model model) {
         String providerName = provider.getProviderName().toLowerCase();
-        String modelName = model.getModelName();
+        log.debug("为提供商 {} 模型 {} 创建EmbeddingModel实例", providerName, model.getModelName());
 
-        // 生成缓存键，包含提供商和模型信息
-        String cacheKey = providerName + ":" + modelName;
+        return switch (providerName) {
+            case "zhipuai", "zhipu" -> createZhipuAIEmbeddingModel(provider, model);
+            // TODO: 添加其他提供商的实现
+            // case "qianwen", "qwen", "tongyi" -> createQianwenEmbeddingModel(provider, model);
+            // case "openai", "open_ai" -> createOpenAIEmbeddingModel(provider, model);
+            default -> throw new UnsupportedOperationException(
+                    "不支持的模型提供商: " + provider.getProviderName()
+                            + "。当前支持的提供商: zhipuai");
+        };
+    }
 
-        // 从缓存获取已创建的实例
-        return modelCache.computeIfAbsent(cacheKey, key -> {
-            ModelProvider targetProvider = resolveModelProvider(providerName);
-            log.debug("为提供商 {} 模型 {} 解析出模型提供者类型: {}", providerName, modelName, targetProvider);
+    /**
+     * 根据提供商创建EmbeddingModel实例（简化版本，不需要Model参数）
+     * 
+     * @param provider 提供商信息
+     * @return EmbeddingModel实例
+     */
+    public EmbeddingModel createEmbeddingModel(Provider provider) {
+        String providerName = provider.getProviderName().toLowerCase();
+        log.debug("为提供商 {} 创建EmbeddingModel实例", providerName);
 
-            // 从已注册的模型中查找并配置
-            return Optional.ofNullable(modelProviderMap.get(targetProvider))
-                    .map(embeddingModel -> configureModel(embeddingModel, provider, model))
-                    .orElseThrow(() -> new UnsupportedOperationException(
-                            "不支持的模型提供商: " + provider.getProviderName()));
-        });
+        return switch (providerName) {
+            case "zhipuai", "zhipu" -> createZhipuAIEmbeddingModel(provider);
+            // TODO: 添加其他提供商的实现
+            default -> throw new UnsupportedOperationException(
+                    "不支持的模型提供商: " + provider.getProviderName()
+                            + "。当前支持的提供商: zhipuai");
+        };
+    }
+
+    /**
+     * 创建智谱AI嵌入模型实例
+     * 
+     * @param provider 提供商信息
+     * @param model 模型信息
+     * @return ZhipuAIEmbeddingModel实例
+     */
+    private EmbeddingModel createZhipuAIEmbeddingModel(Provider provider, Model model) {
+        ZhipuAIEmbeddingConfig config = ZhipuAIEmbeddingConfig.builder()
+                .apiKey(provider.getApiKey())
+                .modelName(model.getModelName())
+                .build();
+
+        return ZhipuAIEmbeddingModel.builder()
+                .config(config)
+                .build();
+    }
+
+    /**
+     * 创建智谱AI嵌入模型实例（使用默认模型）
+     * 
+     * @param provider 提供商信息
+     * @return ZhipuAIEmbeddingModel实例
+     */
+    private EmbeddingModel createZhipuAIEmbeddingModel(Provider provider) {
+        return ZhipuAIEmbeddingModel.builder()
+                .apiKey(provider.getApiKey())
+                .build();
+    }
+
+    // TODO: 添加其他提供商的创建方法
+    // private EmbeddingModel createQianwenEmbeddingModel(Provider provider, Model model) {
+    // return QianwenEmbeddingModel.builder()
+    // .apiKey(provider.getApiKey())
+    // .modelName(model.getModelName())
+    // .build();
+    // }
+
+    // private EmbeddingModel createOpenAIEmbeddingModel(Provider provider, Model model) {
+    // return OpenAIEmbeddingModel.builder()
+    // .apiKey(provider.getApiKey())
+    // .modelName(model.getModelName())
+    // .build();
+    // }
+
+    /**
+     * 检查提供商是否支持
+     * 
+     * @param providerName 提供商名称
+     * @return 是否支持
+     */
+    public boolean isProviderSupported(String providerName) {
+        if (providerName == null || providerName.trim().isEmpty()) {
+            return false;
+        }
+
+        String normalizedName = providerName.toLowerCase();
+        return switch (normalizedName) {
+            case "zhipuai", "zhipu" -> true;
+            // TODO: 添加其他提供商的检查
+            // case "qianwen", "qwen", "tongyi" -> true;
+            // case "openai", "open_ai" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 获取支持的提供商列表
+     * 
+     * @return 支持的提供商名称列表
+     */
+    public java.util.List<String> getSupportedProviders() {
+        java.util.List<String> supported = new java.util.ArrayList<>();
+
+        // 添加当前支持的提供商
+        supported.add("zhipuai");
+
+        // TODO: 添加其他提供商
+        // supported.add("qianwen");
+        // supported.add("openai");
+
+        return supported;
     }
 
     /**
      * 解析提供商名称为ModelProvider枚举
+     * 
+     * @param providerName 提供商名称
+     * @return ModelProvider枚举
      */
-    private ModelProvider resolveModelProvider(String providerName) {
-        // 直接从映射中查找
-        if (providerMapping.containsKey(providerName)) {
-            return providerMapping.get(providerName);
+    public ModelProvider resolveModelProvider(String providerName) {
+        if (providerName == null || providerName.trim().isEmpty()) {
+            return ModelProvider.OTHER;
         }
 
-        // 智能判断提供商类型
-        if (providerName.contains("zhipu") || providerName.contains("chatglm")) {
-            return ModelProvider.ZHIPU;
-        } else if (providerName.contains("qianwen") || providerName.contains("qwen")
-                || providerName.contains("tongyi")) {
-            return ModelProvider.QIANWEN;
-        } else if (providerName.contains("openai") || providerName.contains("gpt")) {
-            return ModelProvider.OPENAI;
-        }
-
-        return ModelProvider.OTHER;
-    }
-
-    /**
-     * 配置模型实例
-     */
-    private EmbeddingModel configureModel(EmbeddingModel embeddingModel, Provider provider, Model model) {
-        log.info("找到匹配的EmbeddingModel实现: {} 用于提供商: {} 模型: {}",
-                embeddingModel.getClass().getSimpleName(), provider.getProviderName(), model.getModelName());
-
-        if (embeddingModel instanceof ZhipuAIEmbeddingModel) {
-            ZhipuAIEmbeddingConfig config = ZhipuAIEmbeddingConfig.builder()
-                    .apiKey(provider.getApiKey())
-                    .modelName(model.getModelName())
-                    .build();
-            embeddingModel.configure(config);
-        }
-
-        return embeddingModel;
-    }
-
-    /**
-     * 清除模型缓存
-     */
-    public void clearCache() {
-        modelCache.clear();
+        String normalizedName = providerName.toLowerCase();
+        return switch (normalizedName) {
+            case "zhipuai", "zhipu" -> ModelProvider.ZHIPU;
+            case "qianwen", "qwen", "tongyi" -> ModelProvider.QIANWEN;
+            case "openai", "open_ai", "azure_openai" -> ModelProvider.OPENAI;
+            default -> {
+                // 智能判断提供商类型
+                if (normalizedName.contains("zhipu") || normalizedName.contains("chatglm")) {
+                    yield ModelProvider.ZHIPU;
+                } else if (normalizedName.contains("qianwen") || normalizedName.contains("qwen")
+                        || normalizedName.contains("tongyi")) {
+                    yield ModelProvider.QIANWEN;
+                } else if (normalizedName.contains("openai") || normalizedName.contains("gpt")) {
+                    yield ModelProvider.OPENAI;
+                } else {
+                    yield ModelProvider.OTHER;
+                }
+            }
+        };
     }
 }

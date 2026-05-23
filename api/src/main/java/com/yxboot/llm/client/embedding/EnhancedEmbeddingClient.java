@@ -164,7 +164,7 @@ public class EnhancedEmbeddingClient {
         Map<String, Object> stats = new ConcurrentHashMap<>();
         stats.put("modelCacheSize", modelCache.size());
         stats.put("healthCacheSize", healthStatusCache.size());
-        stats.put("maxCacheSize", config.getMaxCacheSize());
+        // stats.put("maxCacheSize", config.getMaxCacheSize()); // 新配置中移除了此字段
         stats.put("cacheEnabled", config.isCacheEnabled());
         stats.put("cacheExpireMinutes", config.getCacheExpireMinutes());
         return stats;
@@ -240,7 +240,6 @@ public class EnhancedEmbeddingClient {
         CachedEmbeddingModel cachedModel = modelCache.computeIfAbsent(cacheKey, key -> {
             log.debug("为提供商 {} 创建新的EmbeddingModel实例", provider.getProviderName());
             EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider, model);
-            embeddingModel.withApiKey(provider.getApiKey());
             return CachedEmbeddingModel.of(embeddingModel);
         });
 
@@ -252,7 +251,6 @@ public class EnhancedEmbeddingClient {
             log.debug("提供商 {} 的缓存已过期，重新创建", provider.getProviderName());
             modelCache.remove(cacheKey);
             EmbeddingModel embeddingModel = embeddingModelFactory.createEmbeddingModel(provider, model);
-            embeddingModel.withApiKey(provider.getApiKey());
             cachedModel = CachedEmbeddingModel.of(embeddingModel);
             modelCache.put(cacheKey, cachedModel);
         }

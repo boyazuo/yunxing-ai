@@ -87,7 +87,7 @@ public class DatasetDocumentApplicationService {
             }
 
             // 2. 删除文档的向量数据
-            vectorService.deleteDocumentVectors(documentId, document.getDatasetId());
+            vectorService.deleteDocumentVectors(documentId, document.getDatasetId(), document.getTenantId());
 
             // 3. 删除文档分段
             segmentService.deleteSegmentsByDocumentId(documentId);

@@ -19,6 +19,7 @@ public class VectorProperties {
         private boolean https = false;
         private String apiKey;
         private String defaultCollectionName = "documents";
+        private String vectorName = "default";
     }
 
 }
