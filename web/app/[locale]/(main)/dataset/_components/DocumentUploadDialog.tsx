@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SegmentMethod } from '@/types/document'
 import { Upload } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 interface DocumentUploadDialogProps {
@@ -20,15 +20,27 @@ interface DocumentUploadDialogProps {
   onSuccess: () => void
 }
 
+const DEFAULT_PARENT_CHUNK_SIZE = 1200
+const DEFAULT_CHILD_CHUNK_SIZE = 300
+const DEFAULT_CHILD_OVERLAP = 50
+
 export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, onSuccess }: DocumentUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [segmentMethod, setSegmentMethod] = useState<SegmentMethod>(SegmentMethod.PARAGRAPH)
-  const [maxSegmentLength, setMaxSegmentLength] = useState<number>(500)
-  const [overlapLength, setOverlapLength] = useState<number>(50)
+  const [segmentMethod, setSegmentMethod] = useState<SegmentMethod>(SegmentMethod.PARENT_CHILD)
+  const [parentChunkSize, setParentChunkSize] = useState<number>(DEFAULT_PARENT_CHUNK_SIZE)
+  const [maxSegmentLength, setMaxSegmentLength] = useState<number>(DEFAULT_CHILD_CHUNK_SIZE)
+  const [overlapLength, setOverlapLength] = useState<number>(DEFAULT_CHILD_OVERLAP)
 
-  // 文件拖放处理
+  const childSizeWarning = useMemo(() => {
+    if (segmentMethod !== SegmentMethod.PARENT_CHILD) return null
+    if (maxSegmentLength > parentChunkSize * 0.5) {
+      return '建议子块大小不超过父块大小的 50%，以保证检索精度'
+    }
+    return null
+  }, [segmentMethod, maxSegmentLength, parentChunkSize])
+
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
@@ -43,23 +55,21 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
     }
   }, [])
 
-  // 文件选择处理
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       setFile(e.target.files[0])
     }
   }, [])
 
-  // 重置表单
   const resetForm = useCallback(() => {
     setFile(null)
     setUploadProgress(0)
-    setSegmentMethod(SegmentMethod.PARAGRAPH)
-    setMaxSegmentLength(1000)
-    setOverlapLength(100)
+    setSegmentMethod(SegmentMethod.PARENT_CHILD)
+    setParentChunkSize(DEFAULT_PARENT_CHUNK_SIZE)
+    setMaxSegmentLength(DEFAULT_CHILD_CHUNK_SIZE)
+    setOverlapLength(DEFAULT_CHILD_OVERLAP)
   }, [])
 
-  // 上传文档
   const handleUpload = useCallback(async () => {
     if (!file) {
       toast.error('请选择文件')
@@ -70,11 +80,9 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
       setIsUploading(true)
       setUploadProgress(10)
 
-      // 1. 上传文件
       const uploadedFile = await fileService.updateFile(file)
       setUploadProgress(60)
 
-      // 2. 创建文档记录
       const result = await documentService.createDocument({
         tenantId,
         datasetId,
@@ -84,6 +92,7 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
         segmentMethod,
         maxSegmentLength,
         overlapLength,
+        parentChunkSize: segmentMethod === SegmentMethod.PARENT_CHILD ? parentChunkSize : undefined,
       })
 
       if (result.code !== 0) {
@@ -92,9 +101,7 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
       }
 
       setUploadProgress(100)
-
       toast.success('文档上传成功')
-
       onSuccess()
       resetForm()
       onOpenChange(false)
@@ -104,17 +111,27 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
     } finally {
       setIsUploading(false)
     }
-  }, [file, tenantId, datasetId, segmentMethod, maxSegmentLength, overlapLength, onSuccess, resetForm, onOpenChange])
+  }, [
+    file,
+    tenantId,
+    datasetId,
+    segmentMethod,
+    maxSegmentLength,
+    overlapLength,
+    parentChunkSize,
+    onSuccess,
+    resetForm,
+    onOpenChange,
+  ])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>上传文档</DialogTitle>
-          <DialogDescription>上传文档到知识库，支持PDF、DOCX、TXT等格式</DialogDescription>
+          <DialogDescription>上传文档到知识库，支持 PDF、DOCX、TXT 等格式</DialogDescription>
         </DialogHeader>
 
-        {/* 文件上传区域 */}
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center ${file ? 'border-primary' : 'border-muted-foreground/20'} transition-colors`}
           onDragOver={handleDragOver}
@@ -152,38 +169,115 @@ export function DocumentUploadDialog({ open, onOpenChange, tenantId, datasetId, 
           )}
         </div>
 
-        {/* 分段设置 */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="segmentMethod">分段方式</Label>
-            <RadioGroup value={segmentMethod} onValueChange={(value) => setSegmentMethod(value as SegmentMethod)} className="flex flex-col space-y-1">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value={SegmentMethod.PARAGRAPH} id="paragraph" />
-                <Label htmlFor="paragraph" className="cursor-pointer">
-                  按段落分段
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value={SegmentMethod.CHAPTER} id="chapter" />
-                <Label htmlFor="chapter" className="cursor-pointer">
-                  按章节分段
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="maxSegmentLength">最大分段长度</Label>
-              <Input id="maxSegmentLength" type="number" value={maxSegmentLength} onChange={(e) => setMaxSegmentLength(Number(e.target.value))} min={100} max={5000} />
-              <p className="text-xs text-muted-foreground">建议值：500-1000</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="overlapLength">重叠长度</Label>
-              <Input id="overlapLength" type="number" value={overlapLength} onChange={(e) => setOverlapLength(Number(e.target.value))} min={0} max={500} />
-              <p className="text-xs text-muted-foreground">建议值：0-100</p>
-            </div>
+            <Label>分段方式</Label>
+            <Tabs value={segmentMethod} onValueChange={(value) => setSegmentMethod(value as SegmentMethod)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value={SegmentMethod.PARENT_CHILD}>父子分块</TabsTrigger>
+                <TabsTrigger value={SegmentMethod.PARAGRAPH}>按段落</TabsTrigger>
+                <TabsTrigger value={SegmentMethod.CHAPTER}>按章节</TabsTrigger>
+              </TabsList>
+              <TabsContent value={SegmentMethod.PARENT_CHILD} className="space-y-4 pt-4">
+                <p className="text-xs text-muted-foreground">检索精准 + 上下文丰富，推荐用于大多数文档</p>
+                <div className="space-y-2">
+                  <Label htmlFor="parentChunkSize">父块大小（字）</Label>
+                  <Input
+                    id="parentChunkSize"
+                    type="number"
+                    value={parentChunkSize}
+                    onChange={(e) => setParentChunkSize(Number(e.target.value))}
+                    min={500}
+                    max={4000}
+                    step={100}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="childChunkSize">子块大小（字）</Label>
+                    <Input
+                      id="childChunkSize"
+                      type="number"
+                      value={maxSegmentLength}
+                      onChange={(e) => setMaxSegmentLength(Number(e.target.value))}
+                      min={100}
+                      max={1000}
+                      step={50}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="childOverlap">子块重叠（字）</Label>
+                    <Input
+                      id="childOverlap"
+                      type="number"
+                      value={overlapLength}
+                      onChange={(e) => setOverlapLength(Number(e.target.value))}
+                      min={0}
+                      max={200}
+                      step={10}
+                    />
+                  </div>
+                </div>
+                {childSizeWarning && <p className="text-xs text-amber-600">{childSizeWarning}</p>}
+                <p className="text-xs text-muted-foreground">
+                  预估：约每 {parentChunkSize} 字生成 1 个父块，每 {maxSegmentLength} 字生成 1 个子块
+                </p>
+              </TabsContent>
+              <TabsContent value={SegmentMethod.PARAGRAPH} className="space-y-4 pt-4">
+                <p className="text-xs text-muted-foreground">通用方式，适合纯文本文档</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="maxSegmentLength">最大分段长度</Label>
+                    <Input
+                      id="maxSegmentLength"
+                      type="number"
+                      value={maxSegmentLength}
+                      onChange={(e) => setMaxSegmentLength(Number(e.target.value))}
+                      min={100}
+                      max={5000}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="overlapLength">重叠长度</Label>
+                    <Input
+                      id="overlapLength"
+                      type="number"
+                      value={overlapLength}
+                      onChange={(e) => setOverlapLength(Number(e.target.value))}
+                      min={0}
+                      max={500}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value={SegmentMethod.CHAPTER} className="space-y-4 pt-4">
+                <p className="text-xs text-muted-foreground">适合有明确章节结构的文档</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="chapterMaxLength">最大分段长度</Label>
+                    <Input
+                      id="chapterMaxLength"
+                      type="number"
+                      value={maxSegmentLength}
+                      onChange={(e) => setMaxSegmentLength(Number(e.target.value))}
+                      min={100}
+                      max={5000}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chapterOverlap">重叠长度</Label>
+                    <Input
+                      id="chapterOverlap"
+                      type="number"
+                      value={overlapLength}
+                      onChange={(e) => setOverlapLength(Number(e.target.value))}
+                      min={0}
+                      max={500}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 

@@ -45,7 +45,7 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
     @Transactional
     public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize,
             String fileHash,
-            SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength) {
+            SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength, Integer parentChunkSize) {
 
         DatasetDocument document = new DatasetDocument();
         document.setTenantId(tenantId);
@@ -54,9 +54,10 @@ public class DatasetDocumentService extends ServiceImpl<DatasetDocumentMapper, D
         document.setFileName(fileName);
         document.setFileSize(fileSize);
         document.setFileHash(fileHash);
-        document.setSegmentMethod(segmentMethod);
+        document.setSegmentMethod(segmentMethod != null ? segmentMethod : SegmentMethod.PARENT_CHILD);
         document.setMaxSegmentLength(maxSegmentLength);
         document.setOverlapLength(overlapLength);
+        document.setParentChunkSize(parentChunkSize != null ? parentChunkSize : 1200);
         document.setSegmentNum(0);
         document.setStatus(DocumentStatus.PENDING);
 

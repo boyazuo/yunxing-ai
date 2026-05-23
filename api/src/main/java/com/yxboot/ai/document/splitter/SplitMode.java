@@ -15,7 +15,12 @@ public enum SplitMode {
     /**
      * 按章节分割 - 基于文档结构智能识别章节进行分割
      */
-    CHAPTER_SPLITTER("按章节分割");
+    CHAPTER_SPLITTER("按章节分割"),
+
+    /**
+     * 父子分块 - 子块用于向量检索，父块用于 LLM 上下文
+     */
+    PARENT_CHILD_SPLITTER("父子分块");
 
     private final String description;
 

@@ -12,7 +12,8 @@ import lombok.Getter;
 @Getter
 public enum SegmentMethod {
     PARAGRAPH("paragraph", "段落"),
-    CHAPTER("chapter", "章节");
+    CHAPTER("chapter", "章节"),
+    PARENT_CHILD("parent_child", "父子分块");
 
     @EnumValue
     private final String value;

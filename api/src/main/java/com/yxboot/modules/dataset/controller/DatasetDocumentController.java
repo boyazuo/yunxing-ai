@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.mybatisflex.core.paginate.Page;
-import com.yxboot.common.exception.ApiException;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
+import com.yxboot.common.exception.ApiException;
 import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.dataset.application.DatasetDocumentApplicationService;
 import com.yxboot.modules.dataset.application.DatasetDocumentProcessingApplicationService;
@@ -101,10 +101,12 @@ public class DatasetDocumentController {
                     existingFile.getHash(),
                     documentRequest.getSegmentMethod(),
                     documentRequest.getMaxSegmentLength(),
-                    documentRequest.getOverlapLength());
+                    documentRequest.getOverlapLength(),
+                    documentRequest.getParentChunkSize());
 
             // 触发异步文档处理，传递用户ID
-            datasetDocumentProcessingApplicationService.processDocumentAsync(document.getDocumentId(), securityUser.getUserId());
+            datasetDocumentProcessingApplicationService.processDocumentAsync(document.getDocumentId(),
+                    securityUser.getUserId());
 
             return Result.success("文档创建成功，正在后台处理", document);
         } catch (ApiException e) {
@@ -161,6 +163,7 @@ public class DatasetDocumentController {
         private SegmentMethod segmentMethod;
         private Integer maxSegmentLength;
         private Integer overlapLength;
+        private Integer parentChunkSize = 1200;
     }
 
     /**
@@ -170,4 +173,5 @@ public class DatasetDocumentController {
     public static class StatusRequest {
         private DocumentStatus status;
     }
+
 }

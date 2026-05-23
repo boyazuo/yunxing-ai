@@ -42,7 +42,8 @@ public class DatasetDocumentSegmentController {
             @Parameter(description = "文档ID") @RequestParam Long documentId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size,
-            @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
+            @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword,
+            @Parameter(description = "视图：segments=子块/普通，parents=父块") @RequestParam(defaultValue = "segments") String view) {
 
         if (documentId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "文档ID不能为空");
@@ -52,18 +53,28 @@ public class DatasetDocumentSegmentController {
             Page<DatasetDocumentSegmentDTO> segments;
 
             if (keyword != null && !keyword.trim().isEmpty()) {
-                // 带搜索的分页查询
                 segments = datasetDocumentSegmentApplicationService.pageSegmentsWithSearch(current, size, documentId,
-                        keyword.trim());
+                        keyword.trim(), view);
             } else {
-                // 普通分页查询
-                segments = datasetDocumentSegmentApplicationService.pageSegmentsByDocumentId(current, size, documentId);
+                segments = datasetDocumentSegmentApplicationService.pageSegmentsByDocumentId(current, size, documentId,
+                        view);
             }
 
             return Result.success("查询成功", segments);
         } catch (Exception e) {
             return Result.error(ResultCode.FAIL, "查询失败: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/by-parent")
+    @Operation(summary = "获取父块下的子块列表", description = "根据父块ID获取其所有子块")
+    public Result<List<DatasetDocumentSegmentDTO>> getChildSegmentsByParentId(
+            @Parameter(description = "父块分段ID") @RequestParam Long parentSegmentId) {
+        if (parentSegmentId == null) {
+            return Result.error(ResultCode.VALIDATE_FAILED, "父块ID不能为空");
+        }
+        return Result.success("查询成功",
+                datasetDocumentSegmentApplicationService.listChildSegmentsByParentId(parentSegmentId));
     }
 
     @GetMapping("/{segmentId}")

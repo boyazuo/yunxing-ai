@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -18,6 +19,7 @@ import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
 import com.yxboot.modules.dataset.enums.SegmentMethod;
+import com.yxboot.modules.dataset.enums.SegmentType;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetDocumentService;
 import com.yxboot.modules.dataset.service.DatasetService;
@@ -90,17 +92,26 @@ public class DatasetDocumentProcessingApplicationService {
             log.info("保存文档分段, documentId: {}, 分段数量: {}", documentId, segments.size());
             List<DatasetDocumentSegment> savedSegments = segmentService.batchCreateSegments(document, segments);
 
-            // 6. 更新文档的分段数
-            document.setSegmentNum(savedSegments.size());
+            // 6. 更新文档的分段数（仅统计可检索分段：普通块 + 子块）
+            long searchableCount = savedSegments.stream()
+                    .filter(s -> s.getSegmentType() == null
+                            || s.getSegmentType() == SegmentType.NORMAL
+                            || s.getSegmentType() == SegmentType.CHILD)
+                    .count();
+            document.setSegmentNum((int) searchableCount);
             datasetDocumentService.updateById(document);
 
-            // 7. 向量化处理
-            log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
+            // 7. 向量化处理（跳过父块）
+            List<DatasetDocumentSegment> vectorizableSegments = savedSegments.stream()
+                    .filter(s -> s.getSegmentType() == null || s.getSegmentType() != SegmentType.PARENT)
+                    .collect(Collectors.toList());
+            log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, vectorizableSegments.size());
             int vectorizedCount = vectorStoreService.batchCreateSegmentVectors(
-                    savedSegments, document.getDatasetId());
+                    vectorizableSegments, document.getDatasetId());
 
-            if (vectorizedCount != savedSegments.size()) {
-                log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());
+            if (vectorizedCount != vectorizableSegments.size()) {
+                log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount,
+                        vectorizableSegments.size());
             }
 
             if (vectorizedCount > 0) {
@@ -200,12 +211,14 @@ public class DatasetDocumentProcessingApplicationService {
             SplitMode splitMode = convertSegmentMethodToSplitMode(document.getSegmentMethod());
             Integer maxSegmentLength = document.getMaxSegmentLength();
             Integer overlapLength = document.getOverlapLength();
+            Integer parentChunkSize = document.getParentChunkSize();
 
-            log.info("开始处理文档, filePath: {}, splitMode: {}, maxSegmentLength: {}, overlapLength: {}",
-                    file.getAbsolutePath(), splitMode, maxSegmentLength, overlapLength);
+            log.info(
+                    "开始处理文档, filePath: {}, splitMode: {}, maxSegmentLength: {}, overlapLength: {}, parentChunkSize: {}",
+                    file.getAbsolutePath(), splitMode, maxSegmentLength, overlapLength, parentChunkSize);
 
             List<DocumentSegment> segments = documentProcessingService.loadAndSplitDocument(
-                    file, splitMode, maxSegmentLength, overlapLength);
+                    file, splitMode, maxSegmentLength, overlapLength, parentChunkSize);
 
             log.info("文档处理完成, filePath: {}, 分段数量: {}", file.getAbsolutePath(), segments != null ? segments.size() : 0);
 
@@ -233,6 +246,8 @@ public class DatasetDocumentProcessingApplicationService {
                 return SplitMode.CHARACTER_SPLITTER;
             case CHAPTER:
                 return SplitMode.CHAPTER_SPLITTER;
+            case PARENT_CHILD:
+                return SplitMode.PARENT_CHILD_SPLITTER;
             default:
                 log.warn("未知的分段方式: {}, 使用默认的字符长度分割", segmentMethod);
                 return SplitMode.CHARACTER_SPLITTER;

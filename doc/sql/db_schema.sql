@@ -87,6 +87,7 @@ CREATE TABLE `dataset_document` (
   `segment_method` varchar(20) DEFAULT NULL COMMENT '分段方式',
   `max_segment_length` int(11) DEFAULT NULL COMMENT '分段最大长度',
   `overlap_length` int(11) DEFAULT NULL COMMENT '重叠长度',
+  `parent_chunk_size` int(11) NOT NULL DEFAULT 1200 COMMENT 'Parent 块最大长度（仅 parent_child 策略使用）',
   `segment_num` int(11) DEFAULT NULL COMMENT '文档分段数',
   `status` varchar(20) DEFAULT NULL COMMENT '状态(pending-待处理，processing-处理中，completed-处理完成，failed-处理失败)',
   `creator_id` bigint(20) DEFAULT NULL COMMENT '创建者ID',
@@ -107,6 +108,8 @@ CREATE TABLE `dataset_document_segment` (
   `document_id` bigint(20) DEFAULT NULL COMMENT '文档 ID',
   `vector_id` varchar(255) DEFAULT NULL COMMENT '向量 ID',
   `position` int(11) DEFAULT NULL COMMENT '位置',
+  `segment_type` tinyint(4) NOT NULL DEFAULT 0 COMMENT '分段类型：0=普通，1=父块，2=子块',
+  `parent_segment_id` bigint(20) DEFAULT NULL COMMENT '父块 segment_id，仅 segment_type=2 时有值',
   `title` varchar(255) DEFAULT NULL COMMENT '标题',
   `content` text COMMENT '内容',
   `content_length` int(11) DEFAULT NULL COMMENT '内容长度',
@@ -114,7 +117,8 @@ CREATE TABLE `dataset_document_segment` (
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `updator_id` bigint(20) DEFAULT NULL COMMENT '更新者ID',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
-  PRIMARY KEY (`segment_id`)
+  PRIMARY KEY (`segment_id`),
+  KEY `idx_parent_segment_id` (`parent_segment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档分段表';
 
 -- ----------------------------

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.yxboot.ai.document.DocumentSegment;
 import com.yxboot.ai.document.splitter.ChapterSplitter;
 import com.yxboot.ai.document.splitter.CharacterSplitter;
+import com.yxboot.ai.document.splitter.ParentChildSplitter;
 import com.yxboot.ai.document.splitter.SplitMode;
 import lombok.RequiredArgsConstructor;
 
@@ -25,21 +26,35 @@ public class AiDocumentProcessingService {
 
     private final ChapterSplitter chapterSplitter;
     private final CharacterSplitter characterSplitter;
+    private final ParentChildSplitter parentChildSplitter;
 
     public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode, Integer maxSegmentLength,
             Integer overlapLength) {
+        return loadAndSplitDocument(file, splitMode, maxSegmentLength, overlapLength, null);
+    }
+
+    public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode, Integer maxSegmentLength,
+            Integer overlapLength, Integer parentChunkSize) {
         List<Document> rawDocs = new TikaDocumentReader(new FileSystemResource(file)).get();
         if (rawDocs.isEmpty()) {
             return List.of();
         }
         int maxLen = maxSegmentLength != null && maxSegmentLength > 0 ? maxSegmentLength : 500;
         int overlap = overlapLength != null && overlapLength >= 0 ? overlapLength : 100;
+        int parentLen = parentChunkSize != null && parentChunkSize > 0 ? parentChunkSize : 1200;
         SplitMode mode = splitMode != null ? splitMode : SplitMode.CHARACTER_SPLITTER;
 
         return switch (mode) {
             case CHARACTER_SPLITTER -> splitByCharacter(rawDocs, maxLen, overlap);
             case CHAPTER_SPLITTER -> splitByChapter(rawDocs, maxLen, overlap);
+            case PARENT_CHILD_SPLITTER -> splitByParentChild(rawDocs, parentLen, maxLen, overlap);
         };
+    }
+
+    private List<DocumentSegment> splitByParentChild(List<Document> rawDocs, int parentLen, int childLen, int overlap) {
+        String merged = rawDocs.stream().map(Document::getText).collect(Collectors.joining("\n\n"));
+        com.yxboot.ai.document.Document legacyDoc = com.yxboot.ai.document.Document.of(merged);
+        return parentChildSplitter.split(legacyDoc, parentLen, childLen, overlap);
     }
 
     private List<DocumentSegment> splitByCharacter(List<Document> rawDocs, int maxLen, int overlap) {

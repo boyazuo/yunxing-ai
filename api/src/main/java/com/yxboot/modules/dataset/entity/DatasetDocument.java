@@ -54,6 +54,9 @@ public class DatasetDocument {
     @Schema(description = "重叠长度")
     private Integer overlapLength;
 
+    @Schema(description = "父块最大长度（仅 parent_child 策略使用）")
+    private Integer parentChunkSize;
+
     @Schema(description = "文档分段数")
     private Integer segmentNum;
 

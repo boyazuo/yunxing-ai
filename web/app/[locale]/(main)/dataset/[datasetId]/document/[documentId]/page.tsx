@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { DatasetDocument, DocumentSegment } from '@/types/document'
-import { ArrowLeft, Edit, FileText, MoreHorizontal, Search, Trash2, X } from 'lucide-react'
+import { SegmentMethod, SegmentType } from '@/types/document'
+import { ArrowLeft, ChevronDown, ChevronRight, Edit, FileText, MoreHorizontal, Search, Trash2, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -40,6 +41,10 @@ export default function DocumentSegmentsPage() {
   const [segments, setSegments] = useState<DocumentSegment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [segmentView, setSegmentView] = useState<'segments' | 'parents'>('segments')
+  const [parentCount, setParentCount] = useState(0)
+  const [expandedParents, setExpandedParents] = useState<Set<string | number>>(new Set())
+  const [childSegmentsMap, setChildSegmentsMap] = useState<Record<string, DocumentSegment[]>>({})
 
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
@@ -74,6 +79,10 @@ export default function DocumentSegmentsPage() {
 
       const data = await documentService.getDocument(documentId)
       setDocument(data)
+      if (data.segmentMethod === SegmentMethod.PARENT_CHILD) {
+        const parentResponse = await segmentService.getSegments(documentId, 1, 1, undefined, 'parents')
+        setParentCount(parentResponse.total)
+      }
     } catch (error) {
       console.error('加载文档信息失败', error)
       toast.error('加载文档信息失败')
@@ -87,7 +96,7 @@ export default function DocumentSegmentsPage() {
 
       setIsLoading(true)
 
-      const response = await segmentService.getSegments(documentId, page, pageSize, searchTerm || undefined)
+      const response = await segmentService.getSegments(documentId, page, pageSize, searchTerm || undefined, segmentView)
       setSegments(response.records)
       setTotal(response.total)
     } catch (error) {
@@ -96,7 +105,7 @@ export default function DocumentSegmentsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [documentId, page, pageSize, searchTerm])
+  }, [documentId, page, pageSize, searchTerm, segmentView])
 
   // 首次加载
   useEffect(() => {
@@ -105,6 +114,33 @@ export default function DocumentSegmentsPage() {
       loadSegments()
     }
   }, [status, documentId, loadDocument, loadSegments])
+
+  const isParentChildDoc = document?.segmentMethod === SegmentMethod.PARENT_CHILD
+
+  const handleToggleParentExpand = async (parentSegmentId: string | number) => {
+    const key = String(parentSegmentId)
+    const newExpanded = new Set(expandedParents)
+    if (newExpanded.has(parentSegmentId)) {
+      newExpanded.delete(parentSegmentId)
+      setExpandedParents(newExpanded)
+      return
+    }
+
+    if (!childSegmentsMap[key]) {
+      const children = await segmentService.getChildSegmentsByParent(parentSegmentId)
+      setChildSegmentsMap((prev) => ({ ...prev, [key]: children }))
+    }
+    newExpanded.add(parentSegmentId)
+    setExpandedParents(newExpanded)
+  }
+
+  const handleViewChange = (view: 'segments' | 'parents') => {
+    setSegmentView(view)
+    setPage(1)
+    setSelectedSegments(new Set())
+    setSelectAll(false)
+    setExpandedParents(new Set())
+  }
 
   // 处理页码变化
   const handlePageChange = (newPage: number) => {
@@ -256,7 +292,14 @@ export default function DocumentSegmentsPage() {
           <div className="flex items-baseline space-x-4">
             <h1 className="text-2xl font-bold">文档分段</h1>
             <div className="flex items-center space-x-3 text-sm">
-              <Badge variant="secondary">{total} 个分段</Badge>
+              {isParentChildDoc ? (
+                <>
+                  <Badge variant="secondary">{total} 个子块</Badge>
+                  {parentCount > 0 && <Badge variant="outline">{parentCount} 个父块</Badge>}
+                </>
+              ) : (
+                <Badge variant="secondary">{total} 个分段</Badge>
+              )}
               {selectedSegments.size > 0 && (
                 <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                   已选中 {selectedSegments.size} 个
@@ -266,6 +309,16 @@ export default function DocumentSegmentsPage() {
           </div>
 
           <div className="flex items-center space-x-3">
+            {isParentChildDoc && (
+              <div className="flex rounded-md border p-0.5">
+                <Button variant={segmentView === 'segments' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleViewChange('segments')}>
+                  子块视图
+                </Button>
+                <Button variant={segmentView === 'parents' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleViewChange('parents')}>
+                  父块视图
+                </Button>
+              </div>
+            )}
             {selectedSegments.size > 0 && (
               <Button variant="destructive" size="sm" onClick={confirmBatchDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -346,67 +399,106 @@ export default function DocumentSegmentsPage() {
                 </TableRow>
               ))
             ) : segments.length > 0 ? (
-              // 分段列表
-              segments.map((segment) => (
-                <TableRow key={segment.segmentId} className="group">
-                  <TableCell>
-                    <Checkbox checked={selectedSegments.has(segment.segmentId)} onCheckedChange={(checked) => handleSelectSegment(segment.segmentId, checked as boolean)} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {segment.position + 1}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <span className="font-medium truncate">{segment.title || '无标题'}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-lg">
-                      <p className="text-sm text-muted-foreground truncate">{segment.content}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Badge variant="secondary" className="text-xs">
-                      {segment.contentLength}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-6 w-6">
-                        {segment.creatorAvatar ? (
-                          <AvatarImage src={segment.creatorAvatar} alt={segment.creatorUsername} />
-                        ) : (
-                          <AvatarFallback className="text-xs">{segment.creatorUsername?.slice(0, 1).toUpperCase() || 'U'}</AvatarFallback>
-                        )}
-                      </Avatar>
-                      <span className="text-sm truncate">{segment.creatorUsername}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <span className="text-xs text-muted-foreground">{formatDateTime(segment.createTime)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">操作菜单</span>
+              segments.flatMap((segment) => {
+                const rows = [
+                  <TableRow key={segment.segmentId} className="group">
+                    <TableCell>
+                      {segmentView === 'parents' ? (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleToggleParentExpand(segment.segmentId)}>
+                          {expandedParents.has(segment.segmentId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-32">
-                        <DropdownMenuItem onClick={() => handleEditSegment(segment)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          编辑
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => confirmDeleteSegment(segment)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          删除
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                      ) : (
+                        <Checkbox checked={selectedSegments.has(segment.segmentId)} onCheckedChange={(checked) => handleSelectSegment(segment.segmentId, checked as boolean)} />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {segment.position + 1}
+                        </Badge>
+                        {isParentChildDoc && segmentView === 'segments' && segment.segmentType === SegmentType.CHILD && (
+                          <Badge variant="secondary" className="text-[10px] px-1">向量</Badge>
+                        )}
+                        {segmentView === 'parents' && <Badge variant="secondary" className="text-[10px] px-1">父块</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <span className="font-medium truncate">{segment.title || '无标题'}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-lg">
+                        <p className="text-sm text-muted-foreground truncate">{segment.content}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="secondary" className="text-xs">
+                        {segment.contentLength}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-6 w-6">
+                          {segment.creatorAvatar ? (
+                            <AvatarImage src={segment.creatorAvatar} alt={segment.creatorUsername} />
+                          ) : (
+                            <AvatarFallback className="text-xs">{segment.creatorUsername?.slice(0, 1).toUpperCase() || 'U'}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span className="text-sm truncate">{segment.creatorUsername}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <span className="text-xs text-muted-foreground">{formatDateTime(segment.createTime)}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">操作菜单</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                          <DropdownMenuItem onClick={() => handleEditSegment(segment)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            编辑
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => confirmDeleteSegment(segment)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            删除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>,
+                ]
+
+                if (segmentView === 'parents' && expandedParents.has(segment.segmentId)) {
+                  const children = childSegmentsMap[String(segment.segmentId)] ?? []
+                  for (const child of children) {
+                    rows.push(
+                      <TableRow key={`child-${child.segmentId}`} className="bg-muted/30">
+                        <TableCell />
+                        <TableCell>
+                          <Badge variant="outline" className="ml-4 text-[10px]">{child.position + 1}</Badge>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <span className="text-xs text-muted-foreground truncate">{child.title || '子块'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-xs text-muted-foreground truncate pl-4">{child.content}</p>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant="secondary" className="text-xs">{child.contentLength}</Badge>
+                        </TableCell>
+                        <TableCell colSpan={3} />
+                      </TableRow>,
+                    )
+                  }
+                }
+
+                return rows
+              })
             ) : (
               // 空状态
               <TableRow>

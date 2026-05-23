@@ -47,9 +47,11 @@ public class DatasetDocumentApplicationService {
     @Transactional
     public DatasetDocument createDocument(Long tenantId, Long datasetId, Long fileId, String fileName, Integer fileSize,
             String fileHash,
-            SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength) {
+            SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength, Integer parentChunkSize) {
 
-        log.info("开始创建文档, fileName: {}, datasetId: {}", fileName, datasetId);
+        SegmentMethod method = segmentMethod != null ? segmentMethod : SegmentMethod.PARENT_CHILD;
+
+        log.info("开始创建文档, fileName: {}, datasetId: {}, segmentMethod: {}", fileName, datasetId, method);
 
         // 1. 检查文档是否已存在
         DatasetDocument existingDocument =
@@ -61,8 +63,8 @@ public class DatasetDocumentApplicationService {
 
         // 2. 创建文档记录
         DatasetDocument document = datasetDocumentService.createDocument(tenantId, datasetId, fileId, fileName,
-                fileSize, fileHash, segmentMethod,
-                maxSegmentLength, overlapLength);
+                fileSize, fileHash, method,
+                maxSegmentLength, overlapLength, parentChunkSize);
 
         log.info("文档创建成功, documentId: {}", document.getDocumentId());
         return document;

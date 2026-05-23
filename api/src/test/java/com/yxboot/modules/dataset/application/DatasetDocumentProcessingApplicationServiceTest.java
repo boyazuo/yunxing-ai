@@ -71,6 +71,15 @@ class DatasetDocumentProcessingApplicationServiceTest {
     }
 
     @Test
+    void testConvertSegmentMethodToSplitMode_ParentChild() throws Exception {
+        Method method = DatasetDocumentProcessingApplicationService.class
+                .getDeclaredMethod("convertSegmentMethodToSplitMode", SegmentMethod.class);
+        method.setAccessible(true);
+        SplitMode result = (SplitMode) method.invoke(applicationService, SegmentMethod.PARENT_CHILD);
+        assertEquals(SplitMode.PARENT_CHILD_SPLITTER, result);
+    }
+
+    @Test
     void testConvertSegmentMethodToSplitMode_Null() throws Exception {
         Method method = DatasetDocumentProcessingApplicationService.class
                 .getDeclaredMethod("convertSegmentMethodToSplitMode", SegmentMethod.class);

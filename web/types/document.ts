@@ -15,6 +15,14 @@ export enum DocumentStatus {
 export enum SegmentMethod {
   PARAGRAPH = 'paragraph', // 按段落分段
   CHAPTER = 'chapter', // 按章节分段
+  PARENT_CHILD = 'parent_child', // 父子分块
+}
+
+/** 分段类型：0=普通，1=父块，2=子块 */
+export enum SegmentType {
+  NORMAL = 0,
+  PARENT = 1,
+  CHILD = 2,
 }
 
 /**
@@ -32,6 +40,7 @@ export interface DatasetDocument {
   segmentMethod: SegmentMethod
   maxSegmentLength: number
   overlapLength: number
+  parentChunkSize?: number
   segmentNum: number
   status: DocumentStatus
   statusText?: string
@@ -54,6 +63,9 @@ export interface DocumentSegment {
   datasetId: string | number
   documentId: string | number
   position: number
+  segmentType?: SegmentType
+  parentSegmentId?: string | number
+  vectorId?: string
   title?: string
   content: string
   contentLength: number
@@ -123,6 +135,8 @@ export function getSegmentMethodText(method?: SegmentMethod): string {
       return '按段落分段'
     case SegmentMethod.CHAPTER:
       return '按章节分段'
+    case SegmentMethod.PARENT_CHILD:
+      return '父子分块'
     default:
       return '未知方式'
   }

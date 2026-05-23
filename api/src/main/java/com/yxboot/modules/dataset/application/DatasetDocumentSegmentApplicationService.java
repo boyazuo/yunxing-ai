@@ -7,6 +7,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
+import com.yxboot.modules.dataset.enums.SegmentType;
 import com.yxboot.modules.dataset.service.DatasetDocumentSegmentService;
 import com.yxboot.modules.dataset.service.DatasetService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,12 @@ public class DatasetDocumentSegmentApplicationService {
         }
 
         DatasetDocumentSegment segment = segmentService.getById(segmentId);
+        if (segment != null && segment.getSegmentType() != null
+                && segment.getSegmentType() == SegmentType.PARENT) {
+            log.info("父块无需更新向量, segmentId: {}", segmentId);
+            return true;
+        }
+
         if (segment != null) {
             boolean vectorUpdateSuccess = vectorStoreService.updateSegmentVector(segment);
             if (!vectorUpdateSuccess) {
@@ -107,12 +114,26 @@ public class DatasetDocumentSegmentApplicationService {
     }
 
     public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(long current, long size, Long documentId) {
-        return segmentService.pageSegmentsByDocumentId((int) current, (int) size, documentId);
+        return pageSegmentsByDocumentId(current, size, documentId, "segments");
+    }
+
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(long current, long size, Long documentId,
+            String view) {
+        return segmentService.pageSegmentsByDocumentId((int) current, (int) size, documentId, view);
     }
 
     public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
             String keyword) {
-        return segmentService.pageSegmentsWithSearch(current, size, documentId, keyword);
+        return pageSegmentsWithSearch(current, size, documentId, keyword, "segments");
+    }
+
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+            String keyword, String view) {
+        return segmentService.pageSegmentsWithSearch(current, size, documentId, keyword, view);
+    }
+
+    public List<DatasetDocumentSegmentDTO> listChildSegmentsByParentId(Long parentSegmentId) {
+        return segmentService.listChildSegmentsByParentId(parentSegmentId);
     }
 
     public List<DatasetDocumentSegmentDTO> getSegmentsByDatasetId(Long datasetId) {

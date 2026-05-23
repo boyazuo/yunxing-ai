@@ -58,6 +58,7 @@ public class AiVectorStoreService {
         VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
         List<Document> documents = segments.stream()
                 .filter(s -> s.getContent() != null && !s.getContent().isBlank())
+                .filter(s -> s.getVectorId() != null && !s.getVectorId().isBlank())
                 .map(this::toDocument)
                 .toList();
         if (documents.isEmpty()) {

@@ -1,7 +1,9 @@
 package com.yxboot.modules.dataset.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import com.yxboot.ai.document.DocumentSegment;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
+import com.yxboot.modules.dataset.enums.SegmentType;
 import com.yxboot.modules.dataset.mapper.DatasetDocumentSegmentMapper;
 
 import cn.hutool.core.util.StrUtil;
@@ -38,6 +41,12 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
             return new ArrayList<>();
         }
 
+        boolean hasParentChild = segments.stream()
+                .anyMatch(s -> s.getSegmentType() == SegmentType.PARENT || s.getSegmentType() == SegmentType.CHILD);
+        if (hasParentChild) {
+            return batchCreateParentChildSegments(document, segments);
+        }
+
         Long tenantId = document.getTenantId();
         Long datasetId = document.getDatasetId();
 
@@ -49,21 +58,98 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
                 continue;
             }
 
-            DatasetDocumentSegment segment = new DatasetDocumentSegment();
-            segment.setTenantId(tenantId);
-            segment.setDatasetId(datasetId);
-            segment.setDocumentId(document.getDocumentId());
-            segment.setVectorId(ds.getId());
-            segment.setPosition(i);
-            segment.setTitle(ds.getTitle());
-            segment.setContent(content);
-            segment.setContentLength(content.length());
-
+            DatasetDocumentSegment segment = buildSegmentEntity(document, ds, i, SegmentType.NORMAL, null);
             segmentList.add(segment);
         }
 
         saveBatch(segmentList);
         return segmentList;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public List<DatasetDocumentSegment> batchCreateParentChildSegments(DatasetDocument document,
+            List<DocumentSegment> segments) {
+        if (segments == null || segments.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<DocumentSegment> parents = segments.stream()
+                .filter(s -> s.getSegmentType() == SegmentType.PARENT)
+                .toList();
+        List<DocumentSegment> children = segments.stream()
+                .filter(s -> s.getSegmentType() == SegmentType.CHILD)
+                .toList();
+        List<DocumentSegment> normals = segments.stream()
+                .filter(s -> s.getSegmentType() == SegmentType.NORMAL)
+                .toList();
+
+        Map<String, Long> parentUuidToSegmentId = new HashMap<>();
+        List<DatasetDocumentSegment> allSaved = new ArrayList<>();
+        int position = 0;
+
+        List<DatasetDocumentSegment> parentEntities = new ArrayList<>();
+        for (DocumentSegment ds : parents) {
+            if (ds.getContent() == null || ds.getContent().trim().isEmpty()) {
+                continue;
+            }
+            parentEntities.add(buildSegmentEntity(document, ds, position++, SegmentType.PARENT, null));
+        }
+        if (!parentEntities.isEmpty()) {
+            saveBatch(parentEntities);
+            int parentIndex = 0;
+            for (DocumentSegment ds : parents) {
+                if (ds.getContent() == null || ds.getContent().trim().isEmpty()) {
+                    continue;
+                }
+                parentUuidToSegmentId.put(ds.getId(), parentEntities.get(parentIndex).getSegmentId());
+                parentIndex++;
+            }
+            allSaved.addAll(parentEntities);
+        }
+
+        List<DatasetDocumentSegment> childEntities = new ArrayList<>();
+        for (DocumentSegment ds : children) {
+            if (ds.getContent() == null || ds.getContent().trim().isEmpty()) {
+                continue;
+            }
+            Long parentSegmentId = parentUuidToSegmentId.get(ds.getParentId());
+            childEntities.add(buildSegmentEntity(document, ds, position++, SegmentType.CHILD, parentSegmentId));
+        }
+        if (!childEntities.isEmpty()) {
+            saveBatch(childEntities);
+            allSaved.addAll(childEntities);
+        }
+
+        List<DatasetDocumentSegment> normalEntities = new ArrayList<>();
+        for (DocumentSegment ds : normals) {
+            if (ds.getContent() == null || ds.getContent().trim().isEmpty()) {
+                continue;
+            }
+            normalEntities.add(buildSegmentEntity(document, ds, position++, SegmentType.NORMAL, null));
+        }
+        if (!normalEntities.isEmpty()) {
+            saveBatch(normalEntities);
+            allSaved.addAll(normalEntities);
+        }
+
+        return allSaved;
+    }
+
+    private DatasetDocumentSegment buildSegmentEntity(DatasetDocument document, DocumentSegment ds, int position,
+            int segmentType, Long parentSegmentId) {
+        String content = ds.getContent();
+        DatasetDocumentSegment segment = new DatasetDocumentSegment();
+        segment.setTenantId(document.getTenantId());
+        segment.setDatasetId(document.getDatasetId());
+        segment.setDocumentId(document.getDocumentId());
+        segment.setVectorId(segmentType == SegmentType.PARENT ? null : ds.getId());
+        segment.setPosition(position);
+        segment.setSegmentType(segmentType);
+        segment.setParentSegmentId(parentSegmentId);
+        segment.setTitle(ds.getTitle());
+        segment.setContent(content);
+        segment.setContentLength(content.length());
+        return segment;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -82,22 +168,55 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
     }
 
     public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(int page, int size, Long documentId) {
+        return pageSegmentsByDocumentId(page, size, documentId, "segments");
+    }
+
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(int page, int size, Long documentId, String view) {
         QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
         wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        applySegmentViewFilter(wrapper, view);
         wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
         return pageAs(Page.of(page, size), wrapper, DatasetDocumentSegmentDTO.class);
     }
 
     public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
             String keyword) {
+        return pageSegmentsWithSearch(current, size, documentId, keyword, "segments");
+    }
+
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+            String keyword, String view) {
         QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
         wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        applySegmentViewFilter(wrapper, view);
         if (StrUtil.isNotEmpty(keyword)) {
             wrapper.where(DATASET_DOCUMENT_SEGMENT.TITLE.like(keyword)
                     .or(DATASET_DOCUMENT_SEGMENT.CONTENT.like(keyword)));
         }
         wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
         return pageAs(Page.of(current, size), wrapper, DatasetDocumentSegmentDTO.class);
+    }
+
+    public List<DatasetDocumentSegmentDTO> listChildSegmentsByParentId(Long parentSegmentId) {
+        QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.PARENT_SEGMENT_ID.eq(parentSegmentId));
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
+        return listAs(wrapper, DatasetDocumentSegmentDTO.class);
+    }
+
+    public long countSegmentsByDocumentIdAndType(Long documentId, int segmentType) {
+        QueryWrapper wrapper = QueryWrapper.create();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.SEGMENT_TYPE.eq(segmentType));
+        return count(wrapper);
+    }
+
+    private void applySegmentViewFilter(QueryWrapper wrapper, String view) {
+        if ("parents".equals(view)) {
+            wrapper.where(DATASET_DOCUMENT_SEGMENT.SEGMENT_TYPE.eq(SegmentType.PARENT));
+        } else {
+            wrapper.where(DATASET_DOCUMENT_SEGMENT.SEGMENT_TYPE.in(SegmentType.NORMAL, SegmentType.CHILD));
+        }
     }
 
     public List<DatasetDocumentSegmentDTO> getSegmentsByDatasetId(Long datasetId) {

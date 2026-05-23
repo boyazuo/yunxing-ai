@@ -50,8 +50,14 @@ public class DatasetDocumentDTO {
     @Schema(description = "重叠长度")
     private Integer overlapLength;
 
+    @Schema(description = "父块最大长度")
+    private Integer parentChunkSize;
+
     @Schema(description = "文档分段数")
     private Integer segmentNum;
+
+    @Schema(description = "子块数量")
+    private Long totalChildSegments;
 
     @Schema(description = "状态")
     private DocumentStatus status;

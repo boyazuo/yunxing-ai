@@ -49,6 +49,7 @@ export const documentService = {
     segmentMethod: SegmentMethod
     maxSegmentLength: number
     overlapLength: number
+    parentChunkSize?: number
   }): Promise<ApiResponse<DatasetDocument>> => {
     const response = await api.post<DatasetDocument>('/dataset-documents', data)
     return response
@@ -82,13 +83,14 @@ export const segmentService = {
     page = 1,
     size = 10,
     keyword?: string,
+    view: 'segments' | 'parents' = 'segments',
   ): Promise<{
     records: DocumentSegment[]
     total: number
     current: number
     size: number
   }> => {
-    const params: Record<string, string | number> = { documentId, current: page, size }
+    const params: Record<string, string | number> = { documentId, current: page, size, view }
     if (keyword?.trim()) {
       params.keyword = keyword.trim()
     }
@@ -99,6 +101,13 @@ export const segmentService = {
       current: number
       size: number
     }>('/document-segments/page', { params })
+    return response.data
+  },
+
+  getChildSegmentsByParent: async (parentSegmentId: string | number): Promise<DocumentSegment[]> => {
+    const response = await api.get<DocumentSegment[]>('/document-segments/by-parent', {
+      params: { parentSegmentId },
+    })
     return response.data
   },
 

@@ -19,4 +19,10 @@ public class AiQueryResult {
     private String text;
     private float score;
     private Map<String, Object> metadata;
+
+    /** 命中的子块 ID（parent_child 策略下填充） */
+    private Long hitChildSegmentId;
+
+    /** 命中的子块内容（用于调试） */
+    private String hitChildContent;
 }

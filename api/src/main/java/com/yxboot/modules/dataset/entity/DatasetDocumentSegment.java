@@ -40,6 +40,12 @@ public class DatasetDocumentSegment {
     @Schema(description = "位置")
     private Integer position;
 
+    @Schema(description = "分段类型：0=普通，1=父块，2=子块")
+    private Integer segmentType;
+
+    @Schema(description = "父块分段ID")
+    private Long parentSegmentId;
+
     @Schema(description = "标题")
     private String title;
 

@@ -38,6 +38,17 @@ public class DocumentSegment {
     private Map<String, Object> metadata = new HashMap<>();
 
     /**
+     * 分段类型（0=普通，1=父块，2=子块）
+     */
+    @Builder.Default
+    private int segmentType = 0;
+
+    /**
+     * 父块 ID（子块时非 null，指向父块的 UUID）
+     */
+    private String parentId;
+
+    /**
      * 创建一个新的文档块实例
      * 
      * @param content 块内容
