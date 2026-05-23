@@ -2,7 +2,6 @@
 
 import { datasetService } from '@/api/dataset'
 import { DatasetFormDialog } from '@/app/[locale]/(main)/dataset/_components/DatasetFormDialog'
-import { DatasetEmbeddingModelBadge } from '@/app/[locale]/(main)/dataset/_components/DatasetEmbeddingModelAlert'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -184,7 +183,6 @@ export default function DatasetsPage() {
                       <Database className="h-3 w-3" />
                       <span>{dataset.status === DatasetStatus.ACTIVE ? '正常' : dataset.status === DatasetStatus.DISABLED ? '已禁用' : '未知状态'}</span>
                     </Badge>
-                    <DatasetEmbeddingModelBadge dataset={dataset} />
                   </div>
                 </div>
                 <DropdownMenu>

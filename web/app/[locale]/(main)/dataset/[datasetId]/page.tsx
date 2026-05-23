@@ -3,7 +3,6 @@
 import { datasetService } from '@/api/dataset'
 import { documentService } from '@/api/document'
 import { DocumentUploadDialog } from '@/app/[locale]/(main)/dataset/_components/DocumentUploadDialog'
-import { DatasetEmbeddingModelAlert } from '@/app/[locale]/(main)/dataset/_components/DatasetEmbeddingModelAlert'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
 import { CustomPagination } from '@/components/blocks/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -193,8 +192,6 @@ export default function DatasetDocumentsPage() {
           上传文档
         </Button>
       </div>
-
-      {dataset && <DatasetEmbeddingModelAlert dataset={dataset} />}
 
       {/* 过滤和搜索区域 */}
       <div className="flex justify-between items-center">
