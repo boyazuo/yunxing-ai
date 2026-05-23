@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.yxboot.llm.client.vector.VectorStoreClient;
+import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ModelService;
@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DatasetDocumentSegmentApplicationService {
 
     private final DatasetDocumentSegmentService segmentService;
-    private final VectorStoreClient vectorClient;
+    private final AiVectorStoreService vectorStoreService;
     private final ProviderService providerService;
     private final DatasetService datasetService;
     private final ModelService modelService;
@@ -61,7 +61,7 @@ public class DatasetDocumentSegmentApplicationService {
                 Model model = modelService.getById(dataset.getEmbeddingModelId());
                 Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
                 if (provider != null) {
-                    boolean vectorUpdateSuccess = vectorClient.updateSegmentVector(segment, provider, model);
+                    boolean vectorUpdateSuccess = vectorStoreService.updateSegmentVector(segment, provider, model);
                     if (!vectorUpdateSuccess) {
                         log.warn("向量更新失败, segmentId: {}, 但数据库更新成功", segmentId);
                     }
@@ -94,7 +94,7 @@ public class DatasetDocumentSegmentApplicationService {
         }
 
         // 2. 删除向量
-        boolean vectorDeleteSuccess = vectorClient.deleteSegmentVector(segment);
+        boolean vectorDeleteSuccess = vectorStoreService.deleteSegmentVector(segment);
         if (!vectorDeleteSuccess) {
             log.warn("向量删除失败, segmentId: {}", segmentId);
         }
@@ -133,7 +133,7 @@ public class DatasetDocumentSegmentApplicationService {
         // 2. 按知识库分组批量删除向量
         segments.stream().collect(java.util.stream.Collectors.groupingBy(DatasetDocumentSegment::getDatasetId))
                 .forEach((datasetId, datasetSegments) -> {
-                    int deletedCount = vectorClient.batchDeleteSegmentVectors(datasetSegments, datasetId);
+                    int deletedCount = vectorStoreService.batchDeleteSegmentVectors(datasetSegments, datasetId);
                     log.info("批量删除向量, datasetId: {}, 删除数量: {}", datasetId, deletedCount);
                 });
 

@@ -4,9 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import com.yxboot.llm.client.vector.VectorStoreClient;
-import com.yxboot.llm.vector.query.QueryResult;
-import com.yxboot.llm.vector.query.VectorQuery;
+import com.yxboot.ai.service.AiVectorStoreService;
+import com.yxboot.ai.vector.AiQueryResult;
 import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ModelService;
@@ -25,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DatasetSearchService {
 
-    private final VectorStoreClient vectorStoreClient;
+    private final AiVectorStoreService vectorStoreService;
     private final DatasetService datasetService;
     private final ProviderService providerService;
     private final ModelService modelService;
@@ -39,7 +38,7 @@ public class DatasetSearchService {
      * @param minScore 最小相似度阈值
      * @return 搜索结果列表
      */
-    public List<QueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore) {
+    public List<AiQueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore) {
         return searchInDataset(datasetId, query, limit, minScore, null);
     }
 
@@ -53,7 +52,7 @@ public class DatasetSearchService {
      * @param filter 额外过滤条件
      * @return 搜索结果列表
      */
-    public List<QueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore, Map<String, Object> filter) {
+    public List<AiQueryResult> searchInDataset(Long datasetId, String query, int limit, float minScore, Map<String, Object> filter) {
         try {
             // 获取知识库信息
             Dataset dataset = datasetService.getById(datasetId);
@@ -76,28 +75,13 @@ public class DatasetSearchService {
             }
 
             // 检查集合是否存在
-            if (!vectorStoreClient.collectionExists(datasetId, dataset.getTenantId())) {
+            if (!vectorStoreService.collectionExists(datasetId, dataset.getTenantId())) {
                 log.warn("知识库对应的向量集合不存在, datasetId: {}, tenantId: {}", datasetId, dataset.getTenantId());
                 return List.of(); // 返回空列表
             }
 
-            // 构建查询过滤条件
-            Map<String, Object> queryFilter = new HashMap<>();
-            queryFilter.put("dataset_id", datasetId);
-
-            // 合并额外的过滤条件
-            if (filter != null && !filter.isEmpty()) {
-                queryFilter.putAll(filter);
-            }
-
-            // 构建向量查询
-            VectorQuery vectorQuery = VectorQuery.builder().queryText(query).limit(limit).minScore(minScore)
-                    .filter(queryFilter).includeVectors(false) // 通常不需要返回向量数据
-                    .build();
-
-            // 执行搜索
-            List<QueryResult> results = vectorStoreClient.similaritySearch(datasetId, dataset.getTenantId(), provider,
-                    model, vectorQuery);
+            List<AiQueryResult> results = vectorStoreService.similaritySearch(
+                    datasetId, dataset.getTenantId(), provider, model, query, limit, minScore, filter);
 
             log.info("知识库搜索完成, datasetId: {}, query: {}, 结果数量: {}", datasetId, query, results.size());
             return results;
@@ -117,12 +101,12 @@ public class DatasetSearchService {
      * @param minScore 最小相似度阈值
      * @return 搜索结果映射，key为知识库ID，value为搜索结果列表
      */
-    public Map<Long, List<QueryResult>> searchInMultipleDatasets(List<Long> datasetIds, String query, int limit, float minScore) {
-        Map<Long, List<QueryResult>> results = new HashMap<>();
+    public Map<Long, List<AiQueryResult>> searchInMultipleDatasets(List<Long> datasetIds, String query, int limit, float minScore) {
+        Map<Long, List<AiQueryResult>> results = new HashMap<>();
 
         for (Long datasetId : datasetIds) {
             try {
-                List<QueryResult> datasetResults = searchInDataset(datasetId, query, limit, minScore);
+                List<AiQueryResult> datasetResults = searchInDataset(datasetId, query, limit, minScore);
                 results.put(datasetId, datasetResults);
             } catch (Exception e) {
                 log.error("在知识库 {} 中搜索失败: {}", datasetId, e.getMessage());
@@ -143,7 +127,7 @@ public class DatasetSearchService {
      * @param minScore 最小相似度阈值
      * @return 搜索结果列表
      */
-    public List<QueryResult> searchInDocument(Long datasetId, Long documentId, String query, int limit, float minScore) {
+    public List<AiQueryResult> searchInDocument(Long datasetId, Long documentId, String query, int limit, float minScore) {
         Map<String, Object> filter = new HashMap<>();
         filter.put("document_id", documentId);
 

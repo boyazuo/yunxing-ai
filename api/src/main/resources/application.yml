@@ -8,6 +8,20 @@ spring:
     name: yunxing-api
   profiles:
     active: dev
+  ai:
+    model:
+      chat: none
+      embedding: none
+    zhipuai:
+      api-key: placeholder
+    vectorstore:
+      # 禁用 Spring AI 默认 VectorStore Bean（EmbeddingModel 由 DB 动态提供）
+      type: none
+      qdrant:
+        host: localhost
+        port: 6334
+        use-tls: false
+        initialize-schema: false
   servlet:
     multipart:
       max-file-size: 100MB

@@ -10,10 +10,10 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import com.yxboot.llm.client.document.DocumentProcessorClient;
-import com.yxboot.llm.client.vector.VectorStoreClient;
-import com.yxboot.llm.document.DocumentSegment;
-import com.yxboot.llm.document.splitter.SplitMode;
+import com.yxboot.ai.document.DocumentSegment;
+import com.yxboot.ai.document.splitter.SplitMode;
+import com.yxboot.ai.service.AiDocumentProcessingService;
+import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.ai.entity.Model;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.service.ModelService;
@@ -45,8 +45,8 @@ public class DatasetDocumentProcessingApplicationService {
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentSegmentService segmentService;
     private final SysFileService sysFileService;
-    private final DocumentProcessorClient documentProcessorClient;
-    private final VectorStoreClient vectorService;
+    private final AiDocumentProcessingService documentProcessingService;
+    private final AiVectorStoreService vectorStoreService;
     private final ProviderService providerService;
     private final DatasetService datasetService;
     private final ModelService modelService;
@@ -125,8 +125,8 @@ public class DatasetDocumentProcessingApplicationService {
 
             // 8. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
-            int vectorizedCount =
-                    vectorService.batchCreateSegmentVectors(savedSegments, document.getDatasetId(), provider, model);
+            int vectorizedCount = vectorStoreService.batchCreateSegmentVectors(
+                    savedSegments, document.getDatasetId(), provider, model);
 
             if (vectorizedCount != savedSegments.size()) {
                 log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());
@@ -229,7 +229,7 @@ public class DatasetDocumentProcessingApplicationService {
             log.info("开始处理文档, filePath: {}, splitMode: {}, maxSegmentLength: {}, overlapLength: {}",
                     file.getAbsolutePath(), splitMode, maxSegmentLength, overlapLength);
 
-            List<DocumentSegment> segments = documentProcessorClient.loadAndSplitDocument(
+            List<DocumentSegment> segments = documentProcessingService.loadAndSplitDocument(
                     file, splitMode, maxSegmentLength, overlapLength);
 
             log.info("文档处理完成, filePath: {}, 分段数量: {}", file.getAbsolutePath(), segments != null ? segments.size() : 0);

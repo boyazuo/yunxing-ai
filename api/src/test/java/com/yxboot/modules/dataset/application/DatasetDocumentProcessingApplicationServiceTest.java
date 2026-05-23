@@ -6,9 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import com.yxboot.llm.client.document.DocumentProcessorClient;
-import com.yxboot.llm.client.vector.VectorStoreClient;
-import com.yxboot.llm.document.splitter.SplitMode;
+import com.yxboot.ai.document.splitter.SplitMode;
+import com.yxboot.ai.service.AiDocumentProcessingService;
+import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.ai.service.ModelService;
 import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.enums.SegmentMethod;
@@ -19,8 +19,6 @@ import com.yxboot.modules.system.service.SysFileService;
 
 /**
  * 文档处理应用服务测试类
- *
- * @author Boya
  */
 class DatasetDocumentProcessingApplicationServiceTest {
 
@@ -34,10 +32,10 @@ class DatasetDocumentProcessingApplicationServiceTest {
     private SysFileService sysFileService;
 
     @Mock
-    private DocumentProcessorClient documentProcessorClient;
+    private AiDocumentProcessingService documentProcessingService;
 
     @Mock
-    private VectorStoreClient vectorService;
+    private AiVectorStoreService vectorStoreService;
 
     @Mock
     private ProviderService providerService;
@@ -57,8 +55,8 @@ class DatasetDocumentProcessingApplicationServiceTest {
                 datasetDocumentService,
                 segmentService,
                 sysFileService,
-                documentProcessorClient,
-                vectorService,
+                documentProcessingService,
+                vectorStoreService,
                 providerService,
                 datasetService,
                 modelService);
@@ -66,34 +64,28 @@ class DatasetDocumentProcessingApplicationServiceTest {
 
     @Test
     void testConvertSegmentMethodToSplitMode_Paragraph() throws Exception {
-        // 使用反射调用私有方法
         Method method = DatasetDocumentProcessingApplicationService.class
                 .getDeclaredMethod("convertSegmentMethodToSplitMode", SegmentMethod.class);
         method.setAccessible(true);
-
         SplitMode result = (SplitMode) method.invoke(applicationService, SegmentMethod.PARAGRAPH);
         assertEquals(SplitMode.CHARACTER_SPLITTER, result);
     }
 
     @Test
     void testConvertSegmentMethodToSplitMode_Chapter() throws Exception {
-        // 使用反射调用私有方法
         Method method = DatasetDocumentProcessingApplicationService.class
                 .getDeclaredMethod("convertSegmentMethodToSplitMode", SegmentMethod.class);
         method.setAccessible(true);
-
         SplitMode result = (SplitMode) method.invoke(applicationService, SegmentMethod.CHAPTER);
         assertEquals(SplitMode.CHAPTER_SPLITTER, result);
     }
 
     @Test
     void testConvertSegmentMethodToSplitMode_Null() throws Exception {
-        // 使用反射调用私有方法
         Method method = DatasetDocumentProcessingApplicationService.class
                 .getDeclaredMethod("convertSegmentMethodToSplitMode", SegmentMethod.class);
         method.setAccessible(true);
-
         SplitMode result = (SplitMode) method.invoke(applicationService, (SegmentMethod) null);
-        assertEquals(SplitMode.CHARACTER_SPLITTER, result); // 默认值应该是字符长度分割
+        assertEquals(SplitMode.CHARACTER_SPLITTER, result);
     }
 }

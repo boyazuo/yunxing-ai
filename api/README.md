@@ -5,9 +5,9 @@
 ## 技术栈
 
 - JDK 17
-- Spring Boot 3.4.5
+- Spring Boot 3.5.0
 - Spring Security
-- Spring AI (预置集成)
+- Spring AI 1.0.0（智谱 AI、Qdrant 向量库、Tika 文档读取）
 - MyBatis-Plus 3.5.11
 - MySQL 8.3
 - Druid 1.2.24
@@ -33,6 +33,7 @@ api/
 |   |   |           |   ├── chat      # 会话模块
 |   |   |           |   ├── dataset   # 知识库模块
 |   |   |           |   └── model     # 模型管理模块
+│   │   │           ├── ai/           # Spring AI 集成（注册表、向量/文档服务）
 │   │   │           ├── util/         # 工具类
 │   │   │           └── ApiApplication.java # 主应用程序
 │   │   └── resources/

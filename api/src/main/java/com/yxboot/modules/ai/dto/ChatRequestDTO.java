@@ -2,7 +2,6 @@ package com.yxboot.modules.ai.dto;
 
 import java.util.List;
 
-import com.yxboot.llm.chat.message.Message;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -35,7 +34,7 @@ public class ChatRequestDTO {
     private String prompt;
 
     @Schema(description = "消息列表")
-    private List<Message> messages;
+    private List<ChatMessageDTO> messages;
 
     @Schema(description = "系统提示词")
     private String systemPrompt;

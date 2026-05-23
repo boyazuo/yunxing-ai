@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.14</version>
     </parent>
     
     <groupId>com.yxboot</groupId>
@@ -25,11 +25,28 @@
         <jjwt.version>0.12.6</jjwt.version>
         <pdfbox.version>3.0.2</pdfbox.version>
         <poi.version>5.2.5</poi.version>
-        <tika.version>2.9.2</tika.version>
+        <spring-ai.version>1.1.6</spring-ai.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>9.7.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     
     <dependencies>
         <!-- Spring Boot -->
@@ -136,24 +153,13 @@
             <artifactId>poi-ooxml</artifactId>
             <version>${poi.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-core</artifactId>
-            <version>${tika.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-parsers-standard-package</artifactId>
-            <version>${tika.version}</version>
-        </dependency>
-
         <!-- DevTools -->
         <dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-devtools</artifactId>
+          <scope>runtime</scope>
+          <optional>true</optional>
+        </dependency>
         
         <!-- Test -->
         <dependency>
@@ -172,6 +178,29 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.8.6</version>
+        </dependency>
+
+        <!-- Spring AI -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-zhipuai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.68.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
         </dependency>
 
         <!-- OkHttp依赖 -->
@@ -196,27 +225,6 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- Retrofit依赖 -->
-        <dependency>
-          <groupId>com.squareup.retrofit2</groupId>
-          <artifactId>retrofit</artifactId>
-          <version>2.9.0</version>
-        </dependency>
-        
-        <!-- Retrofit Jackson转换器依赖 -->
-        <dependency>
-          <groupId>com.squareup.retrofit2</groupId>
-          <artifactId>converter-jackson</artifactId>
-          <version>2.9.0</version>
-        </dependency>
-        
-        <!-- Retrofit Gson转换器依赖 -->
-        <dependency>
-          <groupId>com.squareup.retrofit2</groupId>
-          <artifactId>converter-gson</artifactId>
-          <version>2.9.0</version>
-        </dependency>
-
         <!--ali oss-->
         <dependency>
             <groupId>com.aliyun.oss</groupId>

@@ -2,33 +2,28 @@ package com.yxboot.modules.ai.service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.zhipuai.ZhiPuAiChatOptions;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import com.yxboot.llm.chat.ChatResponse;
-import com.yxboot.llm.chat.message.Message;
-import com.yxboot.llm.chat.message.SystemMessage;
-import com.yxboot.llm.chat.message.UserMessage;
-import com.yxboot.llm.chat.prompt.ChatOptions;
-import com.yxboot.llm.chat.prompt.Prompt;
-import com.yxboot.llm.client.chat.ChatClient;
+import com.yxboot.ai.registry.ChatModelRegistry;
+import com.yxboot.ai.support.SpringAiMessageConverter;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 /**
- * 模型调用服务
- * 负责根据Provider选择正确的ChatModel实现，调用大模型，并处理响应结果
- * 
- * @author Boya
+ * 模型调用服务（基于 Spring AI ChatModel）
  */
 @Slf4j
 @Service
@@ -36,30 +31,14 @@ import reactor.core.publisher.Flux;
 public class ChatService {
 
     private final MessageService messageService;
-    private final ChatClient chatClient;
+    private final ChatModelRegistry chatModelRegistry;
 
-    /**
-     * 创建聊天完成
-     * 根据提供商动态选择对应的ChatModel实现处理请求
-     * Model仅作为配置参数传入，不影响ChatModel的选择
-     * 参数验证已在控制器层进行
-     * 
-     * @param provider 提供商信息，用于选择正确的ChatModel实现
-     * @param request  请求参数
-     * @return 响应结果
-     * @throws IOException 请求异常
-     */
     public ChatResponseDTO chatCompletion(Provider provider, ChatRequestDTO request) throws IOException {
         log.info("开始处理聊天请求，提供商：{}，模型：{}", provider.getProviderName(), request.getModelName());
-
         try {
-            // 构建提示词
+            var chatModel = chatModelRegistry.getOrCreate(provider);
             Prompt prompt = buildPrompt(request);
-
-            // 调用模型
-            ChatResponse response = chatClient.chat(provider, prompt);
-
-            // 转换为DTO返回
+            ChatResponse response = chatModel.call(prompt);
             return buildResponseDTO(response, provider, request.getModelName());
         } catch (Exception e) {
             log.error("聊天请求处理异常", e);
@@ -67,51 +46,27 @@ public class ChatService {
         }
     }
 
-    /**
-     * 创建流式聊天完成
-     * 根据提供商动态选择对应的ChatModel实现处理流式请求
-     * Model仅作为配置参数传入，不影响ChatModel的选择
-     * 参数验证已在控制器层进行
-     * 
-     * @param provider  提供商信息，用于选择正确的ChatModel实现
-     * @param model     模型信息，作为配置参数
-     * @param request   请求参数
-     * @param emitter   SSE发射器
-     * @param messageId 消息ID，用于在流处理完成时更新消息状态
-     * @throws IOException 请求异常
-     */
     public void streamingChatCompletion(Provider provider, ChatRequestDTO request,
             SseEmitter emitter, Long messageId) throws IOException {
         try {
-            // 构建提示词
+            var chatModel = chatModelRegistry.getOrCreate(provider);
             Prompt prompt = buildPrompt(request);
-
-            // 用于收集完整响应的StringBuilder
             StringBuilder fullResponseBuilder = new StringBuilder();
 
-            // 发送初始元数据
             emitter.send(SseEmitter.event()
                     .name("metadata")
                     .data(Map.of(
                             "conversationId", request.getConversationId(),
                             "messageId", messageId)));
 
-            // 调用流式接口
-            Flux<ChatResponse> responseStream = chatClient.streamChat(provider, prompt);
+            Flux<ChatResponse> responseStream = chatModel.stream(prompt);
 
-            // 处理流式响应
             responseStream
                     .doOnNext(response -> {
                         try {
-                            // 获取响应内容
-                            String chunk = response.getContent();
-
-                            // 收集完整响应
+                            String chunk = extractContent(response);
                             fullResponseBuilder.append(chunk);
-
-                            // 确保chunk不为空
                             if (chunk != null && !chunk.trim().isEmpty()) {
-                                // 发送数据块，格式化为SSE格式
                                 emitter.send(SseEmitter.event().data(Map.of("chunk", chunk)));
                             }
                         } catch (IOException e) {
@@ -120,21 +75,13 @@ public class ChatService {
                     })
                     .doOnComplete(() -> {
                         try {
-                            // 流结束，更新消息内容和状态
                             if (messageId != null) {
-                                // 使用注入的MessageService更新消息
                                 messageService.updateMessageAnswer(
                                         messageId,
                                         fullResponseBuilder.toString(),
                                         MessageStatus.COMPLETED);
                             }
-
-                            // 发送结束事件
-                            emitter.send(SseEmitter.event()
-                                    .name("end")
-                                    .data(""));
-
-                            // 流结束
+                            emitter.send(SseEmitter.event().name("end").data(""));
                             emitter.complete();
                         } catch (Exception e) {
                             log.error("关闭SSE发射器或更新消息状态异常", e);
@@ -142,14 +89,12 @@ public class ChatService {
                     })
                     .doOnError(error -> {
                         try {
-                            // 错误处理，更新消息状态为失败
                             if (messageId != null) {
                                 messageService.updateMessageAnswer(
                                         messageId,
                                         "处理失败: " + error.getMessage(),
                                         MessageStatus.FAILED);
                             }
-                            // 错误处理
                             log.error("流式处理发生错误", error);
                             emitter.completeWithError(error);
                         } catch (Exception e) {
@@ -159,7 +104,6 @@ public class ChatService {
                     .subscribe();
         } catch (Exception e) {
             log.error("流式聊天请求处理异常", e);
-            // 更新消息状态为失败
             if (messageId != null) {
                 messageService.updateMessageAnswer(
                         messageId,
@@ -170,60 +114,52 @@ public class ChatService {
         }
     }
 
-    /**
-     * 构建提示词对象
-     * 
-     * @param model   模型信息
-     * @param request 请求参数
-     * @return 提示词对象
-     */
     private Prompt buildPrompt(ChatRequestDTO request) {
-        // 转换消息
-        List<Message> messages = request.getMessages();
-
-        // 添加系统提示词
-        if (request.getSystemPrompt() != null && !request.getSystemPrompt().isEmpty()) {
-            messages.add(0, new SystemMessage(request.getSystemPrompt()));
+        List<org.springframework.ai.chat.messages.Message> messages = new ArrayList<>();
+        if (request.getMessages() != null && !request.getMessages().isEmpty()) {
+            messages.addAll(SpringAiMessageConverter.toSpringAiMessages(request.getMessages()));
         }
-
-        // 添加用户消息
+        if (StringUtils.hasText(request.getSystemPrompt())) {
+            messages.add(0, new org.springframework.ai.chat.messages.SystemMessage(request.getSystemPrompt()));
+        }
         messages.add(new UserMessage(request.getPrompt()));
 
-        // 构建选项参数映射
-        ChatOptions options = ChatOptions.builder()
-                .model(request.getModelName())
-                .stream(request.getStream())
-                .maxTokens(request.getMaxTokens())
-                .temperature(request.getTemperature())
-                .topP(request.getTopP())
-                .build();
+        ZhiPuAiChatOptions.Builder optionsBuilder = ZhiPuAiChatOptions.builder();
+        if (StringUtils.hasText(request.getModelName())) {
+            optionsBuilder.model(request.getModelName());
+        }
+        if (request.getTemperature() != null) {
+            optionsBuilder.temperature(request.getTemperature().doubleValue());
+        }
+        if (request.getTopP() != null) {
+            optionsBuilder.topP(request.getTopP().doubleValue());
+        }
+        if (request.getMaxTokens() != null) {
+            optionsBuilder.maxTokens(request.getMaxTokens());
+        }
 
-        return new Prompt(messages, options);
+        return new Prompt(messages, optionsBuilder.build());
     }
 
-    /**
-     * 构建响应DTO
-     * 
-     * @param response ChatResponse对象
-     * @param provider 提供商信息
-     * @param model    模型信息
-     * @return 响应DTO
-     */
+    private String extractContent(ChatResponse response) {
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            return "";
+        }
+        return response.getResult().getOutput().getText() != null ? response.getResult().getOutput().getText() : "";
+    }
+
     private ChatResponseDTO buildResponseDTO(ChatResponse response, Provider provider, String modelName) {
-        // 从响应中提取token使用情况
         int promptTokens = 0;
         int completionTokens = 0;
         int totalTokens = 0;
-
-        // 如果存在token使用统计信息
-        if (response.getTokenUsage() != null) {
-            promptTokens = response.getTokenUsage().getInputTokens();
-            completionTokens = response.getTokenUsage().getOutputTokens();
-            totalTokens = response.getTokenUsage().getTotalTokens();
+        if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
+            var usage = response.getMetadata().getUsage();
+            promptTokens = (int) usage.getPromptTokens();
+            completionTokens = (int) usage.getCompletionTokens();
+            totalTokens = (int) usage.getTotalTokens();
         }
-
         return ChatResponseDTO.builder()
-                .content(response.getContent())
+                .content(extractContent(response))
                 .model(modelName)
                 .provider(provider.getProviderName())
                 .createTime(LocalDateTime.now())

@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.yxboot.common.api.Result;
 import com.yxboot.config.security.SecurityUser;
-import com.yxboot.llm.client.vector.VectorRetrieverClient;
-import com.yxboot.llm.vector.query.QueryResult;
+import com.yxboot.ai.service.AiVectorRetrieverService;
+import com.yxboot.ai.vector.AiQueryResult;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
@@ -51,7 +51,7 @@ public class ChatController {
     private final ConversationService conversationService;
     private final MessageService messageService;
     private final AppConfigService appConfigService;
-    private final VectorRetrieverClient vectorRetrieverClient;
+    private final AiVectorRetrieverService vectorRetrieverService;
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
@@ -190,15 +190,14 @@ public class ChatController {
             log.info("开始从知识库检索相关内容，激活的知识库数量: {}, 用户问题: {}", activeDatasetIds.size(), originalPrompt);
 
             // 从多个知识库中检索相关内容
-            List<QueryResult> allResults = activeDatasetIds.stream().flatMap(datasetId -> {
+            List<AiQueryResult> allResults = activeDatasetIds.stream().flatMap(datasetId -> {
                 try {
-                    // 每个知识库最多检索5条相关内容，相似度阈值0.5
-                    return vectorRetrieverClient.retrieve(datasetId, originalPrompt).stream();
+                    return vectorRetrieverService.retrieve(datasetId, originalPrompt, 5, 0.5f).stream();
                 } catch (Exception e) {
                     log.error("从知识库 {} 检索失败", datasetId, e);
-                    return List.<QueryResult>of().stream();
+                    return List.<AiQueryResult>of().stream();
                 }
-            }).sorted((a, b) -> Float.compare(b.getScore(), a.getScore())) // 按相似度降序排列
+            }).sorted((a, b) -> Float.compare(b.getScore(), a.getScore()))
                     .limit(10) // 总共最多取10条最相关的内容
                     .collect(Collectors.toList());
 
@@ -213,7 +212,7 @@ public class ChatController {
             knowledgeContext.append("【知识库内容】\n");
 
             for (int i = 0; i < allResults.size(); i++) {
-                QueryResult result = allResults.get(i);
+                AiQueryResult result = allResults.get(i);
                 knowledgeContext.append(String.format("%d. %s (相似度: %.2f)\n", i + 1, result.getText(), result.getScore()));
             }
 

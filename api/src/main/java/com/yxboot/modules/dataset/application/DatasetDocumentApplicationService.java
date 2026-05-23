@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.common.exception.ApiException;
-import com.yxboot.llm.client.vector.VectorStoreClient;
+import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
@@ -28,7 +28,7 @@ public class DatasetDocumentApplicationService {
 
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentSegmentService segmentService;
-    private final VectorStoreClient vectorService;
+    private final AiVectorStoreService vectorStoreService;
 
     /**
      * 创建文档记录 注意：异步处理需要在Controller层单独调用DatasetDocumentProcessingApplicationService
@@ -87,7 +87,7 @@ public class DatasetDocumentApplicationService {
             }
 
             // 2. 删除文档的向量数据
-            vectorService.deleteDocumentVectors(documentId, document.getDatasetId(), document.getTenantId());
+            vectorStoreService.deleteDocumentVectors(documentId, document.getDatasetId(), document.getTenantId());
 
             // 3. 删除文档分段
             segmentService.deleteSegmentsByDocumentId(documentId);

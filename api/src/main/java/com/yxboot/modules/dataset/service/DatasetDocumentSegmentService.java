@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.llm.document.DocumentSegment;
+import com.yxboot.ai.document.DocumentSegment;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;

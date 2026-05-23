@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yxboot.llm.client.vector.VectorStoreClient;
+import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.dataset.dto.DatasetDTO;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.enums.DatasetStatus;
@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
 
-    private final VectorStoreClient vectorStoreClient;
+    private final AiVectorStoreService vectorStoreService;
 
     /**
      * 创建知识库
@@ -86,7 +86,7 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
 
             // 1. 删除向量集合
             try {
-                vectorStoreClient.deleteCollection(datasetId, dataset.getTenantId());
+                vectorStoreService.deleteCollection(datasetId, dataset.getTenantId());
             } catch (Exception e) {
                 log.error("删除知识库向量集合失败, datasetId: {}, tenantId: {}", datasetId, dataset.getTenantId(), e);
                 // 向量集合删除失败不影响数据库删除，只记录日志
