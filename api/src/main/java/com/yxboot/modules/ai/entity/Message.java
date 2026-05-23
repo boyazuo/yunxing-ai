@@ -2,11 +2,11 @@ package com.yxboot.modules.ai.entity;
 
 import java.time.LocalDateTime;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.ai.enums.MessageStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,15 +14,15 @@ import lombok.Data;
 
 /**
  * 消息实体类
- * 
+ *
  * @author Boya
  */
 @Data
-@TableName("message")
+@Table(value = "message", onInsert = MyFlexListener.class)
 @Schema(description = "消息信息")
 public class Message {
 
-    @TableId(value = "message_id", type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     @Schema(description = "消息ID")
     private Long messageId;
 
@@ -45,6 +45,5 @@ public class Message {
     private MessageStatus status;
 
     @Schema(description = "创建时间")
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

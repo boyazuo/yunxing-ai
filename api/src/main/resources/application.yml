@@ -25,17 +25,7 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
       
-
-# Mybatis-plus
-mybatis-plus:
-  mapper-locations: classpath*:mapper/**/*.xml
-  type-handlers-package: com.yxboot.config.mybatisplus.handler
-  global-config:
-    db-config:
-      logic-delete-field: deleted # 全局逻辑删除的实体字段名
-      logic-delete-value: 1 # 逻辑已删除值(默认为 1)
-      logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
-
+      
 # JWT配置
 jwt:
   secret: yunxing-ai-platform-secret-key-for-jwt-token-with-spring-boot

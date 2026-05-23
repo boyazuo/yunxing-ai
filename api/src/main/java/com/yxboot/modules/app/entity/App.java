@@ -2,11 +2,11 @@ package com.yxboot.modules.app.entity;
 
 import java.time.LocalDateTime;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.app.enums.AppStatus;
 import com.yxboot.modules.app.enums.AppType;
 
@@ -15,15 +15,15 @@ import lombok.Data;
 
 /**
  * 应用表实体类
- * 
+ *
  * @author Boya
  */
 @Data
-@TableName("app")
+@Table(value = "app", onInsert = MyFlexListener.class, onUpdate = MyFlexListener.class)
 @Schema(description = "应用信息")
 public class App {
 
-    @TableId(value = "app_id", type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     @Schema(description = "应用ID")
     private Long appId;
 
@@ -49,18 +49,14 @@ public class App {
     private AppStatus status;
 
     @Schema(description = "创建者ID")
-    @TableField(fill = FieldFill.INSERT)
     private Long creatorId;
 
     @Schema(description = "创建时间")
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     @Schema(description = "更新者ID")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updatorId;
 
     @Schema(description = "更新时间")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

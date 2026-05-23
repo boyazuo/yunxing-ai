@@ -46,10 +46,7 @@ public class UserController {
             if (file != null) {
                 user.setAvatarId(file.getAttachmentId());
                 // 更新文件状态
-                fileService.lambdaUpdate()
-                        .eq(SysFile::getAttachmentId, file.getAttachmentId())
-                        .set(SysFile::getStatus, StatusEnum.VALID.getValue())
-                        .update();
+                fileService.updateStatus(file.getAttachmentId(), StatusEnum.VALID.getValue());
                 user.setAvatar(file.getUrl());
             }
         }

@@ -3,7 +3,7 @@ package com.yxboot.modules.dataset.application;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.mybatisflex.core.paginate.Page;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.common.exception.ApiException;
 import com.yxboot.ai.service.AiVectorStoreService;
@@ -147,7 +147,7 @@ public class DatasetDocumentApplicationService {
      * @param size 每页大小
      * @return 分页结果
      */
-    public IPage<DatasetDocumentDTO> getDocumentsByDatasetId(Long datasetId, long current, long size) {
+    public Page<DatasetDocumentDTO> getDocumentsByDatasetId(Long datasetId, long current, long size) {
         return datasetDocumentService.getDocumentsByDatasetId(datasetId, current, size);
     }
 

@@ -1,12 +1,11 @@
 package com.yxboot.modules.account.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 import com.yxboot.modules.account.entity.Invitation;
-import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 邀请记录Mapper
+ * 邀请表 Mapper 接口
  */
-@Mapper
 public interface InvitationMapper extends BaseMapper<Invitation> {
+
 }

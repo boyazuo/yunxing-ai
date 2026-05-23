@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.mybatisflex.core.paginate.Page;
 import com.yxboot.common.exception.ApiException;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
@@ -58,14 +58,14 @@ public class DatasetDocumentController {
 
     @GetMapping("/page")
     @Operation(summary = "分页获取文档列表", description = "根据知识库ID分页获取文档列表")
-    public Result<IPage<DatasetDocumentDTO>> getDocumentsPageByDatasetId(
+    public Result<Page<DatasetDocumentDTO>> getDocumentsPageByDatasetId(
             @Parameter(description = "知识库ID") @RequestParam Long datasetId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size) {
         if (datasetId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "知识库ID不能为空");
         }
-        IPage<DatasetDocumentDTO> documents = datasetDocumentApplicationService.getDocumentsByDatasetId(datasetId,
+        Page<DatasetDocumentDTO> documents = datasetDocumentApplicationService.getDocumentsByDatasetId(datasetId,
                 current, size);
         return Result.success("查询成功", documents);
     }

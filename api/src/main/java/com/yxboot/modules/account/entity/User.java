@@ -2,12 +2,12 @@ package com.yxboot.modules.account.entity;
 
 import java.time.LocalDateTime;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.account.enums.UserStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,11 +19,11 @@ import lombok.Data;
  * @author Boya
  */
 @Data
-@TableName("user")
+@Table(value = "user", onInsert = MyFlexListener.class, onUpdate = MyFlexListener.class)
 @Schema(description = "用户信息")
 public class User {
 
-    @TableId(value = "user_id", type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     @Schema(description = "用户ID")
     private Long userId;
 
@@ -49,12 +49,10 @@ public class User {
     private UserStatus status;
 
     @Schema(description = "创建时间")
-    @TableField(fill = FieldFill.INSERT)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 }

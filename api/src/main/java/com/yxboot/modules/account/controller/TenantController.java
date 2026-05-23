@@ -56,11 +56,7 @@ public class TenantController {
 
         // 获取每个租户的成员数量
         tenants.parallelStream().forEach(item -> {
-            Long count = tenantUserService
-                    .lambdaQuery()
-                    .eq(TenantUser::getTenantId, item.getTenantId())
-                    .count();
-            item.setMemberCount(count);
+            item.setMemberCount(tenantUserService.countByTenantId(item.getTenantId()));
         });
 
         return Result.success("获取租户列表成功", tenants);
@@ -151,12 +147,7 @@ public class TenantController {
             @PathVariable Long userId,
             @RequestBody TenantUserRoleRequest tenantUserRoleRequest) {
 
-        tenantUserService
-                .lambdaUpdate()
-                .eq(TenantUser::getTenantId, tenantId)
-                .eq(TenantUser::getUserId, userId)
-                .set(TenantUser::getRole, tenantUserRoleRequest.getRole())
-                .update();
+        tenantUserService.updateRole(tenantId, userId, tenantUserRoleRequest.getRole());
 
         return Result.success("更新租户用户角色成功");
     }
@@ -166,11 +157,7 @@ public class TenantController {
     public Result<Void> deleteTenantUser(
             @PathVariable Long tenantId,
             @PathVariable Long userId) {
-        TenantUser deleteOne = tenantUserService
-                .lambdaQuery()
-                .eq(TenantUser::getTenantId, tenantId)
-                .eq(TenantUser::getUserId, userId)
-                .one();
+        TenantUser deleteOne = tenantUserService.getTenantUser(userId, tenantId);
 
         if (deleteOne != null) {
             boolean success = tenantUserService.removeById(deleteOne);

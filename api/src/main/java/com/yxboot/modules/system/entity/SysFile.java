@@ -1,14 +1,18 @@
 package com.yxboot.modules.system.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.yxboot.config.mybatisflex.MyFlexListener;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-
-import java.io.Serial;
-import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * 附件表
@@ -18,79 +22,43 @@ import java.time.LocalDateTime;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("sys_file")
+@Table(value = "sys_file", onInsert = MyFlexListener.class)
 @Schema(name = "SysFile", description = "附件表")
 public class SysFile implements Serializable {
-	@Serial
-	private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 附件编号
-	 */
-	@TableId(value = "file_id", type = IdType.AUTO)
-	@Schema(description = "附件编号")
-	private Long attachmentId;
+    @Id(value = "file_id", keyType = KeyType.Auto)
+    @Schema(description = "附件编号")
+    private Long attachmentId;
 
-	/**
-	 * 原始文件名称
-	 */
-	@Schema(description = "原始文件名称")
-	private String originName;
+    @Schema(description = "原始文件名称")
+    private String originName;
 
-	/**
-	 * 文件名称
-	 */
-	@Schema(description = "文件名称")
-	private String fileName;
+    @Schema(description = "文件名称")
+    private String fileName;
 
-	/**
-	 * 文件路径
-	 */
-	@Schema(description = "文件路径")
-	private String path;
+    @Schema(description = "文件路径")
+    private String path;
 
-	/**
-	 * 文件URL
-	 */
-	@Schema(description = "文件URL")
-	private String url;
+    @Schema(description = "文件URL")
+    private String url;
 
-	/**
-	 * 文件hash值
-	 */
-	@Schema(description = "文件hash值")
-	private String hash;
+    @Schema(description = "文件hash值")
+    private String hash;
 
-	/**
-	 * ContentType
-	 */
-	@Schema(description = "ContentType")
-	private String contentType;
+    @Schema(description = "ContentType")
+    private String contentType;
 
-	/**
-	 * 文件大小
-	 */
-	@Schema(description = "文件大小")
-	private Long size;
+    @Schema(description = "文件大小")
+    private Long size;
 
-	/**
-	 * 创建人
-	 */
-	@Schema(description = "创建人")
-	@TableField(fill = FieldFill.INSERT)
-	private Long createUserId;
+    @Schema(description = "创建人")
+    private Long createUserId;
 
-	/**
-	 * 创建时间
-	 */
-	@Schema(description = "创建时间")
-	@TableField(fill = FieldFill.INSERT)
-	private LocalDateTime createTime;
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
 
-	/**
-	 * 状态
-	 */
-	@Schema(description = "状态")
-	private Integer status;
-
+    @Schema(description = "状态")
+    private Integer status;
 }

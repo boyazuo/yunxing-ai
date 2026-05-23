@@ -18,7 +18,7 @@
     <properties>
         <java.version>17</java.version>
         <hutool.version>5.8.36</hutool.version>
-        <mybatis-plus.version>3.5.11</mybatis-plus.version>
+        <mybatis-flex.version>1.10.9</mybatis-flex.version>
         <mysql.version>8.3.0</mysql.version>
         <druid.version>1.2.24</druid.version>
         <lombok.version>1.18.36</lombok.version>
@@ -84,15 +84,16 @@
             <version>${druid.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
+            <groupId>com.mybatis-flex</groupId>
+            <artifactId>mybatis-flex-spring-boot3-starter</artifactId>
+            <version>${mybatis-flex.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-jsqlparser</artifactId>
-            <version>${mybatis-plus.version}</version>
-        </dependency>      
+            <groupId>com.mybatis-flex</groupId>
+            <artifactId>mybatis-flex-processor</artifactId>
+            <version>${mybatis-flex.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Redis -->
         <dependency>
@@ -248,6 +249,11 @@
 						<path>
 							<groupId>org.springframework.boot</groupId>
 							<artifactId>spring-boot-configuration-processor</artifactId>
+						</path>
+						<path>
+							<groupId>com.mybatis-flex</groupId>
+							<artifactId>mybatis-flex-processor</artifactId>
+							<version>${mybatis-flex.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>

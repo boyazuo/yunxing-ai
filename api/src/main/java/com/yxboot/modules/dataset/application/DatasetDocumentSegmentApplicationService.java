@@ -3,7 +3,7 @@ package com.yxboot.modules.dataset.application;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.mybatisflex.core.paginate.Page;
 import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
@@ -106,11 +106,11 @@ public class DatasetDocumentSegmentApplicationService {
         return segmentService.getSegmentsByDocumentId(documentId);
     }
 
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(long current, long size, Long documentId) {
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(long current, long size, Long documentId) {
         return segmentService.pageSegmentsByDocumentId((int) current, (int) size, documentId);
     }
 
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
             String keyword) {
         return segmentService.pageSegmentsWithSearch(current, size, documentId, keyword);
     }

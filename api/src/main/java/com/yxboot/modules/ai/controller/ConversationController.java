@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.mybatisflex.core.paginate.Page;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.modules.ai.dto.ConversationDTO;

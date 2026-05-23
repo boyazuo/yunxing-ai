@@ -2,37 +2,36 @@ package com.yxboot.modules.dataset.service;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.yxboot.ai.document.DocumentSegment;
 import com.yxboot.modules.dataset.dto.DatasetDocumentSegmentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.mapper.DatasetDocumentSegmentMapper;
+
+import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.yxboot.modules.account.entity.table.UserTableDef.USER;
+import static com.yxboot.modules.dataset.entity.table.DatasetDocumentSegmentTableDef.DATASET_DOCUMENT_SEGMENT;
+import static com.yxboot.modules.dataset.entity.table.DatasetDocumentTableDef.DATASET_DOCUMENT;
+import static com.yxboot.modules.dataset.entity.table.DatasetTableDef.DATASET;
+
 /**
  * 文档分段服务实现类
- * 
- * @author Boya
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSegmentMapper, DatasetDocumentSegment> {
 
-    /**
-     * 批量创建文档分段
-     * 
-     * @param documentId 文档ID
-     * @param segments 分段内容列表
-     * @param segmentTitles 分段标题列表（可选）
-     * @return 创建的分段列表
-     */
     @Transactional(rollbackFor = Exception.class)
     public List<DatasetDocumentSegment> batchCreateSegments(DatasetDocument document, List<DocumentSegment> segments) {
         if (segments == null || segments.isEmpty()) {
@@ -42,7 +41,6 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         Long tenantId = document.getTenantId();
         Long datasetId = document.getDatasetId();
 
-        // 批量插入新分段
         List<DatasetDocumentSegment> segmentList = new ArrayList<>();
         for (int i = 0; i < segments.size(); i++) {
             DocumentSegment ds = segments.get(i);
@@ -64,83 +62,52 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
             segmentList.add(segment);
         }
 
-        // 批量保存
         saveBatch(segmentList);
-
         return segmentList;
     }
 
-    /**
-     * 批量更新分段的向量ID
-     * 
-     * @param segments 分段列表
-     * @return 是否更新成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean batchUpdateVectorIds(List<DatasetDocumentSegment> segments) {
         if (segments == null || segments.isEmpty()) {
             return true;
         }
-
-        return updateBatchById(segments);
+        return updateBatch(segments);
     }
 
-    /**
-     * 获取文档的所有分段
-     * 
-     * @param documentId 文档ID
-     * @return 分段列表
-     */
     public List<DatasetDocumentSegmentDTO> getSegmentsByDocumentId(Long documentId) {
-        return baseMapper.getSegmentsByDocumentId(documentId);
+        QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
+        return listAs(wrapper, DatasetDocumentSegmentDTO.class);
     }
 
-    /**
-     * 分页获取文档的分段
-     * 
-     * @param page 页码
-     * @param size 每页大小
-     * @param documentId 文档ID
-     * @return 分页结果
-     */
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(int page, int size, Long documentId) {
-        Page<DatasetDocumentSegmentDTO> pageParam = new Page<>(page, size);
-        return baseMapper.pageSegmentsByDocumentId(pageParam, documentId);
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsByDocumentId(int page, int size, Long documentId) {
+        QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
+        return pageAs(Page.of(page, size), wrapper, DatasetDocumentSegmentDTO.class);
     }
 
-    /**
-     * 分页获取文档的分段（带搜索）
-     * 
-     * @param current 页码
-     * @param size 每页大小
-     * @param documentId 文档ID
-     * @param keyword 搜索关键词
-     * @return 分页结果
-     */
-    public IPage<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
+    public Page<DatasetDocumentSegmentDTO> pageSegmentsWithSearch(long current, long size, Long documentId,
             String keyword) {
-        Page<DatasetDocumentSegmentDTO> pageParam = new Page<>(current, size);
-        return baseMapper.pageSegmentsWithSearch(pageParam, documentId, keyword);
+        QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        if (StrUtil.isNotEmpty(keyword)) {
+            wrapper.where(DATASET_DOCUMENT_SEGMENT.TITLE.like(keyword)
+                    .or(DATASET_DOCUMENT_SEGMENT.CONTENT.like(keyword)));
+        }
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
+        return pageAs(Page.of(current, size), wrapper, DatasetDocumentSegmentDTO.class);
     }
 
-    /**
-     * 根据知识库ID获取所有分段
-     * 
-     * @param datasetId 知识库ID
-     * @return 分段列表
-     */
     public List<DatasetDocumentSegmentDTO> getSegmentsByDatasetId(Long datasetId) {
-        return baseMapper.getSegmentsByDatasetId(datasetId);
+        QueryWrapper wrapper = buildSegmentDtoQueryWrapper();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DATASET_ID.eq(datasetId));
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID, true);
+        wrapper.orderBy(DATASET_DOCUMENT_SEGMENT.POSITION, true);
+        return listAs(wrapper, DatasetDocumentSegmentDTO.class);
     }
 
-    /**
-     * 更新文档分段内容（仅更新数据库，不处理向量） 注意：向量的更新应该在应用服务层或基础设施层处理
-     * 
-     * @param segmentId 分段ID
-     * @param content 新内容
-     * @param title 新标题（可选）
-     * @return 是否更新成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean updateSegmentContent(Long segmentId, String content, String title) {
         DatasetDocumentSegment segment = getById(segmentId);
@@ -176,18 +143,12 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         return success;
     }
 
-    /**
-     * 删除分段（仅删除数据库记录，不处理向量） 注意：向量的删除应该在应用服务层或基础设施层处理
-     * 
-     * @param segmentId 分段ID
-     * @return 是否删除成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSegment(Long segmentId) {
         DatasetDocumentSegment segment = getById(segmentId);
         if (segment == null) {
             log.warn("分段不存在, segmentId: {}", segmentId);
-            return true; // 分段不存在视为删除成功
+            return true;
         }
 
         removeById(segmentId);
@@ -195,12 +156,6 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         return true;
     }
 
-    /**
-     * 批量删除分段（仅删除数据库记录，不处理向量） 注意：向量的删除应该在应用服务层或基础设施层处理
-     * 
-     * @param segmentIds 分段ID列表
-     * @return 是否删除成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean batchDeleteSegments(List<Long> segmentIds) {
         if (segmentIds == null || segmentIds.isEmpty()) {
@@ -212,19 +167,31 @@ public class DatasetDocumentSegmentService extends ServiceImpl<DatasetDocumentSe
         return true;
     }
 
-    /**
-     * 删除文档的所有分段
-     * 
-     * @param documentId 文档ID
-     * @return 是否删除成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSegmentsByDocumentId(Long documentId) {
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<DatasetDocumentSegment> queryWrapper =
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        queryWrapper.eq(DatasetDocumentSegment::getDocumentId, documentId);
-        remove(queryWrapper);
+        QueryWrapper wrapper = QueryWrapper.create();
+        wrapper.where(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(documentId));
+        remove(wrapper);
         log.info("删除文档分段完成, documentId: {}", documentId);
         return true;
+    }
+
+    private QueryWrapper buildSegmentDtoQueryWrapper() {
+        var creator = USER.as("cu");
+        var updator = USER.as("uu");
+
+        QueryWrapper wrapper = QueryWrapper.create();
+        wrapper.select(DATASET_DOCUMENT_SEGMENT.ALL_COLUMNS);
+        wrapper.select(creator.USERNAME.as("creatorUsername"));
+        wrapper.select(creator.AVATAR.as("creatorAvatar"));
+        wrapper.select(updator.USERNAME.as("updatorUsername"));
+        wrapper.select(DATASET_DOCUMENT.FILE_NAME.as("documentName"));
+        wrapper.select(DATASET.DATASET_NAME);
+        wrapper.from(DATASET_DOCUMENT_SEGMENT);
+        wrapper.leftJoin(creator).on(DATASET_DOCUMENT_SEGMENT.CREATOR_ID.eq(creator.USER_ID));
+        wrapper.leftJoin(updator).on(DATASET_DOCUMENT_SEGMENT.UPDATOR_ID.eq(updator.USER_ID));
+        wrapper.leftJoin(DATASET_DOCUMENT).on(DATASET_DOCUMENT_SEGMENT.DOCUMENT_ID.eq(DATASET_DOCUMENT.DOCUMENT_ID));
+        wrapper.leftJoin(DATASET).on(DATASET_DOCUMENT_SEGMENT.DATASET_ID.eq(DATASET.DATASET_ID));
+        return wrapper;
     }
 }

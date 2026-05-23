@@ -2,11 +2,11 @@ package com.yxboot.modules.dataset.entity;
 
 import java.time.LocalDateTime;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.dataset.enums.DatasetStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,15 +14,15 @@ import lombok.Data;
 
 /**
  * 知识库表实体类
- * 
+ *
  * @author Boya
  */
 @Data
-@TableName("dataset")
+@Table(value = "dataset", onInsert = MyFlexListener.class, onUpdate = MyFlexListener.class)
 @Schema(description = "知识库信息")
 public class Dataset {
 
-    @TableId(value = "dataset_id", type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     @Schema(description = "知识库ID")
     private Long datasetId;
 
@@ -42,18 +42,14 @@ public class Dataset {
     private String embeddingModel;
 
     @Schema(description = "创建者ID")
-    @TableField(fill = FieldFill.INSERT)
     private Long creatorId;
 
     @Schema(description = "创建时间")
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     @Schema(description = "更新者ID")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updatorId;
 
     @Schema(description = "更新时间")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

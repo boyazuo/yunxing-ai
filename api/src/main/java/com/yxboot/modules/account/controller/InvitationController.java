@@ -77,20 +77,14 @@ public class InvitationController {
         // TODO
         InvitationResult invitationResult = new InvitationResult();
 
-        Invitation invitation = invitationService
-                .lambdaQuery()
-                .eq(Invitation::getToken, token)
-                .one();
+        Invitation invitation = invitationService.getByToken(token);
 
         LocalDateTime expireTime = invitation.getExpireTime();
         if (expireTime.isBefore(LocalDateTime.now())) {
             return Result.error("邀请链接已过期");
         }
 
-        User user = userService
-                .lambdaQuery()
-                .eq(User::getEmail, invitation.getInviteeEmail())
-                .one();
+        User user = userService.getUserByEmail(invitation.getInviteeEmail());
 
         if (user != null) {
             invitationResult.setUser(user);

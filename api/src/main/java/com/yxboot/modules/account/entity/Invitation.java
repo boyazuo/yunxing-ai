@@ -1,48 +1,54 @@
 package com.yxboot.modules.account.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.account.enums.InvitationStatus;
 import com.yxboot.modules.account.enums.TenantUserRole;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("invitation")
+@Table(value = "invitation", onInsert = MyFlexListener.class)
 public class Invitation implements Serializable {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     private Long id;
 
-    @TableField("inviter_tenant_id")
+    @Column("inviter_tenant_id")
     private Long inviterTenantId;
 
-    @TableField("inviter_user_id")
+    @Column("inviter_user_id")
     private Long inviterUserId;
 
-    @TableField("invitee_email")
+    @Column("invitee_email")
     private String inviteeEmail;
 
-    @TableField("invitee_role")
+    @Column("invitee_role")
     private TenantUserRole inviteeRole;
 
-    @TableField(value = "invite_time", fill = FieldFill.INSERT)
+    @Column("invite_time")
     private LocalDateTime inviteTime;
 
     private InvitationStatus status;
 
     private String token;
 
-    @TableField("expire_time")
+    @Column("expire_time")
     private LocalDateTime expireTime;
 
-    @TableField("accept_time")
+    @Column("accept_time")
     private LocalDateTime acceptTime;
 }

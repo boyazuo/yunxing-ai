@@ -86,19 +86,9 @@ public class AuthController {
 
         // 加入租户
         if (StringUtils.isNotBlank(loginRequest.getToken())) {
-            Invitation invitation = invitationService
-                    .lambdaQuery()
-                    .eq(Invitation::getToken, loginRequest.getToken())
-                    .one();
+            Invitation invitation = invitationService.getByToken(loginRequest.getToken());
             if (invitation != null) {
-                // 判断 是否已经加入
-                Long count = tenantUserService
-                        .lambdaQuery()
-                        .eq(TenantUser::getUserId, user.getUserId())
-                        .eq(TenantUser::getTenantId, invitation.getInviterTenantId())
-                        .count();
-                // 没有加入，进行加入操作
-                if (count == 0) {
+                if (!tenantUserService.existsByUserIdAndTenantId(user.getUserId(), invitation.getInviterTenantId())) {
                     // 添加团队用户
                     tenantUserService.addTenantUser(invitation.getInviterTenantId(), user.getUserId(), invitation.getInviteeRole());
                     // 更新邀请状态
@@ -161,10 +151,7 @@ public class AuthController {
 
         // 如果存在token，需要加入token 关联的团队
         if (StringUtils.isNotBlank(registerRequest.getToken())) {
-            Invitation invitation = invitationService
-                    .lambdaQuery()
-                    .eq(Invitation::getToken, registerRequest.getToken())
-                    .one();
+            Invitation invitation = invitationService.getByToken(registerRequest.getToken());
 
             if (invitation != null) {
                 // 添加团队用户

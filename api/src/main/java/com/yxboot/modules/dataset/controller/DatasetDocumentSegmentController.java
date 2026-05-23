@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.mybatisflex.core.paginate.Page;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.modules.dataset.application.DatasetDocumentApplicationService;
@@ -38,7 +38,7 @@ public class DatasetDocumentSegmentController {
 
     @GetMapping("/page")
     @Operation(summary = "分页获取文档分段", description = "根据文档ID分页获取分段列表，支持搜索过滤")
-    public Result<IPage<DatasetDocumentSegmentDTO>> getSegmentsPage(
+    public Result<Page<DatasetDocumentSegmentDTO>> getSegmentsPage(
             @Parameter(description = "文档ID") @RequestParam Long documentId,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") long current,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") long size,
@@ -49,7 +49,7 @@ public class DatasetDocumentSegmentController {
         }
 
         try {
-            IPage<DatasetDocumentSegmentDTO> segments;
+            Page<DatasetDocumentSegmentDTO> segments;
 
             if (keyword != null && !keyword.trim().isEmpty()) {
                 // 带搜索的分页查询

@@ -4,7 +4,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.yxboot.modules.account.dto.TenantUserDTO;
 import com.yxboot.modules.account.entity.Tenant;
 import com.yxboot.modules.account.enums.TenantPlan;
@@ -13,21 +14,16 @@ import com.yxboot.modules.account.mapper.TenantMapper;
 
 import lombok.RequiredArgsConstructor;
 
+import static com.yxboot.modules.account.entity.table.TenantTableDef.TENANT;
+import static com.yxboot.modules.account.entity.table.TenantUserTableDef.TENANT_USER;
+
 /**
  * 租户服务实现类
- * 
- * @author Boya
  */
 @Service
 @RequiredArgsConstructor
 public class TenantService extends ServiceImpl<TenantMapper, Tenant> {
 
-    /**
-     * 创建租户
-     * 
-     * @param tenantName 租户名称
-     * @return 租户ID
-     */
     public Long createTenant(String tenantName) {
         Tenant tenant = new Tenant();
         tenant.setTenantName(tenantName);
@@ -37,14 +33,13 @@ public class TenantService extends ServiceImpl<TenantMapper, Tenant> {
         return tenant.getTenantId();
     }
 
-    /**
-     * 根据用户ID获取租户列表及用户角色
-     * 使用联表查询一次性获取租户信息和角色信息
-     * 
-     * @param userId 用户ID
-     * @return 租户及角色列表
-     */
     public List<TenantUserDTO> getTenantsByUserId(Long userId) {
-        return baseMapper.selectTenantsByUserId(userId);
+        QueryWrapper wrapper = QueryWrapper.create();
+        wrapper.select(TENANT.ALL_COLUMNS);
+        wrapper.select(TENANT_USER.ROLE, TENANT_USER.IS_ACTIVE);
+        wrapper.from(TENANT);
+        wrapper.innerJoin(TENANT_USER).on(TENANT.TENANT_ID.eq(TENANT_USER.TENANT_ID));
+        wrapper.where(TENANT_USER.USER_ID.eq(userId));
+        return listAs(wrapper, TenantUserDTO.class);
     }
 }

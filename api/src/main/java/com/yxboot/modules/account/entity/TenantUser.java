@@ -2,11 +2,11 @@ package com.yxboot.modules.account.entity;
 
 import java.time.LocalDateTime;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.keygen.KeyGenerators;
+import com.yxboot.config.mybatisflex.MyFlexListener;
 import com.yxboot.modules.account.enums.TenantUserRole;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,15 +14,15 @@ import lombok.Data;
 
 /**
  * 租户成员表实体类
- * 
+ *
  * @author Boya
  */
 @Data
-@TableName("tenant_user")
+@Table(value = "tenant_user", onInsert = MyFlexListener.class, onUpdate = MyFlexListener.class)
 @Schema(description = "租户成员信息")
 public class TenantUser {
 
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
+    @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     @Schema(description = "ID")
     private Long id;
 
@@ -42,10 +42,8 @@ public class TenantUser {
     private Long inviterId;
 
     @Schema(description = "创建时间")
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
