@@ -25,12 +25,10 @@ public interface DatasetMapper extends BaseMapper<Dataset> {
     @Select("SELECT d.*, " +
             "cu.username as creator_username, " +
             "cu.avatar as creator_avatar, " +
-            "uu.username as updator_username, " +
-            "m.model_name as embedding_model_name " +
+            "uu.username as updator_username " +
             "FROM dataset d " +
             "LEFT JOIN user cu ON d.creator_id = cu.user_id " +
             "LEFT JOIN user uu ON d.updator_id = uu.user_id " +
-            "LEFT JOIN model m ON d.embedding_model_id = m.model_id " +
             "WHERE d.tenant_id = #{tenantId}")
     List<DatasetDTO> getDatasetsByTenantId(@Param("tenantId") String tenantId);
 }

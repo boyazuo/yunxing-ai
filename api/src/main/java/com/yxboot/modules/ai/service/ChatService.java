@@ -6,17 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.zhipuai.ZhiPuAiChatOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import com.yxboot.ai.registry.ChatModelRegistry;
+import com.yxboot.ai.config.AiProperties;
 import com.yxboot.ai.support.SpringAiMessageConverter;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
-import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,25 +31,25 @@ import reactor.core.publisher.Flux;
 public class ChatService {
 
     private final MessageService messageService;
-    private final ChatModelRegistry chatModelRegistry;
+    private final ChatModel chatModel;
+    private final AiProperties aiProperties;
 
-    public ChatResponseDTO chatCompletion(Provider provider, ChatRequestDTO request) throws IOException {
-        log.info("开始处理聊天请求，提供商：{}，模型：{}", provider.getProviderName(), request.getModelName());
+    public ChatResponseDTO chatCompletion(ChatRequestDTO request) throws IOException {
+        AiProperties.ChatConfig chatConfig = aiProperties.getChat();
+        log.info("开始处理聊天请求，模型：{}", chatConfig.getModel());
         try {
-            var chatModel = chatModelRegistry.getOrCreate(provider);
             Prompt prompt = buildPrompt(request);
             ChatResponse response = chatModel.call(prompt);
-            return buildResponseDTO(response, provider, request.getModelName());
+            return buildResponseDTO(response, chatConfig.getModel());
         } catch (Exception e) {
             log.error("聊天请求处理异常", e);
             throw new IOException("模型调用失败：" + e.getMessage(), e);
         }
     }
 
-    public void streamingChatCompletion(Provider provider, ChatRequestDTO request,
-            SseEmitter emitter, Long messageId) throws IOException {
+    public void streamingChatCompletion(ChatRequestDTO request, SseEmitter emitter, Long messageId)
+            throws IOException {
         try {
-            var chatModel = chatModelRegistry.getOrCreate(provider);
             Prompt prompt = buildPrompt(request);
             StringBuilder fullResponseBuilder = new StringBuilder();
 
@@ -124,21 +124,15 @@ public class ChatService {
         }
         messages.add(new UserMessage(request.getPrompt()));
 
-        ZhiPuAiChatOptions.Builder optionsBuilder = ZhiPuAiChatOptions.builder();
-        if (StringUtils.hasText(request.getModelName())) {
-            optionsBuilder.model(request.getModelName());
-        }
-        if (request.getTemperature() != null) {
-            optionsBuilder.temperature(request.getTemperature().doubleValue());
-        }
-        if (request.getTopP() != null) {
-            optionsBuilder.topP(request.getTopP().doubleValue());
-        }
-        if (request.getMaxTokens() != null) {
-            optionsBuilder.maxTokens(request.getMaxTokens());
-        }
+        AiProperties.ChatConfig chatConfig = aiProperties.getChat();
+        ZhiPuAiChatOptions options = ZhiPuAiChatOptions.builder()
+                .model(chatConfig.getModel())
+                .temperature(chatConfig.getTemperature())
+                .topP(chatConfig.getTopP())
+                .maxTokens(chatConfig.getMaxTokens())
+                .build();
 
-        return new Prompt(messages, optionsBuilder.build());
+        return new Prompt(messages, options);
     }
 
     private String extractContent(ChatResponse response) {
@@ -148,7 +142,7 @@ public class ChatService {
         return response.getResult().getOutput().getText() != null ? response.getResult().getOutput().getText() : "";
     }
 
-    private ChatResponseDTO buildResponseDTO(ChatResponse response, Provider provider, String modelName) {
+    private ChatResponseDTO buildResponseDTO(ChatResponse response, String modelName) {
         int promptTokens = 0;
         int completionTokens = 0;
         int totalTokens = 0;
@@ -161,7 +155,7 @@ public class ChatService {
         return ChatResponseDTO.builder()
                 .content(extractContent(response))
                 .model(modelName)
-                .provider(provider.getProviderName())
+                .provider(aiProperties.getChat().getProvider())
                 .createTime(LocalDateTime.now())
                 .promptTokens(promptTokens)
                 .completionTokens(completionTokens)

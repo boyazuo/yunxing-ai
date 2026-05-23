@@ -5,8 +5,6 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.qdrant.QdrantVectorStore;
 import org.springframework.stereotype.Component;
-import com.yxboot.modules.ai.entity.Model;
-import com.yxboot.modules.ai.entity.Provider;
 import io.qdrant.client.QdrantClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 public class VectorStoreRegistry {
 
     private final QdrantClient qdrantClient;
-    private final EmbeddingModelRegistry embeddingModelRegistry;
+    private final EmbeddingModel embeddingModel;
     private final ConcurrentHashMap<String, VectorStore> storeCache = new ConcurrentHashMap<>();
 
-    public VectorStore getOrCreate(Long datasetId, Long tenantId, Provider provider, Model model) {
+    public VectorStore getOrCreate(Long datasetId, Long tenantId) {
         String collectionName = buildCollectionName(datasetId, tenantId);
-        return storeCache.computeIfAbsent(collectionName,
-                k -> createVectorStore(collectionName, provider, model));
+        return storeCache.computeIfAbsent(collectionName, k -> createVectorStore(collectionName));
     }
 
     public String buildCollectionName(Long datasetId, Long tenantId) {
@@ -62,12 +59,10 @@ public class VectorStoreRegistry {
         }
     }
 
-    private VectorStore createVectorStore(String collectionName, Provider provider, Model model) {
-        EmbeddingModel embeddingModel = embeddingModelRegistry.getOrCreate(provider, model);
+    private VectorStore createVectorStore(String collectionName) {
         return QdrantVectorStore.builder(qdrantClient, embeddingModel)
                 .collectionName(collectionName)
                 .initializeSchema(true)
                 .build();
     }
-
 }

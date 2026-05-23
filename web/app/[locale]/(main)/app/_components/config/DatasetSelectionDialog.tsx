@@ -141,8 +141,6 @@ export default function DatasetSelectionDialog({
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{dataset.datasetDesc}</p>
                     )}
                     <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                      <span>嵌入模型: {dataset.embeddingModelName}</span>
-                      <span className="mx-2">•</span>
                       <span>创建者: {dataset.creatorUsername}</span>
                     </div>
                   </div>

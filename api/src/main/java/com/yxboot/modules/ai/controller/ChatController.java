@@ -18,12 +18,10 @@ import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
 import com.yxboot.modules.ai.entity.Message;
-import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.ai.enums.MessageStatus;
 import com.yxboot.modules.ai.service.ChatService;
 import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
-import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.app.entity.AppConfig;
 import com.yxboot.modules.app.service.AppConfigService;
 import cn.hutool.json.JSONUtil;
@@ -47,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ChatController {
 
     private final ChatService aiService;
-    private final ProviderService providerService;
     private final ConversationService conversationService;
     private final MessageService messageService;
     private final AppConfigService appConfigService;
@@ -58,101 +55,42 @@ public class ChatController {
     public SseEmitter chatCompletion(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody ChatRequestDTO request) throws Exception {
         Long userId = securityUser.getUserId();
 
-        // 处理会话
         Long conversationId = handleConversation(userId, request);
         request.setConversationId(conversationId);
 
-        // 创建消息记录
         Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
 
-        // 获取提供商信息
-        Provider provider = providerService.getProviderByModelId(request.getModelId());
-
-        // 获取应用配置
         AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
 
-        // 处理知识库检索并增强prompt
         String enhancedPrompt = enhancePromptWithKnowledge(request.getPrompt(), appConfig);
         request.setPrompt(enhancedPrompt);
-
-        // 设置系统提示词
         request.setSystemPrompt(appConfig.getSysPrompt());
-        // 获取模型配置
-        String models = appConfig.getModels();
-        if (models != null && !models.isEmpty()) {
-            List<ModelConfig> modelConfigs = JSONUtil.parseArray(models).toList(ModelConfig.class);
-            ModelConfig modelConfig = modelConfigs.stream().filter(m -> m.getModelId().equals(request.getModelId())).findFirst().orElse(null);
-            if (modelConfig != null) {
-                request.setModelId(modelConfig.getModelId());
-                request.setModelName(modelConfig.getModelName());
-                request.setTemperature(Float.parseFloat(modelConfig.getTemperature()));
-                request.setTopP(Float.parseFloat(modelConfig.getTopP()));
-                request.setMaxTokens(Integer.parseInt(modelConfig.getMaxTokens()));
-            }
-        }
 
-        // 创建SSE发射器，设置超时时间为5分钟
         SseEmitter emitter = new SseEmitter(300000L);
-
-        // 调用AI服务进行流式聊天
-        aiService.streamingChatCompletion(provider, request, emitter, message.getMessageId());
+        aiService.streamingChatCompletion(request, emitter, message.getMessageId());
 
         return emitter;
     }
 
-    /**
-     * 非流式聊天模型调用
-     * 
-     * @param securityUser 当前用户
-     * @param request 请求参数
-     * @return 模型响应
-     * @throws Exception 调用异常
-     */
     @PostMapping("/chat/sync")
     @Operation(summary = "非流式聊天模型调用", description = "调用大模型进行聊天，使用同步响应方式")
     public Result<ChatResponseDTO> chatCompletionSync(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody ChatRequestDTO request)
             throws Exception {
 
         Long userId = securityUser.getUserId();
-        // 确保使用非流式请求
         request.setStream(false);
 
-        // 获取提供商信息
-        Provider provider = providerService.getProviderByModelId(request.getModelId());
-        // 获取应用配置
         AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
 
-        // 处理知识库检索并增强prompt
         String enhancedPrompt = enhancePromptWithKnowledge(request.getPrompt(), appConfig);
         request.setPrompt(enhancedPrompt);
-
-        // 设置系统提示词
         request.setSystemPrompt(appConfig.getSysPrompt());
 
-        // 获取模型配置
-        String models = appConfig.getModels();
-        if (models != null && !models.isEmpty()) {
-            List<ModelConfig> modelConfigs = JSONUtil.parseArray(models).toList(ModelConfig.class);
-            ModelConfig modelConfig = modelConfigs.stream().filter(m -> m.getModelId().equals(request.getModelId())).findFirst().orElse(null);
-            if (modelConfig != null) {
-                request.setModelId(modelConfig.getModelId());
-                request.setModelName(modelConfig.getModelName());
-                request.setTemperature(Float.parseFloat(modelConfig.getTemperature()));
-                request.setTopP(Float.parseFloat(modelConfig.getTopP()));
-                request.setMaxTokens(Integer.parseInt(modelConfig.getMaxTokens()));
-            }
-        }
-
-        // 处理会话
         Long conversationId = handleConversation(userId, request);
-
-        // 创建消息记录
         Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
 
-        // 调用AI服务进行聊天
-        ChatResponseDTO response = aiService.chatCompletion(provider, request);
+        ChatResponseDTO response = aiService.chatCompletion(request);
 
-        // 更新消息回复
         messageService.updateMessageAnswer(message.getMessageId(), response.getContent(), MessageStatus.COMPLETED);
 
         response.setConversationId(conversationId);
@@ -160,15 +98,7 @@ public class ChatController {
         return Result.success("请求成功。", response);
     }
 
-    /**
-     * 使用知识库检索增强用户问题的prompt
-     * 
-     * @param originalPrompt 原始用户问题
-     * @param appConfig 应用配置
-     * @return 增强后的prompt
-     */
     private String enhancePromptWithKnowledge(String originalPrompt, AppConfig appConfig) {
-        // 检查是否配置了知识库
         String datasetsConfig = appConfig.getDatasets();
         if (datasetsConfig == null || datasetsConfig.trim().isEmpty()) {
             log.debug("未配置知识库，直接使用原始prompt");
@@ -176,9 +106,7 @@ public class ChatController {
         }
 
         try {
-            // 解析知识库配置
             List<DatasetConfig> datasetConfigs = JSONUtil.parseArray(datasetsConfig).toList(DatasetConfig.class);
-            // 过滤出激活的知识库
             List<Long> activeDatasetIds =
                     datasetConfigs.stream().filter(DatasetConfig::isActive).map(DatasetConfig::getDatasetId).collect(Collectors.toList());
 
@@ -189,7 +117,6 @@ public class ChatController {
 
             log.info("开始从知识库检索相关内容，激活的知识库数量: {}, 用户问题: {}", activeDatasetIds.size(), originalPrompt);
 
-            // 从多个知识库中检索相关内容
             List<AiQueryResult> allResults = activeDatasetIds.stream().flatMap(datasetId -> {
                 try {
                     return vectorRetrieverService.retrieve(datasetId, originalPrompt, 5, 0.5f).stream();
@@ -198,7 +125,7 @@ public class ChatController {
                     return List.<AiQueryResult>of().stream();
                 }
             }).sorted((a, b) -> Float.compare(b.getScore(), a.getScore()))
-                    .limit(10) // 总共最多取10条最相关的内容
+                    .limit(10)
                     .collect(Collectors.toList());
 
             if (allResults.isEmpty()) {
@@ -206,7 +133,6 @@ public class ChatController {
                 return originalPrompt;
             }
 
-            // 构建知识库上下文
             StringBuilder knowledgeContext = new StringBuilder();
             knowledgeContext.append("请基于以下知识库内容回答用户问题：\n\n");
             knowledgeContext.append("【知识库内容】\n");
@@ -230,51 +156,24 @@ public class ChatController {
         }
     }
 
-    /**
-     * 处理会话逻辑 如果conversationId为空，创建新会话 如果conversationId存在，更新会话时间
-     * 
-     * @param request 请求参数
-     * @return 会话ID
-     */
     private Long handleConversation(Long userId, ChatRequestDTO request) {
-        Long conversationId = null;
-
-        // 检查是否存在会话ID
         if (request.getConversationId() != null) {
-
-            conversationId = request.getConversationId();
-            // 检查会话是否存在
+            Long conversationId = request.getConversationId();
             Conversation conversation = conversationService.getById(conversationId);
             if (conversation != null) {
-                // 更新会话的更新时间
                 conversation.setUpdateTime(LocalDateTime.now());
                 conversationService.updateById(conversation);
                 return conversationId;
             }
         }
 
-        // 创建新会话
         String title = request.getPrompt();
-        // 限制标题长度
         if (title.length() > 50) {
             title = title.substring(0, 47) + "...";
         }
 
         Conversation conversation = conversationService.createConversation(userId, request.getAppId(), title);
-
         return conversation.getConversationId();
-    }
-
-    @Data
-    @Schema(description = "模型配置")
-    public static class ModelConfig {
-        private String id;
-        private Long modelId;
-        private String modelName;
-        private String provider;
-        private String temperature;
-        private String topP;
-        private String maxTokens;
     }
 
     @Data

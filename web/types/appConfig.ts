@@ -1,18 +1,4 @@
 /**
- * 模型配置类型
- */
-export interface ModelConfig {
-  id?: string
-  modelId: string
-  name: string
-  provider: string
-  temperature: number
-  topP: number
-  maxTokens: number
-  isActive: boolean
-}
-
-/**
  * 变量配置类型
  */
 export interface VariableConfig {
@@ -41,7 +27,6 @@ export interface AppConfig {
   appId: string
   tenantId: string
   sysPrompt?: string
-  models: ModelConfig[]
   variables?: VariableConfig[]
   datasets?: DatasetConfig[]
 }

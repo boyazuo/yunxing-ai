@@ -49,12 +49,12 @@ public class DatasetController {
 
     @GetMapping("/{datasetId}")
     @Operation(summary = "获取知识库详情", description = "根据知识库ID获取知识库详情")
-    public Result<Dataset> getDatasetById(@PathVariable Long datasetId) {
+    public Result<DatasetDTO> getDatasetById(@PathVariable Long datasetId) {
         Dataset dataset = datasetService.getById(datasetId);
         if (dataset == null) {
             return Result.error(ResultCode.NOT_FOUND, "知识库不存在");
         }
-        return Result.success("查询成功", dataset);
+        return Result.success("查询成功", datasetService.toDatasetDTO(dataset));
     }
 
     @PostMapping
@@ -64,7 +64,6 @@ public class DatasetController {
         Long tenantId = datasetRequest.getTenantId();
         String datasetName = datasetRequest.getDatasetName();
         String datasetDesc = datasetRequest.getDatasetDesc();
-        Long embeddingModelId = datasetRequest.getEmbeddingModelId();
 
         if (tenantId == null) {
             return Result.error(ResultCode.VALIDATE_FAILED, "租户ID不能为空");
@@ -72,12 +71,8 @@ public class DatasetController {
         if (datasetName == null || datasetName.trim().isEmpty()) {
             return Result.error(ResultCode.VALIDATE_FAILED, "知识库名称不能为空");
         }
-        if (embeddingModelId == null) {
-            return Result.error(ResultCode.VALIDATE_FAILED, "嵌入模型ID不能为空");
-        }
 
-        // 创建知识库
-        Dataset dataset = datasetService.createDataset(tenantId, datasetName, datasetDesc, embeddingModelId);
+        Dataset dataset = datasetService.createDataset(tenantId, datasetName, datasetDesc);
 
         return Result.success("知识库创建成功", dataset);
     }
@@ -97,9 +92,6 @@ public class DatasetController {
         }
         if (datasetRequest.getDatasetDesc() != null) {
             existingDataset.setDatasetDesc(datasetRequest.getDatasetDesc());
-        }
-        if (datasetRequest.getEmbeddingModelId() != null) {
-            existingDataset.setEmbeddingModelId(datasetRequest.getEmbeddingModelId());
         }
         if (datasetRequest.getStatus() != null) {
             existingDataset.setStatus(datasetRequest.getStatus());
@@ -153,7 +145,6 @@ public class DatasetController {
         private Long datasetId;
         private String datasetName;
         private String datasetDesc;
-        private Long embeddingModelId;
         private DatasetStatus status;
     }
 

@@ -9,11 +9,10 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from '@/components/ui/sidebar'
-import { Sparkles, User, Users } from 'lucide-react'
+import { User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// 设置菜单项
 const settingsMenuItems = [
   {
     name: '账户设置',
@@ -24,11 +23,6 @@ const settingsMenuItems = [
     name: '团队管理',
     href: '/settings/teams',
     icon: Users,
-  },
-  {
-    name: '模型提供商',
-    href: '/settings/providers',
-    icon: Sparkles,
   },
 ]
 

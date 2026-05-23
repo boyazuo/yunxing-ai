@@ -3,13 +3,9 @@ package com.yxboot.ai.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.yxboot.ai.config.AiProperties;
 import com.yxboot.ai.vector.AiQueryResult;
-import com.yxboot.modules.ai.entity.Model;
-import com.yxboot.modules.ai.entity.Provider;
-import com.yxboot.modules.ai.service.ModelService;
-import com.yxboot.modules.ai.service.ProviderService;
 import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.service.DatasetService;
 import lombok.RequiredArgsConstructor;
@@ -25,17 +21,11 @@ public class AiVectorRetrieverService {
 
     private final AiVectorStoreService vectorStoreService;
     private final DatasetService datasetService;
-    private final ProviderService providerService;
-    private final ModelService modelService;
-
-    @Value("${yxboot.ai.retriever.default-limit:10}")
-    private int defaultLimit;
-
-    @Value("${yxboot.ai.retriever.default-min-score:0.0}")
-    private float defaultMinScore;
+    private final AiProperties aiProperties;
 
     public List<AiQueryResult> retrieve(Long datasetId, String query) {
-        return retrieve(datasetId, query, defaultLimit, defaultMinScore);
+        AiProperties.RetrieverConfig retriever = aiProperties.getRetriever();
+        return retrieve(datasetId, query, retriever.getDefaultLimit(), retriever.getDefaultMinScore());
     }
 
     public List<AiQueryResult> retrieve(Long datasetId, String query, int limit, float minScore) {
@@ -48,14 +38,13 @@ public class AiVectorRetrieverService {
         if (dataset == null) {
             throw new IllegalArgumentException("知识库不存在, datasetId: " + datasetId);
         }
-        Provider provider = providerService.getProviderByModelId(dataset.getEmbeddingModelId());
-        Model model = modelService.getById(dataset.getEmbeddingModelId());
         if (!vectorStoreService.collectionExists(datasetId, dataset.getTenantId())) {
             log.warn("向量集合不存在, datasetId={}, tenantId={}", datasetId, dataset.getTenantId());
             return List.of();
         }
+        datasetService.ensureEmbeddingModelCompatible(dataset);
         return vectorStoreService.similaritySearch(
-                datasetId, dataset.getTenantId(), provider, model, query, limit, minScore, filter);
+                datasetId, dataset.getTenantId(), query, limit, minScore, filter);
     }
 
     public List<AiQueryResult> retrieveInDocument(Long datasetId, Long documentId, String query, int limit,

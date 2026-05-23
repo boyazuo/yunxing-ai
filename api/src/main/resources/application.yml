@@ -10,13 +10,11 @@ spring:
     active: dev
   ai:
     model:
-      chat: none
-      embedding: none
-    zhipuai:
-      api-key: placeholder
+      chat: none       # 禁用 Spring AI 自动 ChatModel，由 SpringAIConfig + yxboot.ai 静态配置创建
+      embedding: none  # 禁用 Spring AI 自动 EmbeddingModel，同上
+      image: none      # 禁用 Spring AI 自动 ImageModel（项目未使用）
     vectorstore:
-      # 禁用 Spring AI 默认 VectorStore Bean（EmbeddingModel 由 DB 动态提供）
-      type: none
+      type: none       # 禁用 Spring AI 自动 VectorStore，由 VectorStoreRegistry 按知识库动态创建
       qdrant:
         host: localhost
         port: 6334
@@ -61,4 +59,22 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
   packages-to-scan: com.yxboot.modules
-  show-actuator: false 
+  show-actuator: false
+
+yxboot:
+  ai:
+    chat:
+      provider: zhipuai
+      api-key: ""
+      model: glm-4-flash
+      temperature: 0.7
+      top-p: 0.95
+      max-tokens: 4096
+    embedding:
+      provider: zhipuai
+      api-key: ""
+      model: embedding-3
+      dimensions: 2048
+    retriever:
+      default-limit: 10
+      default-min-score: 0.0

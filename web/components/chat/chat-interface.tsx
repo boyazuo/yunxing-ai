@@ -2,11 +2,10 @@ import { chatService } from '@/api/chat'
 import { conversationService } from '@/api/conversation'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
-import { ArrowRight, ChevronDown, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
+import { ArrowRight, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from './markdown'
 
@@ -18,21 +17,8 @@ export interface ChatMessage {
   time: string
 }
 
-export interface ChatModel {
-  id: string
-  modelId: string
-  name: string
-  provider: string
-  temperature: number
-  topP: number
-  maxTokens: number
-  isActive: boolean
-}
-
 export interface ChatInterfaceProps {
   activeApp: App | null
-  models: ChatModel[]
-  defaultModelId: string
   hasActiveConversation: boolean
   activeConversationId: string | null
   userId?: string
@@ -51,8 +37,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
   (
     {
       activeApp,
-      models = [],
-      defaultModelId,
       hasActiveConversation,
       activeConversationId,
       userId = '',
@@ -63,9 +47,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
   ) => {
     const [userInput, setUserInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-    const [selectedModelId, setSelectedModelId] = useState<string>(
-      defaultModelId || (models.length > 0 ? models[0].modelId : ''),
-    )
 
     // 消息状态
     const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -117,14 +98,12 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
     }, [])
 
     // 发送消息
-    const sendMessage = async (question: string, modelId: string) => {
-      if (!question || !activeApp || !modelId) return
+    const sendMessage = async (question: string) => {
+      if (!question || !activeApp) return
       try {
-        // 准备请求数据
         const chatRequest = {
           appId: activeApp.appId,
           conversationId: activeConversationId || undefined,
-          modelId,
           prompt: question,
           messages: messages.map((message) => ({
             role: message.role,
@@ -262,29 +241,15 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
       [loadMessages, cleanMessages],
     )
 
-    // 确保在models数组更新时，如果selectedModelId为空，则设置为第一个可用的模型
-    useEffect(() => {
-      if (models.length > 0) {
-        // 如果没有选择模型，或者选择的模型不在当前模型列表中，则选择第一个模型
-        if (!selectedModelId || !models.find((m) => m.modelId === selectedModelId)) {
-          setSelectedModelId(models[0].modelId)
-        }
-      }
-    }, [models, selectedModelId])
-
-    const handleModelSelect = (modelId: string) => {
-      setSelectedModelId(modelId)
-    }
-
     const handleSendMessage = async () => {
-      if (!userInput.trim() || !activeApp || !selectedModelId) return
+      if (!userInput.trim() || !activeApp) return
 
       const message = userInput.trim()
       setUserInput('')
       setIsLoading(true)
 
       try {
-        await sendMessage(message, selectedModelId)
+        await sendMessage(message)
       } catch (error) {
         console.error('发送消息失败', error)
       } finally {
@@ -292,21 +257,9 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
       }
     }
 
-    const getSelectedModelName = () => {
-      if (!models || models.length === 0) return '选择模型'
-      const model = models.find((m) => m.modelId === selectedModelId)
-      return model ? model.name : '选择模型'
-    }
-
     return (
       <div className={`flex-1 flex flex-col bg-background ${className}`}>
-        <ChatHeader
-          activeApp={activeApp}
-          models={models}
-          selectedModelId={selectedModelId}
-          getSelectedModelName={getSelectedModelName}
-          onModelSelect={handleModelSelect}
-        />
+        <ChatHeader activeApp={activeApp} />
         <ChatMessages
           messages={messages}
           activeApp={activeApp}
@@ -318,7 +271,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           setUserInput={setUserInput}
           isLoading={isLoading}
           activeApp={activeApp}
-          selectedModelId={selectedModelId}
           handleSendMessage={handleSendMessage}
         />
       </div>
@@ -331,13 +283,9 @@ ChatInterface.displayName = 'ChatInterface'
 // 子组件: 聊天头部
 interface ChatHeaderProps {
   activeApp: App | null
-  models: ChatModel[]
-  selectedModelId: string
-  getSelectedModelName: () => string
-  onModelSelect: (modelId: string) => void
 }
 
-function ChatHeader({ activeApp, models, selectedModelId, getSelectedModelName, onModelSelect }: ChatHeaderProps) {
+function ChatHeader({ activeApp }: ChatHeaderProps) {
   return (
     <div className="border-b p-3 flex items-center justify-between bg-card">
       <div className="flex items-center">
@@ -353,25 +301,6 @@ function ChatHeader({ activeApp, models, selectedModelId, getSelectedModelName, 
         </div>
       </div>
       <div className="flex gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1" disabled={!activeApp || models.length === 0}>
-              {getSelectedModelName()}
-              <ChevronDown className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {models.map((model) => (
-              <DropdownMenuItem
-                key={model.modelId}
-                onClick={() => onModelSelect(model.modelId)}
-                className={selectedModelId === model.modelId ? 'bg-muted' : ''}
-              >
-                {model.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Button variant="outline" size="icon" className="h-8 w-8">
           <Settings className="h-4 w-4" />
         </Button>
@@ -491,20 +420,12 @@ interface ChatInputProps {
   setUserInput: (value: string) => void
   isLoading: boolean
   activeApp: App | null
-  selectedModelId: string
   handleSendMessage: () => Promise<void>
 }
 
-function ChatInput({
-  userInput,
-  setUserInput,
-  isLoading,
-  activeApp,
-  selectedModelId,
-  handleSendMessage,
-}: ChatInputProps) {
+function ChatInput({ userInput, setUserInput, isLoading, activeApp, handleSendMessage }: ChatInputProps) {
   const isInputDisabled = !activeApp || isLoading
-  const isSendDisabled = !userInput.trim() || isLoading || !activeApp || !selectedModelId
+  const isSendDisabled = !userInput.trim() || isLoading || !activeApp
 
   return (
     <div className="border-t p-4 bg-card">

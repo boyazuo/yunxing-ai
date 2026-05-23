@@ -3,7 +3,6 @@
 import { appConfigService } from '@/api/appConfig'
 import { appService } from '@/api/apps'
 import DatasetConfig from '@/app/[locale]/(main)/app/_components/config/DatasetConfig'
-import ModelConfig from '@/app/[locale]/(main)/app/_components/config/ModelConfig'
 import PromptConfig from '@/app/[locale]/(main)/app/_components/config/PromptConfig'
 import VariableConfig from '@/app/[locale]/(main)/app/_components/config/VariableConfig'
 import { Button } from '@/components/ui/button'
@@ -11,11 +10,9 @@ import { Input } from '@/components/ui/input'
 import type {
   AppConfig,
   DatasetConfig as DatasetConfigType,
-  ModelConfig as ModelConfigType,
   VariableConfig as VariableConfigType,
 } from '@/types/appConfig'
 import {
-  Bot,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
@@ -57,7 +54,6 @@ export default function AppConfigPage() {
   // 控制各个部分是否展开的状态
   const [sectionState, setSectionState] = useState({
     promptSection: true,
-    modelSection: false,
     variableSection: false,
     datasetSection: false,
   })
@@ -101,15 +97,12 @@ export default function AppConfigPage() {
             appId,
             tenantId,
             sysPrompt: '',
-            models: [],
             variables: [],
             datasets: [],
           })
         } else {
-          // 将后端返回的JSON字符串解析为对象
           const parsedConfig: AppConfig = {
             ...configData,
-            models: parseJsonField<ModelConfigType>(configData.models),
             variables: parseJsonField<VariableConfigType>(configData.variables),
             datasets: parseJsonField<DatasetConfigType>(configData.datasets),
           }
@@ -164,18 +157,6 @@ export default function AppConfigPage() {
     }
   }
 
-  const handleModelsChange = (models: AppConfig['models']) => {
-    // 检查models中是否包含isActive字段
-    const hasActiveField = models.length > 0 ? models.some((model) => 'isActive' in model) : false
-
-    if (appConfig) {
-      setAppConfig({
-        ...appConfig,
-        models,
-      })
-    }
-  }
-
   const handleVariablesChange = (variables: AppConfig['variables']) => {
     if (appConfig) {
       setAppConfig({
@@ -204,7 +185,6 @@ export default function AppConfigPage() {
       // 准备要发送到后端的数据，将数组转换为JSON字符串
       const configToSave = {
         ...appConfig,
-        models: JSON.stringify(appConfig.models),
         variables: JSON.stringify(appConfig.variables || []),
         datasets: JSON.stringify(appConfig.datasets || []),
       }
@@ -222,7 +202,6 @@ export default function AppConfigPage() {
       // 将接收到的结果中的JSON字符串解析回对象
       const parsedResult: AppConfig = {
         ...result,
-        models: parseJsonField<ModelConfigType>(result.models),
         variables: parseJsonField<VariableConfigType>(result.variables),
         datasets: parseJsonField<DatasetConfigType>(result.datasets),
       }
@@ -303,30 +282,6 @@ export default function AppConfigPage() {
               {sectionState.promptSection && (
                 <div className="p-4">
                   <PromptConfig appId={appId} sysPrompt={appConfig?.sysPrompt || ''} onChange={handlePromptChange} />
-                </div>
-              )}
-            </div>
-
-            {/* AI 模型配置部分 */}
-            <div className="bg-background rounded-lg overflow-hidden">
-              <button
-                type="button"
-                className="w-full py-3 px-4 flex items-center justify-between bg-muted/50 text-left"
-                onClick={() => toggleSection('modelSection')}
-              >
-                <div className="flex items-center">
-                  <Bot className="h-4 w-4 mr-2 text-primary" />
-                  <span className="font-medium text-sm">AI 模型配置</span>
-                </div>
-                {sectionState.modelSection ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-              {sectionState.modelSection && (
-                <div className="p-4">
-                  <ModelConfig appId={appId} models={appConfig?.models || []} onChange={handleModelsChange} />
                 </div>
               )}
             </div>

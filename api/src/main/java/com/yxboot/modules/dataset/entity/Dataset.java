@@ -35,11 +35,11 @@ public class Dataset {
     @Schema(description = "知识库描述")
     private String datasetDesc;
 
-    @Schema(description = "嵌入模型ID")
-    private Long embeddingModelId;
-
     @Schema(description = "状态")
     private DatasetStatus status;
+
+    @Schema(description = "向量化使用的模型标识，格式 provider:model")
+    private String embeddingModel;
 
     @Schema(description = "创建者ID")
     @TableField(fill = FieldFill.INSERT)

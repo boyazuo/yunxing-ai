@@ -30,14 +30,14 @@ public class DatasetDTO {
     @Schema(description = "知识库描述")
     private String datasetDesc;
 
-    @Schema(description = "嵌入模型ID")
-    private Long embeddingModelId;
-
-    @Schema(description = "嵌入模型名称")
-    private String embeddingModelName;
-
     @Schema(description = "状态")
     private DatasetStatus status;
+
+    @Schema(description = "向量化使用的模型标识，格式 provider:model")
+    private String embeddingModel;
+
+    @Schema(description = "向量模型是否与当前系统配置一致，null 表示未记录")
+    private Boolean embeddingModelMatched;
 
     @Schema(description = "创建者ID")
     private Long creatorId;
@@ -71,8 +71,8 @@ public class DatasetDTO {
         dto.setTenantId(dataset.getTenantId());
         dto.setDatasetName(dataset.getDatasetName());
         dto.setDatasetDesc(dataset.getDatasetDesc());
-        dto.setEmbeddingModelId(dataset.getEmbeddingModelId());
         dto.setStatus(dataset.getStatus());
+        dto.setEmbeddingModel(dataset.getEmbeddingModel());
         dto.setCreatorId(dataset.getCreatorId());
         dto.setCreateTime(dataset.getCreateTime());
         dto.setUpdatorId(dataset.getUpdatorId());

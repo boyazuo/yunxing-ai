@@ -14,11 +14,6 @@ import com.yxboot.ai.document.DocumentSegment;
 import com.yxboot.ai.document.splitter.SplitMode;
 import com.yxboot.ai.service.AiDocumentProcessingService;
 import com.yxboot.ai.service.AiVectorStoreService;
-import com.yxboot.modules.ai.entity.Model;
-import com.yxboot.modules.ai.entity.Provider;
-import com.yxboot.modules.ai.service.ModelService;
-import com.yxboot.modules.ai.service.ProviderService;
-import com.yxboot.modules.dataset.entity.Dataset;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import com.yxboot.modules.dataset.enums.DocumentStatus;
@@ -47,9 +42,7 @@ public class DatasetDocumentProcessingApplicationService {
     private final SysFileService sysFileService;
     private final AiDocumentProcessingService documentProcessingService;
     private final AiVectorStoreService vectorStoreService;
-    private final ProviderService providerService;
     private final DatasetService datasetService;
-    private final ModelService modelService;
 
     /**
      * 异步处理文档 协调文档解析、分段创建、向量化等完整流程
@@ -101,35 +94,17 @@ public class DatasetDocumentProcessingApplicationService {
             document.setSegmentNum(savedSegments.size());
             datasetDocumentService.updateById(document);
 
-            // 7. 获取知识库和提供商信息
-            Dataset dataset = datasetService.getById(document.getDatasetId());
-            if (dataset == null) {
-                log.error("知识库不存在, datasetId: {}", document.getDatasetId());
-                updateDocumentStatusToFailed(documentId);
-                return CompletableFuture.completedFuture(false);
-            }
-
-            Model model = modelService.getById(dataset.getEmbeddingModelId());
-            if (model == null) {
-                log.error("模型不存在, modelId: {}", dataset.getEmbeddingModelId());
-                updateDocumentStatusToFailed(documentId);
-                return CompletableFuture.completedFuture(false);
-            }
-
-            Provider provider = providerService.getProviderByModelId(model.getModelId());
-            if (provider == null) {
-                log.error("提供商不存在, embeddingModelId: {}", dataset.getEmbeddingModelId());
-                updateDocumentStatusToFailed(documentId);
-                return CompletableFuture.completedFuture(false);
-            }
-
-            // 8. 向量化处理
+            // 7. 向量化处理
             log.info("开始向量化处理, documentId: {}, 分段数量: {}", documentId, savedSegments.size());
             int vectorizedCount = vectorStoreService.batchCreateSegmentVectors(
-                    savedSegments, document.getDatasetId(), provider, model);
+                    savedSegments, document.getDatasetId());
 
             if (vectorizedCount != savedSegments.size()) {
                 log.warn("向量化部分失败, documentId: {}, 成功: {}, 总数: {}", documentId, vectorizedCount, savedSegments.size());
+            }
+
+            if (vectorizedCount > 0) {
+                datasetService.recordEmbeddingModel(document.getDatasetId());
             }
 
             // 9. 更新文档状态为已完成

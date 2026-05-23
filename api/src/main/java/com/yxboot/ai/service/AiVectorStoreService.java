@@ -9,8 +9,6 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import com.yxboot.ai.registry.VectorStoreRegistry;
 import com.yxboot.ai.vector.AiQueryResult;
-import com.yxboot.modules.ai.entity.Model;
-import com.yxboot.modules.ai.entity.Provider;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +35,9 @@ public class AiVectorStoreService {
         return vectorStoreRegistry.deleteCollection(datasetId, tenantId);
     }
 
-    public List<AiQueryResult> similaritySearch(Long datasetId, Long tenantId, Provider provider, Model model,
-            String queryText, int limit, float minScore, Map<String, Object> filter) {
-        VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId, provider, model);
+    public List<AiQueryResult> similaritySearch(Long datasetId, Long tenantId, String queryText, int limit,
+            float minScore, Map<String, Object> filter) {
+        VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
         SearchRequest.Builder builder = SearchRequest.builder()
                 .query(queryText)
                 .topK(limit)
@@ -52,13 +50,12 @@ public class AiVectorStoreService {
         return documents.stream().map(this::toQueryResult).toList();
     }
 
-    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId, Provider provider,
-            Model model) {
+    public int batchCreateSegmentVectors(List<DatasetDocumentSegment> segments, Long datasetId) {
         if (segments == null || segments.isEmpty()) {
             return 0;
         }
         Long tenantId = segments.get(0).getTenantId();
-        VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId, provider, model);
+        VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
         List<Document> documents = segments.stream()
                 .filter(s -> s.getContent() != null && !s.getContent().isBlank())
                 .map(this::toDocument)
@@ -71,20 +68,18 @@ public class AiVectorStoreService {
         return documents.size();
     }
 
-    public boolean createSegmentVector(DatasetDocumentSegment segment, Provider provider, Model model) {
-        return batchCreateSegmentVectors(List.of(segment), segment.getDatasetId(), provider, model) == 1;
+    public boolean createSegmentVector(DatasetDocumentSegment segment) {
+        return batchCreateSegmentVectors(List.of(segment), segment.getDatasetId()) == 1;
     }
 
-    public boolean updateSegmentVector(DatasetDocumentSegment segment, Provider provider, Model model) {
+    public boolean updateSegmentVector(DatasetDocumentSegment segment) {
         deleteSegmentVector(segment);
-        return createSegmentVector(segment, provider, model);
+        return createSegmentVector(segment);
     }
 
     public boolean deleteSegmentVector(DatasetDocumentSegment segment) {
         try {
-            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(
-                    segment.getDatasetId(), segment.getTenantId(),
-                    dummyProvider(segment.getTenantId()), dummyModel());
+            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(segment.getDatasetId(), segment.getTenantId());
             if (segment.getVectorId() != null) {
                 vectorStore.delete(List.of(segment.getVectorId()));
             }
@@ -101,8 +96,7 @@ public class AiVectorStoreService {
         }
         Long tenantId = segments.get(0).getTenantId();
         try {
-            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId,
-                    dummyProvider(tenantId), dummyModel());
+            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
             List<String> ids = segments.stream()
                     .map(DatasetDocumentSegment::getVectorId)
                     .filter(id -> id != null && !id.isBlank())
@@ -127,8 +121,7 @@ public class AiVectorStoreService {
             if (!vectorStoreRegistry.collectionExists(datasetId, tenantId)) {
                 return 0;
             }
-            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId,
-                    dummyProvider(tenantId), dummyModel());
+            VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
             String expression = buildFilterExpression(datasetId, filter);
             if (expression != null) {
                 vectorStore.delete(expression);
@@ -182,19 +175,5 @@ public class AiVectorStoreService {
             }
         }
         return sb.toString();
-    }
-
-    private Provider dummyProvider(Long tenantId) {
-        Provider p = new Provider();
-        p.setProviderName("zhipu");
-        p.setApiKey("placeholder");
-        p.setTenantId(tenantId);
-        return p;
-    }
-
-    private Model dummyModel() {
-        Model m = new Model();
-        m.setModelName("embedding-3");
-        return m;
     }
 }

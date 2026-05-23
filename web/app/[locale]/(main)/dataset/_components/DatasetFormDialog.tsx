@@ -1,7 +1,6 @@
 'use client'
 
 import { datasetService } from '@/api/dataset'
-import { modelService } from '@/api/model'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,9 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { type Model, ModelType } from '@/types/ai'
 import type { Dataset } from '@/types/dataset'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
@@ -23,11 +20,9 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-// 表单验证规则
 const datasetFormSchema = z.object({
   datasetName: z.string().min(1, '知识库名称不能为空').max(50, '知识库名称最长50个字符'),
   datasetDesc: z.string().max(200, '描述最长200个字符').optional(),
-  embeddingModelId: z.string().min(1, '请选择嵌入模型'),
 })
 
 type DatasetFormValues = z.infer<typeof datasetFormSchema>
@@ -42,55 +37,36 @@ interface DatasetFormDialogProps {
 
 export function DatasetFormDialog({ open, onOpenChange, dataset, onSuccess, tenantId }: DatasetFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [embeddingModels, setEmbeddingModels] = useState<Model[]>([])
   const isEditing = !!dataset
 
-  // 获取嵌入模型列表
-  useEffect(() => {
-    if (open) {
-      const fetchModels = async () => {
-        const models = await modelService.getModelsByType(ModelType.EMBEDDING)
-        setEmbeddingModels(models)
-      }
-      fetchModels()
-    }
-  }, [open])
-
-  // 表单初始化
   const form = useForm<DatasetFormValues>({
     resolver: zodResolver(datasetFormSchema),
     defaultValues: {
       datasetName: dataset?.datasetName || '',
       datasetDesc: dataset?.datasetDesc || '',
-      embeddingModelId: dataset?.embeddingModelId || '',
     },
   })
 
-  // 当dataset改变时，重置表单值
   useEffect(() => {
     if (open) {
       form.reset({
         datasetName: dataset?.datasetName || '',
         datasetDesc: dataset?.datasetDesc || '',
-        embeddingModelId: dataset?.embeddingModelId || '',
       })
     }
   }, [form, dataset, open])
 
-  // 表单提交
   const onSubmit = async (values: DatasetFormValues) => {
     try {
       setIsSubmitting(true)
 
       if (isEditing && dataset) {
-        // 更新知识库
         await datasetService.updateDataset({
           datasetId: dataset.datasetId,
           ...values,
         })
         toast.success('知识库更新成功')
       } else {
-        // 创建知识库
         await datasetService.createDataset({
           tenantId,
           ...values,
@@ -148,31 +124,6 @@ export function DatasetFormDialog({ open, onOpenChange, dataset, onSuccess, tena
                       value={field.value || ''}
                     />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="embeddingModelId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>嵌入模型</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="请选择嵌入模型" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {embeddingModels.map((model) => (
-                        <SelectItem key={model.modelId} value={model.modelId}>
-                          {model.modelName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
