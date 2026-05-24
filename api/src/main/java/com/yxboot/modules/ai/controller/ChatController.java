@@ -1,8 +1,6 @@
 package com.yxboot.modules.ai.controller;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +14,6 @@ import com.yxboot.common.api.Result;
 import com.yxboot.config.security.SecurityUser;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
-import com.yxboot.modules.ai.entity.Conversation;
 import com.yxboot.modules.ai.entity.Message;
 import com.yxboot.modules.ai.enums.MessageStatus;
 import com.yxboot.modules.ai.service.ChatService;
@@ -49,26 +46,9 @@ public class ChatController {
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
-    public SseEmitter chatCompletion(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody ChatRequestDTO request) throws Exception {
-        Long userId = securityUser.getUserId();
-
-        Long conversationId = handleConversation(userId, request);
-        request.setConversationId(conversationId);
-
-        Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
-
-        AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
-        RagPromptResult ragPrompt = ragChatPromptService.build(request.getPrompt(), appConfig);
-
-        if (ragPrompt.getDirectResponse() != null) {
-            return streamDirectResponse(conversationId, message.getMessageId(), ragPrompt.getDirectResponse());
-        }
-
-        applyRagPrompt(request, ragPrompt);
-
+    public SseEmitter chatCompletion(@AuthenticationPrincipal SecurityUser securityUser, @RequestBody ChatRequestDTO request) {
         SseEmitter emitter = new SseEmitter(300000L);
-        aiService.streamingChatCompletion(request, emitter, message.getMessageId());
-
+        aiService.streamChat(securityUser.getUserId(), request, emitter);
         return emitter;
     }
 
@@ -113,22 +93,10 @@ public class ChatController {
         request.setSystemPrompt(ragPrompt.getSystemPrompt());
     }
 
-    private SseEmitter streamDirectResponse(Long conversationId, Long messageId, String content) throws IOException {
-        SseEmitter emitter = new SseEmitter(30000L);
-        messageService.updateMessageAnswer(messageId, content, MessageStatus.COMPLETED);
-        emitter.send(SseEmitter.event()
-                .name("metadata")
-                .data(Map.of("conversationId", conversationId, "messageId", messageId)));
-        emitter.send(SseEmitter.event().data(Map.of("chunk", content)));
-        emitter.send(SseEmitter.event().name("end").data(""));
-        emitter.complete();
-        return emitter;
-    }
-
     private Long handleConversation(Long userId, ChatRequestDTO request) {
         if (request.getConversationId() != null) {
             Long conversationId = request.getConversationId();
-            Conversation conversation = conversationService.getById(conversationId);
+            var conversation = conversationService.getById(conversationId);
             if (conversation != null) {
                 conversation.setUpdateTime(LocalDateTime.now());
                 conversationService.updateById(conversation);
@@ -141,7 +109,7 @@ public class ChatController {
             title = title.substring(0, 47) + "...";
         }
 
-        Conversation conversation = conversationService.createConversation(userId, request.getAppId(), title);
+        var conversation = conversationService.createConversation(userId, request.getAppId(), title);
         return conversation.getConversationId();
     }
 }

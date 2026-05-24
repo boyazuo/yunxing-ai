@@ -3,10 +3,11 @@ import { conversationService } from '@/api/conversation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
-import { MessageRole } from '@/types/chat'
+import { ChatStreamPhase, MessageRole } from '@/types/chat'
 import { ArrowRight, ArrowUp, FileText, Loader2, Settings, Share2 } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from './markdown'
+import { ThinkingIndicator } from './thinking-indicator'
 
 export interface ChatMessage {
   id: string
@@ -45,6 +46,7 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
     const [isLoading, setIsLoading] = useState(false)
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [loadingMessages, setLoadingMessages] = useState(false)
+    const [streamingPhase, setStreamingPhase] = useState<ChatStreamPhase>(ChatStreamPhase.UNDERSTANDING)
 
     const formatTime = useCallback((dateString: string) => {
       return new Date(dateString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
@@ -119,6 +121,7 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
             time: currentTime,
           },
         ])
+        setStreamingPhase(ChatStreamPhase.UNDERSTANDING)
 
         let conversationId = activeConversationId
         let messageId = ''
@@ -158,6 +161,15 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
                   }
                 } catch (jsonError) {
                   console.error('解析metadata JSON失败:', jsonError, data)
+                }
+              } else if (event.name === 'status') {
+                try {
+                  const { phase } = JSON.parse(data) as { phase: string }
+                  if (Object.values(ChatStreamPhase).includes(phase as ChatStreamPhase)) {
+                    setStreamingPhase(phase as ChatStreamPhase)
+                  }
+                } catch (jsonError) {
+                  console.error('解析status JSON失败:', jsonError, data)
                 }
               } else if (event.name === 'end') {
                 return
@@ -254,7 +266,13 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           />
         ) : (
           <>
-            <ChatMessages messages={messages} activeApp={activeApp} loadingMessages={loadingMessages} />
+            <ChatMessages
+              messages={messages}
+              activeApp={activeApp}
+              loadingMessages={loadingMessages}
+              isLoading={isLoading}
+              streamingPhase={streamingPhase}
+            />
             <ChatInputDock
               userInput={userInput}
               setUserInput={setUserInput}
@@ -354,9 +372,11 @@ interface ChatMessagesProps {
   messages: ChatMessage[]
   activeApp: App | null
   loadingMessages: boolean
+  isLoading: boolean
+  streamingPhase: ChatStreamPhase
 }
 
-function ChatMessages({ messages, loadingMessages }: ChatMessagesProps) {
+function ChatMessages({ messages, loadingMessages, isLoading, streamingPhase }: ChatMessagesProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -381,8 +401,18 @@ function ChatMessages({ messages, loadingMessages }: ChatMessagesProps) {
   return (
     <div ref={messagesContainerRef} className="flex-1 overflow-auto">
       <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 space-y-8">
-        {messages.map((message) => (
-          <ChatMessageItem key={message.id} message={message} />
+        {messages.map((message, index) => (
+          <ChatMessageItem
+            key={message.id}
+            message={message}
+            isThinking={
+              isLoading &&
+              index === messages.length - 1 &&
+              message.role === MessageRole.ASSISTANT &&
+              !message.content.trim()
+            }
+            streamingPhase={streamingPhase}
+          />
         ))}
       </div>
     </div>
@@ -391,9 +421,11 @@ function ChatMessages({ messages, loadingMessages }: ChatMessagesProps) {
 
 interface ChatMessageItemProps {
   message: ChatMessage
+  isThinking?: boolean
+  streamingPhase: ChatStreamPhase
 }
 
-function ChatMessageItem({ message }: ChatMessageItemProps) {
+function ChatMessageItem({ message, isThinking = false, streamingPhase }: ChatMessageItemProps) {
   const isUserMessage = message.role === MessageRole.USER
 
   if (isUserMessage) {
@@ -408,10 +440,18 @@ function ChatMessageItem({ message }: ChatMessageItemProps) {
     )
   }
 
+  if (isThinking) {
+    return (
+      <div className="min-w-0">
+        <ThinkingIndicator phase={streamingPhase} />
+      </div>
+    )
+  }
+
   return (
     <div className="min-w-0">
       <div className="text-sm leading-relaxed text-foreground prose-sm max-w-none">
-        <Markdown>{message.content || '...'}</Markdown>
+        <Markdown>{message.content}</Markdown>
       </div>
     </div>
   )

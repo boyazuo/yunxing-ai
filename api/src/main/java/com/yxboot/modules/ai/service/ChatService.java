@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -14,10 +15,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.yxboot.ai.config.AiProperties;
+import com.yxboot.ai.rag.RagPromptResult;
+import com.yxboot.ai.service.RagChatPromptService;
 import com.yxboot.ai.support.SpringAiMessageConverter;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
+import com.yxboot.modules.ai.entity.Conversation;
+import com.yxboot.modules.ai.entity.Message;
+import com.yxboot.modules.ai.enums.ChatStreamPhase;
 import com.yxboot.modules.ai.enums.MessageStatus;
+import com.yxboot.modules.app.entity.AppConfig;
+import com.yxboot.modules.app.service.AppConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -31,6 +39,9 @@ import reactor.core.publisher.Flux;
 public class ChatService {
 
     private final MessageService messageService;
+    private final ConversationService conversationService;
+    private final AppConfigService appConfigService;
+    private final RagChatPromptService ragChatPromptService;
     private final ChatModel chatModel;
     private final AiProperties aiProperties;
 
@@ -47,17 +58,48 @@ public class ChatService {
         }
     }
 
+    /**
+     * 异步编排流式聊天：先建立 SSE 连接，再按阶段推送 status 并流式输出。
+     */
+    public void streamChat(Long userId, ChatRequestDTO request, SseEmitter emitter) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                sendStatus(emitter, ChatStreamPhase.UNDERSTANDING);
+
+                Long conversationId = resolveConversation(userId, request);
+                request.setConversationId(conversationId);
+
+                Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
+
+                sendMetadata(emitter, conversationId, message.getMessageId());
+
+                AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
+                if (ragChatPromptService.hasActiveDatasets(appConfig)) {
+                    sendStatus(emitter, ChatStreamPhase.RETRIEVING);
+                }
+
+                RagPromptResult ragPrompt = ragChatPromptService.build(request.getPrompt(), appConfig);
+
+                if (ragPrompt.getDirectResponse() != null) {
+                    streamDirectResponse(emitter, message.getMessageId(), ragPrompt.getDirectResponse());
+                    return;
+                }
+
+                applyRagPrompt(request, ragPrompt);
+                sendStatus(emitter, ChatStreamPhase.GENERATING);
+                streamingChatCompletion(request, emitter, message.getMessageId());
+            } catch (Exception e) {
+                log.error("流式聊天编排异常", e);
+                emitter.completeWithError(e);
+            }
+        });
+    }
+
     public void streamingChatCompletion(ChatRequestDTO request, SseEmitter emitter, Long messageId)
             throws IOException {
         try {
             Prompt prompt = buildPrompt(request);
             StringBuilder fullResponseBuilder = new StringBuilder();
-
-            emitter.send(SseEmitter.event()
-                    .name("metadata")
-                    .data(Map.of(
-                            "conversationId", request.getConversationId(),
-                            "messageId", messageId)));
 
             Flux<ChatResponse> responseStream = chatModel.stream(prompt);
 
@@ -112,6 +154,48 @@ public class ChatService {
             }
             emitter.completeWithError(e);
         }
+    }
+
+    private void streamDirectResponse(SseEmitter emitter, Long messageId, String content) throws IOException {
+        messageService.updateMessageAnswer(messageId, content, MessageStatus.COMPLETED);
+        emitter.send(SseEmitter.event().data(Map.of("chunk", content)));
+        emitter.send(SseEmitter.event().name("end").data(""));
+        emitter.complete();
+    }
+
+    private void sendStatus(SseEmitter emitter, ChatStreamPhase phase) throws IOException {
+        emitter.send(SseEmitter.event().name("status").data(Map.of("phase", phase.getValue())));
+    }
+
+    private void sendMetadata(SseEmitter emitter, Long conversationId, Long messageId) throws IOException {
+        emitter.send(SseEmitter.event()
+                .name("metadata")
+                .data(Map.of("conversationId", conversationId, "messageId", messageId)));
+    }
+
+    private void applyRagPrompt(ChatRequestDTO request, RagPromptResult ragPrompt) {
+        request.setPrompt(ragPrompt.getUserPrompt());
+        request.setSystemPrompt(ragPrompt.getSystemPrompt());
+    }
+
+    private Long resolveConversation(Long userId, ChatRequestDTO request) {
+        if (request.getConversationId() != null) {
+            Long conversationId = request.getConversationId();
+            Conversation conversation = conversationService.getById(conversationId);
+            if (conversation != null) {
+                conversation.setUpdateTime(LocalDateTime.now());
+                conversationService.updateById(conversation);
+                return conversationId;
+            }
+        }
+
+        String title = request.getPrompt();
+        if (title.length() > 50) {
+            title = title.substring(0, 47) + "...";
+        }
+
+        Conversation conversation = conversationService.createConversation(userId, request.getAppId(), title);
+        return conversation.getConversationId();
     }
 
     private Prompt buildPrompt(ChatRequestDTO request) {

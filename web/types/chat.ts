@@ -1,4 +1,19 @@
 /**
+ * 流式聊天处理阶段
+ */
+export enum ChatStreamPhase {
+  UNDERSTANDING = 'understanding',
+  RETRIEVING = 'retrieving',
+  GENERATING = 'generating',
+}
+
+export const CHAT_STREAM_PHASE_LABELS: Record<ChatStreamPhase, string> = {
+  [ChatStreamPhase.UNDERSTANDING]: '正在理解问题',
+  [ChatStreamPhase.RETRIEVING]: '正在检索知识库',
+  [ChatStreamPhase.GENERATING]: '正在生成回答',
+}
+
+/**
  * 消息角色枚举
  */
 export enum MessageRole {

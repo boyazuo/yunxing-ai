@@ -24,6 +24,10 @@ public class RagChatPromptService {
     private final AiVectorRetrieverService vectorRetrieverService;
     private final AiProperties aiProperties;
 
+    public boolean hasActiveDatasets(AppConfig appConfig) {
+        return !parseActiveDatasetIds(appConfig).isEmpty();
+    }
+
     public RagPromptResult build(String userQuestion, AppConfig appConfig) {
         List<Long> activeDatasetIds = parseActiveDatasetIds(appConfig);
 
