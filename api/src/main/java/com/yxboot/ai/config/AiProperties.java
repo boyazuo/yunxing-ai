@@ -28,16 +28,16 @@ public class AiProperties {
 
     @Data
     public static class EmbeddingConfig {
-        private String provider = "zhipuai";
+        private String provider = "dashscope";
         private String apiKey;
-        private String model = "embedding-3";
-        private Integer dimensions = 2048;
-        /** Ollama 专用：服务地址，默认 http://localhost:11434 */
-        private String baseUrl = "http://localhost:11434";
-        /** HTTP 读超时（秒），本地大模型向量化较慢时需适当调大 */
-        private Integer readTimeoutSeconds = 300;
-        /** 单次 embedding 请求的分段数量，避免大批量请求超时 */
-        private Integer batchSize = 16;
+        private String model = "text-embedding-v4";
+        private Integer dimensions = 1024;
+        /** DashScope 百炼 OpenAI 兼容端点；Ollama 时为本地服务地址 */
+        private String baseUrl = "https://dashscope.aliyuncs.com/compatible-mode";
+        /** HTTP 读超时（秒） */
+        private Integer readTimeoutSeconds = 60;
+        /** 单次 embedding 请求的分段数量（百炼 text-embedding-v4 上限为 10） */
+        private Integer batchSize = 10;
 
         /** 返回向量模型标识，格式 provider:model */
         public String toModelKey() {

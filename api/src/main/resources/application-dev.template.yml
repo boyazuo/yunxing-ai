@@ -46,12 +46,13 @@ yxboot:
       top-p: 0.95
       max-tokens: 4096
     embedding:
-      provider: ollama         # ollama | zhipuai
-      base-url: http://localhost:11434
-      model: qwen3-embedding:4b
-      dimensions: 2560
-      read-timeout-seconds: 300
-      batch-size: 16
+      provider: dashscope      # dashscope | ollama | zhipuai
+      api-key: ${DASHSCOPE_API_KEY:}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      model: text-embedding-v4
+      dimensions: 1024
+      read-timeout-seconds: 60
+      batch-size: 10
     retriever:
       default-limit: 10
       default-min-score: 0.0

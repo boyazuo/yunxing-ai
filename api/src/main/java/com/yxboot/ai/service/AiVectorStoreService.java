@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class AiVectorStoreService {
 
-    private static final int DEFAULT_EMBEDDING_BATCH_SIZE = 16;
+    private static final int DEFAULT_EMBEDDING_BATCH_SIZE = 10;
 
     private final VectorStoreRegistry vectorStoreRegistry;
     private final AiProperties aiProperties;

@@ -7,6 +7,9 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.zhipuai.ZhiPuAiChatModel;
 import org.springframework.ai.zhipuai.ZhiPuAiChatOptions;
 import org.springframework.ai.zhipuai.ZhiPuAiEmbeddingModel;
@@ -46,6 +49,7 @@ public class SpringAIConfig {
         AiProperties.EmbeddingConfig cfg = props.getEmbedding();
         return switch (cfg.getProvider().toLowerCase()) {
             case "zhipuai", "zhipu" -> buildZhiPuEmbeddingModel(cfg);
+            case "dashscope", "bailian", "alibaba" -> buildDashScopeEmbeddingModel(cfg);
             case "ollama" -> buildOllamaEmbeddingModel(cfg);
             default -> throw new IllegalArgumentException("不支持的 Embedding 提供商: " + cfg.getProvider());
         };
@@ -89,6 +93,25 @@ public class SpringAIConfig {
                 .dimensions(cfg.getDimensions())
                 .build();
         return new ZhiPuAiEmbeddingModel(api, MetadataMode.EMBED, options);
+    }
+
+    private EmbeddingModel buildDashScopeEmbeddingModel(AiProperties.EmbeddingConfig cfg) {
+        if (!StringUtils.hasText(cfg.getApiKey())) {
+            throw new IllegalArgumentException(
+                    "Embedding API Key 未配置，请在 yxboot.ai.embedding.api-key 中设置百炼 DashScope API Key");
+        }
+        String baseUrl = StringUtils.hasText(cfg.getBaseUrl())
+                ? cfg.getBaseUrl()
+                : "https://dashscope.aliyuncs.com/compatible-mode";
+        OpenAiApi openAiApi = OpenAiApi.builder()
+                .baseUrl(baseUrl)
+                .apiKey(cfg.getApiKey())
+                .build();
+        OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
+                .model(cfg.getModel())
+                .dimensions(cfg.getDimensions())
+                .build();
+        return new OpenAiEmbeddingModel(openAiApi, MetadataMode.EMBED, options);
     }
 
     private EmbeddingModel buildOllamaEmbeddingModel(AiProperties.EmbeddingConfig cfg) {
