@@ -181,20 +181,28 @@ public class AiVectorStoreService {
     }
 
     /**
-     * 使用 FilterExpressionBuilder 构建过滤条件，避免 Snowflake ID 超出 int 范围时
-     * 字符串表达式被 Spring AI 解析为 Integer 导致 NumberFormatException。
+     * 使用 FilterExpressionBuilder 构建过滤条件。
+     * Snowflake ID 在 Qdrant payload 中以字符串存储，过滤值需转为字符串才能命中。
      */
     private Filter.Expression buildFilter(Long datasetId, Map<String, Object> filter) {
         FilterExpressionBuilder builder = new FilterExpressionBuilder();
-        FilterExpressionBuilder.Op expression = builder.eq("dataset_id", datasetId);
+        FilterExpressionBuilder.Op expression = builder.eq("dataset_id", toMetadataFilterValue(datasetId));
         if (filter != null) {
             for (Map.Entry<String, Object> entry : filter.entrySet()) {
                 if ("dataset_id".equals(entry.getKey())) {
                     continue;
                 }
-                expression = builder.and(expression, builder.eq(entry.getKey(), entry.getValue()));
+                expression = builder.and(expression,
+                        builder.eq(entry.getKey(), toMetadataFilterValue(entry.getValue())));
             }
         }
         return expression.build();
+    }
+
+    private Object toMetadataFilterValue(Object value) {
+        if (value instanceof Number number) {
+            return number.toString();
+        }
+        return value;
     }
 }
