@@ -230,47 +230,53 @@ export default function AppConfigPage() {
 
   if (loading && !appConfig) {
     return (
-      <div className="flex justify-center items-center h-[calc(100vh-60px)]">
-        <p>加载中...</p>
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-3">
+        <RefreshCw className="h-6 w-6 animate-spin text-primary/60" />
+        <p className="text-sm text-muted-foreground">加载应用配置中...</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden">
-      {/* 顶部导航 */}
-      <div className="p-4 border-b border-border flex justify-between items-center shrink-0">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" className="mr-2" onClick={handleBack}>
+    <div className="flex flex-col h-[calc(100vh-56px)] overflow-hidden bg-background">
+      {/* Top bar */}
+      <div className="h-14 px-4 border-b border-border/60 flex justify-between items-center shrink-0 bg-background/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 cursor-pointer" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="font-medium">{appName}</h1>
+          <div className="h-5 w-px bg-border" />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold tracking-widest text-primary/70 uppercase">App Config</p>
+            <h1 className="font-semibold text-sm truncate">{appName}</h1>
+          </div>
         </div>
         <Button
-          variant="default"
           size="sm"
-          className="flex items-center gap-1"
+          className="gap-1.5 shadow-sm shadow-primary/15 cursor-pointer"
           onClick={handleSaveConfig}
           disabled={loading}
         >
-          {loading ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+          {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           保存配置
         </Button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* 左侧配置区域 */}
-        <div className="w-[450px] min-h-0 border-r border-border overflow-y-auto">
-          <div className="p-4 space-y-2">
-            {/* 提示词设置部分 */}
-            <div className="bg-background rounded-lg overflow-hidden">
+        {/* Left config panel */}
+        <div className="w-[420px] min-h-0 border-r border-border/60 overflow-y-auto bg-muted/20">
+          <div className="p-4 space-y-3">
+            {/* Prompt section */}
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
               <button
                 type="button"
-                className="w-full py-3 px-4 flex items-center justify-between bg-muted/50 text-left"
+                className="w-full py-3 px-4 flex items-center justify-between text-left cursor-pointer hover:bg-muted/40 transition-colors duration-200"
                 onClick={() => toggleSection('promptSection')}
               >
-                <div className="flex items-center">
-                  <MessageSquare className="h-4 w-4 mr-2 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center">
+                    <MessageSquare className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-300" />
+                  </div>
                   <span className="font-medium text-sm">提示词设置</span>
                 </div>
                 {sectionState.promptSection ? (
@@ -280,21 +286,23 @@ export default function AppConfigPage() {
                 )}
               </button>
               {sectionState.promptSection && (
-                <div className="p-4">
+                <div className="px-4 pb-4 border-t border-border/40">
                   <PromptConfig appId={appId} sysPrompt={appConfig?.sysPrompt || ''} onChange={handlePromptChange} />
                 </div>
               )}
             </div>
 
-            {/* 变量配置部分 */}
-            <div className="bg-background rounded-lg overflow-hidden">
+            {/* Variables section */}
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
               <button
                 type="button"
-                className="w-full py-3 px-4 flex items-center justify-between bg-muted/50 text-left"
+                className="w-full py-3 px-4 flex items-center justify-between text-left cursor-pointer hover:bg-muted/40 transition-colors duration-200"
                 onClick={() => toggleSection('variableSection')}
               >
-                <div className="flex items-center">
-                  <RefreshCw className="h-4 w-4 mr-2 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-violet-50 dark:bg-violet-950/60 flex items-center justify-center">
+                    <RefreshCw className="h-3.5 w-3.5 text-violet-600 dark:text-violet-300" />
+                  </div>
                   <span className="font-medium text-sm">变量配置</span>
                 </div>
                 {sectionState.variableSection ? (
@@ -304,7 +312,7 @@ export default function AppConfigPage() {
                 )}
               </button>
               {sectionState.variableSection && (
-                <div className="p-4">
+                <div className="px-4 pb-4 border-t border-border/40">
                   <VariableConfig
                     appId={appId}
                     variables={appConfig?.variables || []}
@@ -314,15 +322,17 @@ export default function AppConfigPage() {
               )}
             </div>
 
-            {/* 知识库部分 */}
-            <div className="bg-background rounded-lg overflow-hidden">
+            {/* Dataset section */}
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
               <button
                 type="button"
-                className="w-full py-3 px-4 flex items-center justify-between bg-muted/50 text-left"
+                className="w-full py-3 px-4 flex items-center justify-between text-left cursor-pointer hover:bg-muted/40 transition-colors duration-200"
                 onClick={() => toggleSection('datasetSection')}
               >
-                <div className="flex items-center">
-                  <Database className="h-4 w-4 mr-2 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-50 dark:bg-teal-950/60 flex items-center justify-center">
+                    <Database className="h-3.5 w-3.5 text-teal-600 dark:text-teal-300" />
+                  </div>
                   <span className="font-medium text-sm">知识库</span>
                 </div>
                 {sectionState.datasetSection ? (
@@ -332,7 +342,7 @@ export default function AppConfigPage() {
                 )}
               </button>
               {sectionState.datasetSection && (
-                <div className="p-4">
+                <div className="px-4 pb-4 border-t border-border/40">
                   <DatasetConfig appId={appId} datasets={appConfig?.datasets || []} onChange={handleDatasetsChange} />
                 </div>
               )}
@@ -340,32 +350,33 @@ export default function AppConfigPage() {
           </div>
         </div>
 
-        {/* 右侧调试预览区域 */}
+        {/* Right preview panel */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* 调试预览标题栏 */}
-          <div className="flex justify-between items-center px-6 py-3 border-b border-border bg-white shrink-0">
-            <h2 className="font-medium">调试预览</h2>
+          <div className="flex justify-between items-center px-5 h-12 border-b border-border/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <h2 className="font-medium text-sm">调试预览</h2>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              className="flex items-center gap-1 px-3 text-xs"
+              className="h-7 text-xs gap-1 cursor-pointer"
               onClick={handleRefreshPreview}
             >
-              <RefreshCw className="w-3.5 h-3.5 mr-1" />
+              <RefreshCw className="w-3 h-3" />
               刷新
             </Button>
           </div>
 
-          {/* 聊天消息区域 */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 bg-gray-50">
-            <div className="flex flex-col space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-muted/20">
+            <div className="max-w-2xl mx-auto flex flex-col space-y-4">
               {chatMessages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
+                    className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       msg.role === 'assistant'
-                        ? 'bg-white border border-gray-100'
-                        : 'bg-primary text-primary-foreground'
+                        ? 'bg-card border border-border/60 rounded-bl-md shadow-sm'
+                        : 'bg-primary text-primary-foreground rounded-br-md shadow-sm'
                     }`}
                   >
                     {msg.content}
@@ -375,20 +386,21 @@ export default function AppConfigPage() {
             </div>
           </div>
 
-          {/* 输入区域 */}
-          <div className="px-6 py-3 border-t border-border bg-white shrink-0">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
+          <div className="px-5 py-3 border-t border-border/60 shrink-0">
+            <form onSubmit={handleSendMessage} className="flex gap-2 max-w-2xl mx-auto">
               <Input
-                placeholder="输入问题，按Enter键执行 [Ctrl(Alt/Shift) + Enter]"
+                placeholder="输入问题测试应用效果..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                className="flex-1 border-gray-200"
+                className="flex-1 h-10 rounded-xl bg-muted/30 border-border/80"
               />
               <Button
                 type="submit"
-                className="bg-primary text-primary-foreground rounded-full w-10 h-10 p-0 flex items-center justify-center"
+                size="icon"
+                className="h-10 w-10 rounded-xl shrink-0 cursor-pointer"
+                disabled={!chatInput.trim()}
               >
-                <PlusCircle className="h-5 w-5" />
+                <PlusCircle className="h-4 w-4" />
               </Button>
             </form>
           </div>

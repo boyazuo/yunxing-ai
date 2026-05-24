@@ -1,5 +1,13 @@
 package com.yxboot.modules.system.controller;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.yxboot.common.api.Result;
 import com.yxboot.common.enums.StatusEnum;
 import com.yxboot.config.security.SecurityUser;
@@ -10,9 +18,6 @@ import com.yxboot.modules.system.service.SysFileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 
 /**
@@ -34,7 +39,7 @@ public class SysFileController {
     @Operation(summary = "附件表查询详情接口")
     public Result get(@PathVariable Long attachmentId) {
         SysFile coreAttachment = sysFileService.getById(attachmentId);
-        return Result.success("查询成功！", coreAttachment );
+        return Result.success("查询成功！", coreAttachment);
     }
 
     @PostMapping
@@ -52,7 +57,7 @@ public class SysFileController {
         sysFile.setCreateUserId(securityUser.getUserId());
         sysFile.setStatus(StatusEnum.INVALID.getValue()); // 默认无效
         sysFileService.saveOrUpdate(sysFile);
-        fileEntity.setFileId(sysFile.getAttachmentId());
+        fileEntity.setFileId(sysFile.getFileId());
         return Result.success("保存成功！", fileEntity);
     }
 }

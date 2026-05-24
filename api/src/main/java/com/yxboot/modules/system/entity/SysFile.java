@@ -3,12 +3,10 @@ package com.yxboot.modules.system.entity;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 import com.yxboot.config.mybatisflex.MyFlexListener;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,7 +28,7 @@ public class SysFile implements Serializable {
 
     @Id(value = "file_id", keyType = KeyType.Auto)
     @Schema(description = "附件编号")
-    private Long attachmentId;
+    private Long fileId;
 
     @Schema(description = "原始文件名称")
     private String originName;

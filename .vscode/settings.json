@@ -1,4 +1,8 @@
 {
+  "editor.tabSize": 2,
+  "[java]": {
+    "editor.tabSize": 4
+  },
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit",

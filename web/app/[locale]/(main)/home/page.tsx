@@ -7,15 +7,14 @@ import { appConfigService } from '@/api/appConfig'
 import { ChatInterface, type ChatInterfaceHandle } from '@/components/chat/chat-interface'
 import type { App } from '@/types/app'
 import type { Conversation } from '@/types/chat'
-import { AppsSidebar, ConversationList } from './_components'
-import type { ConversationListHandle } from './_components/conversation-list'
+import { HomeSidebar, type HomeSidebarHandle } from './_components/home-sidebar'
 
 export default function HomePage() {
   const { data: session } = useSession()
   const tenantId = session?.tenant?.tenantId || ''
   const userId = session?.user?.userId || ''
 
-  const conversationListRef = useRef<ConversationListHandle>(null)
+  const sidebarRef = useRef<HomeSidebarHandle>(null)
   const chatInterfaceRef = useRef<ChatInterfaceHandle>(null)
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -39,68 +38,53 @@ export default function HomePage() {
       setActiveApp(app)
       loadAppConfig(app.appId)
       setActiveConversationId(null)
-      if (chatInterfaceRef.current) {
-        chatInterfaceRef.current.cleanMessages()
-      }
+      chatInterfaceRef.current?.cleanMessages()
     },
     [loadAppConfig],
   )
 
   const handleConversationChange = useCallback((conversation: Conversation) => {
     setActiveConversationId(conversation.conversationId)
-    if (chatInterfaceRef.current) {
-      chatInterfaceRef.current.loadMessages(conversation.conversationId)
-    }
+    chatInterfaceRef.current?.loadMessages(conversation.conversationId)
   }, [])
 
   const handleNewConversation = useCallback(() => {
     setActiveConversationId(null)
-    if (chatInterfaceRef.current) {
-      chatInterfaceRef.current.cleanMessages()
-    }
+    chatInterfaceRef.current?.cleanMessages()
   }, [])
 
   const handleNewConversationCreated = useCallback(
     (conversationId: string) => {
       setActiveConversationId(conversationId)
-      if (conversationListRef.current && activeApp) {
-        conversationListRef.current.loadConversations(activeApp.appId)
+      if (sidebarRef.current && activeApp) {
+        sidebarRef.current.loadConversations(activeApp.appId)
       }
     },
     [activeApp],
   )
 
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed)
-  }
-
   return (
-    <div className="flex h-[calc(100vh-60px)]">
-      <AppsSidebar
-        isSidebarCollapsed={isSidebarCollapsed}
-        toggleSidebar={toggleSidebar}
+    <div className="flex h-[calc(100vh-56px)] bg-background overflow-hidden">
+      <HomeSidebar
+        ref={sidebarRef}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)}
         activeApp={activeApp}
+        activeConversationId={activeConversationId}
         onAppChange={handleAppChange}
+        onConversationChange={handleConversationChange}
+        onNewConversation={handleNewConversation}
       />
 
-      <div className="flex-1 flex">
-        <ConversationList
-          ref={conversationListRef}
-          activeApp={activeApp}
-          activeConversationId={activeConversationId}
-          onConversationChange={handleConversationChange}
-          onNewConversation={handleNewConversation}
-        />
-
-        <ChatInterface
-          ref={chatInterfaceRef}
-          activeApp={activeApp}
-          hasActiveConversation={!!activeConversationId}
-          activeConversationId={activeConversationId}
-          userId={userId}
-          onNewConversation={handleNewConversationCreated}
-        />
-      </div>
+      <ChatInterface
+        ref={chatInterfaceRef}
+        activeApp={activeApp}
+        hasActiveConversation={!!activeConversationId}
+        activeConversationId={activeConversationId}
+        userId={userId}
+        onNewConversation={handleNewConversationCreated}
+        className="min-w-0"
+      />
     </div>
   )
 }

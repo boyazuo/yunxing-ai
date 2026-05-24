@@ -36,18 +36,19 @@ export default function Header() {
   const pathname = usePathname()
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center">
-        <div className="mx-10 flex">
-          <Link href="/home" className="flex items-center space-x-2 cursor-pointer">
-            <div className="flex size-8 items-center justify-center rounded-lg">
-              <Image src="/logo.png" alt="云行 AI Logo" width={32} height={32} />
-            </div>
-            <span className="font-bold">云行 AI</span>
-          </Link>
-        </div>
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="flex h-14 items-center px-6">
+        {/* Logo */}
+        <Link href="/home" className="flex items-center gap-2.5 mr-8 flex-shrink-0 cursor-pointer group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/15 transition-colors">
+            <Image src="/logo.png" alt="云行 AI" width={20} height={20} />
+          </div>
+          <span className="font-bold text-sm tracking-tight">云行 AI</span>
+        </Link>
+
+        {/* Nav */}
         <nav className="hidden flex-1 md:flex">
-          <ul className="flex space-x-1">
+          <ul className="flex items-center gap-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
               const Icon = item.icon
@@ -55,34 +56,33 @@ export default function Header() {
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className={cn(
-                      'group relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer',
-                      'hover:bg-muted/50 hover:scale-105',
-                      isActive ? 'text-primary bg-primary/10 shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                    )}
                     title={item.description}
+                    className={cn(
+                      'relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',
+                    )}
                   >
-                    <Icon
-                      size={16}
-                      className={cn(
-                        'transition-all duration-200',
-                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
-                      )}
-                    />
-                    <span className="relative">
-                      {item.name}
-                      {isActive && <span className="absolute left-0 right-0 h-0.5 bg-gradient-to-r rounded-full" />}
-                    </span>
+                    <Icon size={15} className="flex-shrink-0" />
+                    {item.name}
+                    {/* Active underline indicator */}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-primary/70" />
+                    )}
                   </Link>
                 </li>
               )
             })}
           </ul>
         </nav>
-        <div className="ml-auto flex items-center gap-2 mr-10">
+
+        {/* Right actions */}
+        <div className="ml-auto flex items-center gap-1.5">
           <LocaleToggle />
           <GithubLink isIcon />
           <ThemeToggle isIcon />
+          <div className="h-5 w-px bg-border mx-1" />
           <UserAvatar />
         </div>
       </div>

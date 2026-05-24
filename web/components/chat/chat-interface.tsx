@@ -1,15 +1,13 @@
 import { chatService } from '@/api/chat'
 import { conversationService } from '@/api/conversation'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
 import { MessageRole } from '@/types/chat'
-import { ArrowRight, FileText, Loader2, MessageSquare, Send, Settings, User } from 'lucide-react'
+import { ArrowRight, ArrowUp, FileText, Loader2, Settings, Share2 } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from './markdown'
 
-// 定义类型
 export interface ChatMessage {
   id: string
   role: MessageRole
@@ -26,13 +24,11 @@ export interface ChatInterfaceProps {
   className?: string
 }
 
-// 暴露给父组件的方法
 export interface ChatInterfaceHandle {
   loadMessages: (conversationId: string) => Promise<void>
   cleanMessages: () => void
 }
 
-// 使用forwardRef改造组件
 export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
   (
     {
@@ -47,17 +43,13 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
   ) => {
     const [userInput, setUserInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-
-    // 消息状态
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [loadingMessages, setLoadingMessages] = useState(false)
 
-    // 格式化时间
     const formatTime = useCallback((dateString: string) => {
       return new Date(dateString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
     }, [])
 
-    // 加载会话消息
     const loadMessages = useCallback(
       async (conversationId: string) => {
         if (!conversationId) return
@@ -66,7 +58,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           setLoadingMessages(true)
           const data = await conversationService.getConversationMessages(conversationId)
 
-          // 将后端消息格式转换为前端UI格式
           const formattedMessages: ChatMessage[] = data.flatMap((message) => [
             {
               id: `${message.messageId}-q`,
@@ -92,12 +83,10 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
       [formatTime],
     )
 
-    // 清空消息
     const cleanMessages = useCallback(() => {
       setMessages([])
     }, [])
 
-    // 发送消息
     const sendMessage = async (question: string) => {
       if (!question || !activeApp) return
       try {
@@ -111,12 +100,10 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           })),
         }
 
-        // 创建临时消息ID
         const currentTime = formatTime(new Date().toISOString())
         const tempUserId = `temp-${Date.now()}`
         const tempAssistantId = `temp-assistant-${Date.now()}`
 
-        // 添加用户消息到UI
         setMessages((prev) => [
           ...prev,
           {
@@ -133,12 +120,10 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           },
         ])
 
-        // 创建处理流式消息的回调
         let conversationId = activeConversationId
         let messageId = ''
         let messageContent = ''
 
-        // 内部更新消息内容函数
         const updateMessageContent = (content: string, msgId: string) => {
           setMessages((prev) => {
             const updated = [...prev]
@@ -167,7 +152,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
                     messageId = metaData.messageId
                   }
                   if (!activeConversationId) {
-                    // 通知父组件有新会话创建
                     if (onNewConversation && conversationId) {
                       onNewConversation(conversationId)
                     }
@@ -180,7 +164,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
               } else {
                 const chunk = JSON.parse(data).chunk
                 messageContent += chunk
-                // 更新流式消息内容
                 updateMessageContent(messageContent, tempAssistantId)
               }
             } catch (error) {
@@ -189,13 +172,11 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           },
           onError: (error) => {
             console.error('处理流数据失败', error)
-            // 显示错误消息
             updateMessageContent(`抱歉，${error.message || '请求发送失败，请重试。'}`, tempAssistantId)
           },
           onComplete: () => {
             try {
               if (conversationId && messageId) {
-                // 更新消息的ID为真实ID
                 setMessages((prev) => {
                   const updated = [...prev]
                   const userMsgIndex = updated.findIndex((msg) => msg.id === tempUserId)
@@ -231,7 +212,6 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
       }
     }
 
-    // 暴露方法给父组件
     useImperativeHandle(
       ref,
       () => ({
@@ -257,22 +237,34 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
       }
     }
 
+    const isEmpty = !loadingMessages && messages.length === 0
+
     return (
-      <div className={`flex-1 flex flex-col bg-background ${className}`}>
-        <ChatHeader activeApp={activeApp} />
-        <ChatMessages
-          messages={messages}
-          activeApp={activeApp}
-          loadingMessages={loadingMessages}
-          hasActiveConversation={hasActiveConversation}
-        />
-        <ChatInput
-          userInput={userInput}
-          setUserInput={setUserInput}
-          isLoading={isLoading}
-          activeApp={activeApp}
-          handleSendMessage={handleSendMessage}
-        />
+      <div className={`flex-1 flex flex-col bg-background min-w-0 ${className}`}>
+        {!isEmpty && <ChatHeader activeApp={activeApp} />}
+
+        {isEmpty ? (
+          <EmptyChatState
+            activeApp={activeApp}
+            loadingMessages={loadingMessages}
+            userInput={userInput}
+            setUserInput={setUserInput}
+            isLoading={isLoading}
+            handleSendMessage={handleSendMessage}
+          />
+        ) : (
+          <>
+            <ChatMessages messages={messages} activeApp={activeApp} loadingMessages={loadingMessages} />
+            <ChatInputDock
+              userInput={userInput}
+              setUserInput={setUserInput}
+              isLoading={isLoading}
+              activeApp={activeApp}
+              handleSendMessage={handleSendMessage}
+              variant="bottom"
+            />
+          </>
+        )}
       </div>
     )
   },
@@ -280,189 +272,242 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
 
 ChatInterface.displayName = 'ChatInterface'
 
-// 子组件: 聊天头部
 interface ChatHeaderProps {
   activeApp: App | null
 }
 
 function ChatHeader({ activeApp }: ChatHeaderProps) {
   return (
-    <div className="border-b p-3 flex items-center justify-between bg-card">
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9 mr-3">
-          <AvatarFallback>{activeApp?.logo || '🤖'}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h3 className="font-medium">{activeApp?.appName || '请选择应用'}</h3>
-          <p className="text-xs text-muted-foreground flex items-center">
-            <span className="bg-green-500 h-1.5 w-1.5 rounded-full inline-block mr-1.5" />
-            在线
-          </p>
-        </div>
+    <div className="h-12 border-b border-border/40 px-5 flex items-center justify-between bg-background/80 backdrop-blur-sm shrink-0">
+      <div className="min-w-0">
+        <h3 className="font-semibold text-sm truncate">{activeApp?.appName || '请选择应用'}</h3>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="icon" className="h-8 w-8">
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground cursor-pointer" disabled={!activeApp}>
           <Settings className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm">
-          <MessageSquare className="h-4 w-4 mr-2" />
-          分享会话
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground cursor-pointer" disabled={!activeApp}>
+          <Share2 className="h-4 w-4" />
         </Button>
       </div>
     </div>
   )
 }
 
-// 子组件: 消息区域
+interface EmptyChatStateProps {
+  activeApp: App | null
+  loadingMessages: boolean
+  userInput: string
+  setUserInput: (value: string) => void
+  isLoading: boolean
+  handleSendMessage: () => Promise<void>
+}
+
+function EmptyChatState({
+  activeApp,
+  loadingMessages,
+  userInput,
+  setUserInput,
+  isLoading,
+  handleSendMessage,
+}: EmptyChatStateProps) {
+  if (loadingMessages) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+          <p className="text-xs text-muted-foreground">加载消息中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+      <div className="w-full max-w-2xl flex flex-col items-center gap-8 animate-in fade-in duration-500">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {activeApp ? '我能为你做什么？' : '欢迎使用云行 AI'}
+          </h1>
+          {activeApp?.intro && (
+            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">{activeApp.intro}</p>
+          )}
+          {!activeApp && (
+            <p className="text-sm text-muted-foreground">请从左侧选择一个应用，开始智能对话</p>
+          )}
+        </div>
+
+        <ChatInputDock
+          userInput={userInput}
+          setUserInput={setUserInput}
+          isLoading={isLoading}
+          activeApp={activeApp}
+          handleSendMessage={handleSendMessage}
+          variant="center"
+        />
+      </div>
+    </div>
+  )
+}
+
 interface ChatMessagesProps {
   messages: ChatMessage[]
   activeApp: App | null
   loadingMessages: boolean
-  hasActiveConversation: boolean
 }
 
-function ChatMessages({ messages, activeApp, loadingMessages, hasActiveConversation }: ChatMessagesProps) {
+function ChatMessages({ messages, loadingMessages }: ChatMessagesProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-
-  // 使用 useLayoutEffect 确保在DOM更新后但在浏览器绘制前执行滚动
-  // 创建一个安全的客户端专用钩子，以避免服务器端渲染问题
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
   useIsomorphicLayoutEffect(() => {
     const container = messagesContainerRef.current
     if (container) {
-      // 滚动到底部
       container.scrollTop = container.scrollHeight
     }
   })
 
   if (loadingMessages) {
     return (
-      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
-        <div className="flex justify-center items-center h-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto">
+        <div className="flex flex-col items-center justify-center h-full gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+          <p className="text-xs text-muted-foreground">加载消息中...</p>
         </div>
-      </div>
-    )
-  }
-
-  if (!hasActiveConversation && (!activeApp || messages.length === 0)) {
-    return (
-      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
-        <div className="text-center p-4 text-muted-foreground">
-          {activeApp ? '开始新的对话，或选择一个已有会话' : '请先选择一个应用'}
-        </div>
-      </div>
-    )
-  }
-
-  if (messages.length === 0) {
-    return (
-      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
-        <div className="text-center p-4 text-muted-foreground">暂无消息记录</div>
       </div>
     )
   }
 
   return (
-    <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4 space-y-6">
-      {messages.map((message) => (
-        <ChatMessageItem key={message.id} message={message} activeApp={activeApp} />
-      ))}
+    <div ref={messagesContainerRef} className="flex-1 overflow-auto">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 space-y-8">
+        {messages.map((message) => (
+          <ChatMessageItem key={message.id} message={message} />
+        ))}
+      </div>
     </div>
   )
 }
 
-// 子组件: 单条消息
 interface ChatMessageItemProps {
   message: ChatMessage
-  activeApp: App | null
 }
 
-function ChatMessageItem({ message, activeApp }: ChatMessageItemProps) {
+function ChatMessageItem({ message }: ChatMessageItemProps) {
   const isUserMessage = message.role === MessageRole.USER
 
-  return (
-    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex gap-3 max-w-[85%] ${isUserMessage ? 'flex-row-reverse' : ''}`}>
-        <Avatar className={`h-8 w-8 ${isUserMessage ? 'mt-1' : ''}`}>
-          {isUserMessage ? (
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              <User className="h-4 w-4" />
-            </AvatarFallback>
-          ) : (
-            <AvatarFallback className="bg-muted">{activeApp?.logo || '🤖'}</AvatarFallback>
-          )}
-        </Avatar>
-        <div>
-          <div
-            className={`px-4 py-3 rounded-lg ${
-              isUserMessage ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted shadow-sm'
-            }`}
-          >
-            <div className="whitespace-pre-line text-sm">
-              <Markdown>{message.content}</Markdown>
-            </div>
-            {/* <div className="whitespace-pre-line text-sm">{message.content}</div> */}
-          </div>
-          <div className={`text-xs mt-1 text-muted-foreground ${isUserMessage ? 'text-right' : ''}`}>
-            {message.time}
+  if (isUserMessage) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] min-w-0">
+          <div className="px-4 py-3 rounded-2xl rounded-br-md bg-muted/80 border border-border/40 text-sm leading-relaxed text-foreground">
+            <div className="whitespace-pre-line">{message.content}</div>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-w-0">
+      <div className="text-sm leading-relaxed text-foreground prose-sm max-w-none">
+        <Markdown>{message.content || '...'}</Markdown>
       </div>
     </div>
   )
 }
 
-// 子组件: 输入区域
-interface ChatInputProps {
+interface ChatInputDockProps {
   userInput: string
   setUserInput: (value: string) => void
   isLoading: boolean
   activeApp: App | null
   handleSendMessage: () => Promise<void>
+  variant: 'center' | 'bottom'
 }
 
-function ChatInput({ userInput, setUserInput, isLoading, activeApp, handleSendMessage }: ChatInputProps) {
+function ChatInputDock({
+  userInput,
+  setUserInput,
+  isLoading,
+  activeApp,
+  handleSendMessage,
+  variant,
+}: ChatInputDockProps) {
   const isInputDisabled = !activeApp || isLoading
   const isSendDisabled = !userInput.trim() || isLoading || !activeApp
 
+  const placeholder =
+    variant === 'center'
+      ? activeApp
+        ? '分配一个任务或提问任何问题'
+        : '请先选择应用...'
+      : activeApp
+        ? '提出后续问题...'
+        : '请先选择应用...'
+
+  const wrapperClass =
+    variant === 'center'
+      ? 'w-full'
+      : 'border-t border-border/40 p-4 md:p-5 bg-background shrink-0'
+
   return (
-    <div className="border-t p-4 bg-card">
-      <div className="flex items-center gap-2 relative">
-        <Textarea
-          placeholder="输入消息..."
-          className="flex-1 pr-24 min-h-[4.5rem] resize-none"
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              handleSendMessage()
-            }
-          }}
-          disabled={isInputDisabled}
-        />
-        <div className="absolute right-2 bottom-2 flex gap-1.5">
-          <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost"
-            className="rounded-full h-7 w-7"
-            onClick={handleSendMessage}
-            disabled={isSendDisabled}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
+    <div className={wrapperClass}>
+      <div
+        className={`relative mx-auto ${variant === 'center' ? 'max-w-2xl' : 'max-w-3xl'}`}
+      >
+        <div
+          className={`relative rounded-2xl border border-border/70 bg-card shadow-sm transition-shadow duration-200 focus-within:shadow-md focus-within:border-border ${
+            variant === 'center' ? 'shadow-md' : ''
+          }`}
+        >
+          <Textarea
+            placeholder={placeholder}
+            className="min-h-[56px] max-h-40 resize-none rounded-2xl border-0 bg-transparent px-4 pt-4 pb-12 text-sm focus-visible:ring-0 shadow-none"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage()
+              }
+            }}
+            disabled={isInputDisabled}
+          />
+          <div className="absolute left-3 bottom-3 flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 rounded-lg text-muted-foreground cursor-pointer"
+              disabled={isInputDisabled}
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="absolute right-3 bottom-3">
+            <Button
+              size="icon"
+              className="h-8 w-8 rounded-full cursor-pointer"
+              onClick={handleSendMessage}
+              disabled={isSendDisabled}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
-      </div>
-      <div className="flex justify-between mt-2 text-xs">
-        <div className="text-muted-foreground">支持 Markdown 格式</div>
-        <div className="text-muted-foreground flex items-center hover:text-foreground cursor-pointer">
-          <span>开启知识库增强</span>
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </div>
+
+        {variant === 'bottom' && (
+          <div className="flex justify-between mt-2 text-[11px] px-1">
+            <span className="text-muted-foreground">Enter 发送 · Shift+Enter 换行</span>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors duration-200 cursor-pointer"
+            >
+              知识库增强
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
