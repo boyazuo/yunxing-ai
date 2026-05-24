@@ -3,23 +3,24 @@ package com.yxboot.ai.service;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import com.yxboot.ai.document.DocumentSegment;
+import com.yxboot.ai.document.loader.PdfDocumentLoader;
 import com.yxboot.ai.document.splitter.ChapterSplitter;
 import com.yxboot.ai.document.splitter.CharacterSplitter;
 import com.yxboot.ai.document.splitter.ParentChildSplitter;
 import com.yxboot.ai.document.splitter.SplitMode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * 文档加载与分段服务（Spring AI Tika 加载 + Token/章节切分）。
+ * 文档加载与分段服务。PDF 使用 PDFBox 专用加载器，其他格式使用 Tika。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiDocumentProcessingService {
@@ -27,6 +28,7 @@ public class AiDocumentProcessingService {
     private final ChapterSplitter chapterSplitter;
     private final CharacterSplitter characterSplitter;
     private final ParentChildSplitter parentChildSplitter;
+    private final PdfDocumentLoader pdfDocumentLoader;
 
     public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode, Integer maxSegmentLength,
             Integer overlapLength) {
@@ -35,7 +37,7 @@ public class AiDocumentProcessingService {
 
     public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode, Integer maxSegmentLength,
             Integer overlapLength, Integer parentChunkSize) {
-        List<Document> rawDocs = new TikaDocumentReader(new FileSystemResource(file)).get();
+        List<Document> rawDocs = loadRawDocuments(file);
         if (rawDocs.isEmpty()) {
             return List.of();
         }
@@ -79,5 +81,25 @@ public class AiDocumentProcessingService {
 
     public List<DocumentSegment> loadAndSplitDocument(File file, SplitMode splitMode) {
         return loadAndSplitDocument(file, splitMode, 500, 100);
+    }
+
+    /**
+     * 按文件类型加载文档。PDF 不走 Tika（部分 PDF 会在 Tika 解析阶段阻塞），改用 PDFBox。
+     */
+    private List<Document> loadRawDocuments(File file) {
+        if (isPdfFile(file.getName())) {
+            log.info("使用 PDFBox 加载 PDF 文档: {}", file.getAbsolutePath());
+            com.yxboot.ai.document.Document legacyDoc = pdfDocumentLoader.load(file);
+            String content = legacyDoc.getContent();
+            if (content == null || content.isBlank()) {
+                return List.of();
+            }
+            return List.of(new Document(content, legacyDoc.getMetadata()));
+        }
+        return new TikaDocumentReader(new FileSystemResource(file)).get();
+    }
+
+    private static boolean isPdfFile(String filename) {
+        return filename != null && filename.toLowerCase().endsWith(".pdf");
     }
 }
