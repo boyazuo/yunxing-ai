@@ -6,7 +6,10 @@ import java.util.Map;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
+import com.yxboot.ai.config.AiProperties;
 import com.yxboot.ai.registry.VectorStoreRegistry;
 import com.yxboot.ai.vector.AiQueryResult;
 import com.yxboot.modules.dataset.entity.DatasetDocumentSegment;
@@ -21,7 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class AiVectorStoreService {
 
+    private static final int DEFAULT_EMBEDDING_BATCH_SIZE = 16;
+
     private final VectorStoreRegistry vectorStoreRegistry;
+    private final AiProperties aiProperties;
 
     public String getCollectionName(Long datasetId, Long tenantId) {
         return vectorStoreRegistry.buildCollectionName(datasetId, tenantId);
@@ -35,6 +41,10 @@ public class AiVectorStoreService {
         return vectorStoreRegistry.deleteCollection(datasetId, tenantId);
     }
 
+    public void ensureCollectionExists(Long datasetId, Long tenantId) {
+        vectorStoreRegistry.ensureCollectionExists(datasetId, tenantId);
+    }
+
     public List<AiQueryResult> similaritySearch(Long datasetId, Long tenantId, String queryText, int limit,
             float minScore, Map<String, Object> filter) {
         VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
@@ -42,10 +52,7 @@ public class AiVectorStoreService {
                 .query(queryText)
                 .topK(limit)
                 .similarityThreshold(minScore);
-        String filterExpression = buildFilterExpression(datasetId, filter);
-        if (filterExpression != null) {
-            builder.filterExpression(filterExpression);
-        }
+        builder.filterExpression(buildFilter(datasetId, filter));
         List<Document> documents = vectorStore.similaritySearch(builder.build());
         return documents.stream().map(this::toQueryResult).toList();
     }
@@ -64,9 +71,26 @@ public class AiVectorStoreService {
         if (documents.isEmpty()) {
             return 0;
         }
-        vectorStore.add(documents);
-        log.info("批量向量化完成, datasetId={}, tenantId={}, count={}", datasetId, tenantId, documents.size());
-        return documents.size();
+        int batchSize = resolveEmbeddingBatchSize();
+        int total = 0;
+        for (int i = 0; i < documents.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, documents.size());
+            List<Document> batch = documents.subList(i, end);
+            vectorStore.add(batch);
+            total += batch.size();
+            log.info("向量化批次完成, datasetId={}, tenantId={}, progress={}/{}", datasetId, tenantId, total,
+                    documents.size());
+        }
+        log.info("批量向量化完成, datasetId={}, tenantId={}, count={}", datasetId, tenantId, total);
+        return total;
+    }
+
+    private int resolveEmbeddingBatchSize() {
+        Integer configured = aiProperties.getEmbedding().getBatchSize();
+        if (configured == null || configured <= 0) {
+            return DEFAULT_EMBEDDING_BATCH_SIZE;
+        }
+        return configured;
     }
 
     public boolean createSegmentVector(DatasetDocumentSegment segment) {
@@ -123,10 +147,7 @@ public class AiVectorStoreService {
                 return 0;
             }
             VectorStore vectorStore = vectorStoreRegistry.getOrCreate(datasetId, tenantId);
-            String expression = buildFilterExpression(datasetId, filter);
-            if (expression != null) {
-                vectorStore.delete(expression);
-            }
+            vectorStore.delete(buildFilter(datasetId, filter));
             return 0;
         } catch (Exception e) {
             log.error("按条件删除向量失败, datasetId={}, tenantId={}", datasetId, tenantId, e);
@@ -159,22 +180,21 @@ public class AiVectorStoreService {
                 .build();
     }
 
-    private String buildFilterExpression(Long datasetId, Map<String, Object> filter) {
-        StringBuilder sb = new StringBuilder("dataset_id == ").append(datasetId);
+    /**
+     * 使用 FilterExpressionBuilder 构建过滤条件，避免 Snowflake ID 超出 int 范围时
+     * 字符串表达式被 Spring AI 解析为 Integer 导致 NumberFormatException。
+     */
+    private Filter.Expression buildFilter(Long datasetId, Map<String, Object> filter) {
+        FilterExpressionBuilder builder = new FilterExpressionBuilder();
+        FilterExpressionBuilder.Op expression = builder.eq("dataset_id", datasetId);
         if (filter != null) {
             for (Map.Entry<String, Object> entry : filter.entrySet()) {
                 if ("dataset_id".equals(entry.getKey())) {
                     continue;
                 }
-                sb.append(" && ").append(entry.getKey()).append(" == ");
-                Object value = entry.getValue();
-                if (value instanceof String) {
-                    sb.append("'").append(value).append("'");
-                } else {
-                    sb.append(value);
-                }
+                expression = builder.and(expression, builder.eq(entry.getKey(), entry.getValue()));
             }
         }
-        return sb.toString();
+        return expression.build();
     }
 }

@@ -81,6 +81,7 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
         log.info("记录知识库向量模型, datasetId={}, embeddingModel={}", datasetId, currentKey);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Dataset createDataset(Long tenantId, String datasetName, String datasetDesc) {
         Dataset dataset = new Dataset();
         dataset.setTenantId(tenantId);
@@ -88,6 +89,7 @@ public class DatasetService extends ServiceImpl<DatasetMapper, Dataset> {
         dataset.setDatasetDesc(datasetDesc);
         dataset.setStatus(DatasetStatus.ACTIVE);
         save(dataset);
+        vectorStoreService.ensureCollectionExists(dataset.getDatasetId(), tenantId);
         return dataset;
     }
 

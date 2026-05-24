@@ -6,6 +6,8 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.qdrant.QdrantVectorStore;
 import org.springframework.stereotype.Component;
 import io.qdrant.client.QdrantClient;
+import io.qdrant.client.grpc.Collections.Distance;
+import io.qdrant.client.grpc.Collections.VectorParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,6 +24,7 @@ public class VectorStoreRegistry {
     private final ConcurrentHashMap<String, VectorStore> storeCache = new ConcurrentHashMap<>();
 
     public VectorStore getOrCreate(Long datasetId, Long tenantId) {
+        ensureCollectionExists(datasetId, tenantId);
         String collectionName = buildCollectionName(datasetId, tenantId);
         return storeCache.computeIfAbsent(collectionName, k -> createVectorStore(collectionName));
     }
@@ -44,6 +47,24 @@ public class VectorStoreRegistry {
         }
     }
 
+    public void ensureCollectionExists(Long datasetId, Long tenantId) {
+        if (collectionExists(datasetId, tenantId)) {
+            return;
+        }
+        String collectionName = buildCollectionName(datasetId, tenantId);
+        try {
+            VectorParams vectorParams = VectorParams.newBuilder()
+                    .setDistance(Distance.Cosine)
+                    .setSize(embeddingModel.dimensions())
+                    .build();
+            qdrantClient.createCollectionAsync(collectionName, vectorParams).get();
+            log.info("创建 Qdrant 集合成功, collection={}", collectionName);
+        } catch (Exception e) {
+            log.error("创建 Qdrant 集合失败, collection={}", collectionName, e);
+            throw new IllegalStateException("创建向量集合失败: " + collectionName, e);
+        }
+    }
+
     public boolean deleteCollection(Long datasetId, Long tenantId) {
         try {
             String name = buildCollectionName(datasetId, tenantId);
@@ -60,9 +81,15 @@ public class VectorStoreRegistry {
     }
 
     private VectorStore createVectorStore(String collectionName) {
-        return QdrantVectorStore.builder(qdrantClient, embeddingModel)
+        QdrantVectorStore vectorStore = QdrantVectorStore.builder(qdrantClient, embeddingModel)
                 .collectionName(collectionName)
                 .initializeSchema(true)
                 .build();
+        try {
+            vectorStore.afterPropertiesSet();
+        } catch (Exception e) {
+            throw new IllegalStateException("初始化向量集合失败: " + collectionName, e);
+        }
+        return vectorStore;
     }
 }

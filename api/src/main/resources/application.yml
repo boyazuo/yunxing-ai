@@ -65,6 +65,14 @@ yxboot:
       base-url: http://localhost:11434
       model: qwen3-embedding:4b
       dimensions: 2560
+      read-timeout-seconds: 300
+      batch-size: 16
     retriever:
       default-limit: 10
       default-min-score: 0.0
+    rag:
+      strict-mode: true
+      no-context-response: "抱歉，知识库中未找到与您问题相关的信息，我无法基于现有资料回答该问题。"
+      per-dataset-limit: 5
+      limit: 10
+      min-score: 0.5

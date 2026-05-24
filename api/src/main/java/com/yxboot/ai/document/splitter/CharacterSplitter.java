@@ -82,14 +82,16 @@ public class CharacterSplitter extends AbstractSplitter {
                             sentenceChunk = new StringBuilder();
                         }
 
-                        // 直接切分句子
+                        // 直接切分句子（末尾剩余长度 <= overlap 时必须退出，否则 start 不前进导致死循环）
                         int start = 0;
                         while (start < sentence.length()) {
                             int end = Math.min(start + maxChunkSize, sentence.length());
-                            String chunk = sentence.substring(start, end);
-                            chunks.add(chunk);
-                            // 处理重叠
-                            start = end - overlapSize;
+                            chunks.add(sentence.substring(start, end));
+                            if (end >= sentence.length()) {
+                                break;
+                            }
+                            int nextStart = end - overlapSize;
+                            start = nextStart > start ? nextStart : end;
                         }
                     } else {
                         // 如果添加当前句子后超过最大块大小，则创建新块

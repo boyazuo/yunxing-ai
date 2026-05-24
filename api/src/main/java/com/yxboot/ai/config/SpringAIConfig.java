@@ -1,5 +1,6 @@
 package com.yxboot.ai.config;
 
+import java.time.Duration;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -15,9 +16,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
+import reactor.netty.http.client.HttpClient;
 
 /**
  * Spring AI 基础设施配置：根据 yxboot.ai 静态配置初始化 ChatModel、EmbeddingModel 及 Qdrant 客户端。
@@ -88,8 +93,19 @@ public class SpringAIConfig {
 
     private EmbeddingModel buildOllamaEmbeddingModel(AiProperties.EmbeddingConfig cfg) {
         String baseUrl = StringUtils.hasText(cfg.getBaseUrl()) ? cfg.getBaseUrl() : "http://localhost:11434";
+        int readTimeoutSeconds = cfg.getReadTimeoutSeconds() != null && cfg.getReadTimeoutSeconds() > 0
+                ? cfg.getReadTimeoutSeconds()
+                : 300;
+        Duration readTimeout = Duration.ofSeconds(readTimeoutSeconds);
+        HttpClient httpClient = HttpClient.create().responseTimeout(readTimeout);
+        RestClient.Builder restClientBuilder = RestClient.builder()
+                .requestFactory(new ReactorClientHttpRequestFactory(httpClient));
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                .clientConnector(new org.springframework.http.client.reactive.ReactorClientHttpConnector(httpClient));
         OllamaApi ollamaApi = OllamaApi.builder()
                 .baseUrl(baseUrl)
+                .restClientBuilder(restClientBuilder)
+                .webClientBuilder(webClientBuilder)
                 .build();
         return OllamaEmbeddingModel.builder()
                 .ollamaApi(ollamaApi)

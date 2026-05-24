@@ -1,8 +1,8 @@
 package com.yxboot.modules.ai.controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.yxboot.ai.rag.RagPromptResult;
+import com.yxboot.ai.service.RagChatPromptService;
 import com.yxboot.common.api.Result;
 import com.yxboot.config.security.SecurityUser;
-import com.yxboot.ai.service.AiVectorRetrieverService;
-import com.yxboot.ai.vector.AiQueryResult;
 import com.yxboot.modules.ai.dto.ChatRequestDTO;
 import com.yxboot.modules.ai.dto.ChatResponseDTO;
 import com.yxboot.modules.ai.entity.Conversation;
@@ -24,11 +24,8 @@ import com.yxboot.modules.ai.service.ConversationService;
 import com.yxboot.modules.ai.service.MessageService;
 import com.yxboot.modules.app.entity.AppConfig;
 import com.yxboot.modules.app.service.AppConfigService;
-import cn.hutool.json.JSONUtil;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,7 +45,7 @@ public class ChatController {
     private final ConversationService conversationService;
     private final MessageService messageService;
     private final AppConfigService appConfigService;
-    private final AiVectorRetrieverService vectorRetrieverService;
+    private final RagChatPromptService ragChatPromptService;
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "聊天模型调用", description = "调用大模型进行聊天，默认使用流式响应")
@@ -61,10 +58,13 @@ public class ChatController {
         Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
 
         AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
+        RagPromptResult ragPrompt = ragChatPromptService.build(request.getPrompt(), appConfig);
 
-        String enhancedPrompt = enhancePromptWithKnowledge(request.getPrompt(), appConfig);
-        request.setPrompt(enhancedPrompt);
-        request.setSystemPrompt(appConfig.getSysPrompt());
+        if (ragPrompt.getDirectResponse() != null) {
+            return streamDirectResponse(conversationId, message.getMessageId(), ragPrompt.getDirectResponse());
+        }
+
+        applyRagPrompt(request, ragPrompt);
 
         SseEmitter emitter = new SseEmitter(300000L);
         aiService.streamingChatCompletion(request, emitter, message.getMessageId());
@@ -81,13 +81,23 @@ public class ChatController {
         request.setStream(false);
 
         AppConfig appConfig = appConfigService.getByAppId(request.getAppId());
-
-        String enhancedPrompt = enhancePromptWithKnowledge(request.getPrompt(), appConfig);
-        request.setPrompt(enhancedPrompt);
-        request.setSystemPrompt(appConfig.getSysPrompt());
+        RagPromptResult ragPrompt = ragChatPromptService.build(request.getPrompt(), appConfig);
 
         Long conversationId = handleConversation(userId, request);
         Message message = messageService.createMessage(userId, request.getAppId(), conversationId, request.getPrompt());
+
+        if (ragPrompt.getDirectResponse() != null) {
+            messageService.updateMessageAnswer(message.getMessageId(), ragPrompt.getDirectResponse(), MessageStatus.COMPLETED);
+            ChatResponseDTO response = ChatResponseDTO.builder()
+                    .content(ragPrompt.getDirectResponse())
+                    .conversationId(conversationId)
+                    .messageId(message.getMessageId())
+                    .createTime(LocalDateTime.now())
+                    .build();
+            return Result.success("请求成功。", response);
+        }
+
+        applyRagPrompt(request, ragPrompt);
 
         ChatResponseDTO response = aiService.chatCompletion(request);
 
@@ -98,62 +108,21 @@ public class ChatController {
         return Result.success("请求成功。", response);
     }
 
-    private String enhancePromptWithKnowledge(String originalPrompt, AppConfig appConfig) {
-        String datasetsConfig = appConfig.getDatasets();
-        if (datasetsConfig == null || datasetsConfig.trim().isEmpty()) {
-            log.debug("未配置知识库，直接使用原始prompt");
-            return originalPrompt;
-        }
+    private void applyRagPrompt(ChatRequestDTO request, RagPromptResult ragPrompt) {
+        request.setPrompt(ragPrompt.getUserPrompt());
+        request.setSystemPrompt(ragPrompt.getSystemPrompt());
+    }
 
-        try {
-            List<DatasetConfig> datasetConfigs = JSONUtil.parseArray(datasetsConfig).toList(DatasetConfig.class);
-            List<Long> activeDatasetIds =
-                    datasetConfigs.stream().filter(DatasetConfig::isActive).map(DatasetConfig::getDatasetId).collect(Collectors.toList());
-
-            if (activeDatasetIds.isEmpty()) {
-                log.debug("没有激活的知识库，直接使用原始prompt");
-                return originalPrompt;
-            }
-
-            log.info("开始从知识库检索相关内容，激活的知识库数量: {}, 用户问题: {}", activeDatasetIds.size(), originalPrompt);
-
-            List<AiQueryResult> allResults = activeDatasetIds.stream().flatMap(datasetId -> {
-                try {
-                    return vectorRetrieverService.retrieve(datasetId, originalPrompt, 5, 0.5f).stream();
-                } catch (Exception e) {
-                    log.error("从知识库 {} 检索失败", datasetId, e);
-                    return List.<AiQueryResult>of().stream();
-                }
-            }).sorted((a, b) -> Float.compare(b.getScore(), a.getScore()))
-                    .limit(10)
-                    .collect(Collectors.toList());
-
-            if (allResults.isEmpty()) {
-                log.debug("未检索到相关知识库内容，直接使用原始prompt");
-                return originalPrompt;
-            }
-
-            StringBuilder knowledgeContext = new StringBuilder();
-            knowledgeContext.append("请基于以下知识库内容回答用户问题：\n\n");
-            knowledgeContext.append("【知识库内容】\n");
-
-            for (int i = 0; i < allResults.size(); i++) {
-                AiQueryResult result = allResults.get(i);
-                knowledgeContext.append(String.format("%d. %s (相似度: %.2f)\n", i + 1, result.getText(), result.getScore()));
-            }
-
-            knowledgeContext.append("\n【用户问题】\n");
-            knowledgeContext.append(originalPrompt);
-            knowledgeContext.append("\n\n请根据上述知识库内容回答用户问题。如果知识库内容与问题不相关，请直接回答用户问题。");
-
-            String enhancedPrompt = knowledgeContext.toString();
-            log.info("成功检索到 {} 条相关内容，增强后的prompt长度: {}", allResults.size(), enhancedPrompt.length());
-            return enhancedPrompt;
-
-        } catch (Exception e) {
-            log.error("知识库检索失败，使用原始prompt", e);
-            return originalPrompt;
-        }
+    private SseEmitter streamDirectResponse(Long conversationId, Long messageId, String content) throws IOException {
+        SseEmitter emitter = new SseEmitter(30000L);
+        messageService.updateMessageAnswer(messageId, content, MessageStatus.COMPLETED);
+        emitter.send(SseEmitter.event()
+                .name("metadata")
+                .data(Map.of("conversationId", conversationId, "messageId", messageId)));
+        emitter.send(SseEmitter.event().data(Map.of("chunk", content)));
+        emitter.send(SseEmitter.event().name("end").data(""));
+        emitter.complete();
+        return emitter;
     }
 
     private Long handleConversation(Long userId, ChatRequestDTO request) {
@@ -174,14 +143,5 @@ public class ChatController {
 
         Conversation conversation = conversationService.createConversation(userId, request.getAppId(), title);
         return conversation.getConversationId();
-    }
-
-    @Data
-    @Schema(description = "知识库配置")
-    public static class DatasetConfig {
-        private String id;
-        private Long datasetId;
-        private String name;
-        private boolean isActive;
     }
 }
