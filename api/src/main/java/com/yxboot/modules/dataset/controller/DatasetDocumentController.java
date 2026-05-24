@@ -163,7 +163,7 @@ public class DatasetDocumentController {
         private SegmentMethod segmentMethod;
         private Integer maxSegmentLength;
         private Integer overlapLength;
-        private Integer parentChunkSize = 1200;
+        private Integer parentChunkSize;
     }
 
     /**

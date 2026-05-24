@@ -76,3 +76,8 @@ yxboot:
       per-dataset-limit: 5
       limit: 10
       min-score: 0.5
+    document:
+      segment-method: parent_child
+      max-segment-length: 300
+      overlap-length: 50
+      parent-chunk-size: 1200

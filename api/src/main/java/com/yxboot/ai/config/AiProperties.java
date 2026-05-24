@@ -1,5 +1,6 @@
 package com.yxboot.ai.config;
 
+import com.yxboot.modules.dataset.enums.SegmentMethod;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import lombok.Data;
@@ -13,6 +14,7 @@ public class AiProperties {
     private EmbeddingConfig embedding = new EmbeddingConfig();
     private RetrieverConfig retriever = new RetrieverConfig();
     private RagConfig rag = new RagConfig();
+    private DocumentConfig document = new DocumentConfig();
 
     @Data
     public static class ChatConfig {
@@ -77,5 +79,26 @@ public class AiProperties {
         private int limit = 10;
         /** 检索最低相似度阈值 */
         private float minScore = 0.5f;
+    }
+
+    @Data
+    public static class DocumentConfig {
+        /** 分段方式：paragraph | chapter | parent_child */
+        private String segmentMethod = "parent_child";
+        /** 子块/普通块最大长度（字符数） */
+        private Integer maxSegmentLength = 300;
+        /** 块重叠长度（字符数） */
+        private Integer overlapLength = 50;
+        /** 父块大小（字符数，仅 parent_child 模式有效） */
+        private Integer parentChunkSize = 1200;
+
+        public SegmentMethod resolveSegmentMethod() {
+            for (SegmentMethod method : SegmentMethod.values()) {
+                if (method.getValue().equalsIgnoreCase(segmentMethod)) {
+                    return method;
+                }
+            }
+            return SegmentMethod.PARENT_CHILD;
+        }
     }
 }

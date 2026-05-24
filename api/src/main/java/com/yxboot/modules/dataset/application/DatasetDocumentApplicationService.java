@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mybatisflex.core.paginate.Page;
 import com.yxboot.common.api.ResultCode;
 import com.yxboot.common.exception.ApiException;
+import com.yxboot.ai.config.AiProperties;
 import com.yxboot.ai.service.AiVectorStoreService;
 import com.yxboot.modules.dataset.dto.DatasetDocumentDTO;
 import com.yxboot.modules.dataset.entity.DatasetDocument;
@@ -29,6 +30,7 @@ public class DatasetDocumentApplicationService {
     private final DatasetDocumentService datasetDocumentService;
     private final DatasetDocumentSegmentService segmentService;
     private final AiVectorStoreService vectorStoreService;
+    private final AiProperties aiProperties;
 
     /**
      * 创建文档记录 注意：异步处理需要在Controller层单独调用DatasetDocumentProcessingApplicationService
@@ -49,7 +51,12 @@ public class DatasetDocumentApplicationService {
             String fileHash,
             SegmentMethod segmentMethod, Integer maxSegmentLength, Integer overlapLength, Integer parentChunkSize) {
 
-        SegmentMethod method = segmentMethod != null ? segmentMethod : SegmentMethod.PARENT_CHILD;
+        AiProperties.DocumentConfig defaults = aiProperties.getDocument();
+        SegmentMethod method = segmentMethod != null ? segmentMethod : defaults.resolveSegmentMethod();
+        Integer resolvedMaxSegmentLength =
+                maxSegmentLength != null ? maxSegmentLength : defaults.getMaxSegmentLength();
+        Integer resolvedOverlapLength = overlapLength != null ? overlapLength : defaults.getOverlapLength();
+        Integer resolvedParentChunkSize = parentChunkSize != null ? parentChunkSize : defaults.getParentChunkSize();
 
         log.info("开始创建文档, fileName: {}, datasetId: {}, segmentMethod: {}", fileName, datasetId, method);
 
@@ -64,7 +71,7 @@ public class DatasetDocumentApplicationService {
         // 2. 创建文档记录
         DatasetDocument document = datasetDocumentService.createDocument(tenantId, datasetId, fileId, fileName,
                 fileSize, fileHash, method,
-                maxSegmentLength, overlapLength, parentChunkSize);
+                resolvedMaxSegmentLength, resolvedOverlapLength, resolvedParentChunkSize);
 
         log.info("文档创建成功, documentId: {}", document.getDocumentId());
         return document;

@@ -1,5 +1,5 @@
 import { type ApiResponse, api } from '@/lib/api'
-import type { DatasetDocument, DocumentSegment, DocumentStatus, SegmentMethod } from '@/types/document'
+import type { DatasetDocument, DocumentSegment, DocumentStatus } from '@/types/document'
 
 /**
  * 文档服务
@@ -46,10 +46,6 @@ export const documentService = {
     fileId: string | number
     fileName: string
     fileSize: number
-    segmentMethod: SegmentMethod
-    maxSegmentLength: number
-    overlapLength: number
-    parentChunkSize?: number
   }): Promise<ApiResponse<DatasetDocument>> => {
     const response = await api.post<DatasetDocument>('/dataset-documents', data)
     return response
