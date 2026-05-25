@@ -1,91 +1,94 @@
-// @ts-nocheck
+'use client'
+
 import Link from 'next/link'
 import { memo } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkBreaks from 'remark-breaks'
-import remarkGfm from 'remark-gfm'
+import { Streamdown } from 'streamdown'
+import 'streamdown/styles.css'
 import { CodeBlock } from './code-block'
 
-// @ts-ignore
 const components = {
-  code: ({ node, inline, className, children, ...props }) => {
+  code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
     const match = /language-(\w+)/.exec(className || '')
     return !inline && match ? (
       <CodeBlock inline={false} className={className} {...props}>
         {children}
       </CodeBlock>
     ) : (
-      <CodeBlock inline={true} className={className} {...props}>
+      <CodeBlock inline className={className} {...props}>
         {children}
       </CodeBlock>
     )
   },
-  pre: ({ children }) => <>{children}</>,
-  ol: ({ children, ...props }) => (
-    <ol className="list-decimal list-outside ml-4" {...props}>
+  pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  ol: ({ children, ...props }: React.ComponentProps<'ol'>) => (
+    <ol className="list-decimal list-outside ml-4 my-2" {...props}>
       {children}
     </ol>
   ),
-  li: ({ children, ...props }) => (
+  li: ({ children, ...props }: React.ComponentProps<'li'>) => (
     <li className="py-1" {...props}>
       {children}
     </li>
   ),
-  ul: ({ children, ...props }) => (
-    <ul className="list-decimal list-outside ml-4" {...props}>
+  ul: ({ children, ...props }: React.ComponentProps<'ul'>) => (
+    <ul className="list-disc list-outside ml-4 my-2" {...props}>
       {children}
     </ul>
   ),
-  strong: ({ children, ...props }) => (
+  strong: ({ children, ...props }: React.ComponentProps<'span'>) => (
     <span className="font-semibold" {...props}>
       {children}
     </span>
   ),
-  a: ({ children, ...props }) => (
-    <Link className="text-blue-500 hover:underline" target="_blank" rel="noreferrer" {...props}>
+  a: ({ children, href, ...props }: React.ComponentProps<'a'>) => (
+    <Link className="text-blue-500 hover:underline" href={href || '#'} target="_blank" rel="noreferrer" {...props}>
       {children}
     </Link>
   ),
-  h1: ({ children, ...props }) => (
-    <h1 className="text-3xl font-semibold mt-6 mb-2" {...props}>
+  h1: ({ children, ...props }: React.ComponentProps<'h1'>) => (
+    <h1 className="text-2xl font-semibold mt-6 mb-2 first:mt-0" {...props}>
       {children}
     </h1>
   ),
-  h2: ({ children, ...props }) => (
-    <h2 className="text-2xl font-semibold mt-6 mb-2" {...props}>
+  h2: ({ children, ...props }: React.ComponentProps<'h2'>) => (
+    <h2 className="text-xl font-semibold mt-5 mb-2 first:mt-0" {...props}>
       {children}
     </h2>
   ),
-  h3: ({ children, ...props }) => (
-    <h3 className="text-xl font-semibold mt-6 mb-2" {...props}>
+  h3: ({ children, ...props }: React.ComponentProps<'h3'>) => (
+    <h3 className="text-lg font-semibold mt-4 mb-2 first:mt-0" {...props}>
       {children}
     </h3>
   ),
-  h4: ({ children, ...props }) => (
-    <h4 className="text-lg font-semibold mt-6 mb-2" {...props}>
+  h4: ({ children, ...props }: React.ComponentProps<'h4'>) => (
+    <h4 className="text-base font-semibold mt-4 mb-2 first:mt-0" {...props}>
       {children}
     </h4>
   ),
-  h5: ({ children, ...props }) => (
-    <h5 className="text-base font-semibold mt-6 mb-2" {...props}>
+  p: ({ children, ...props }: React.ComponentProps<'p'>) => (
+    <p className="my-2 leading-relaxed" {...props}>
       {children}
-    </h5>
-  ),
-  h6: ({ children, ...props }) => (
-    <h6 className="text-sm font-semibold mt-6 mb-2" {...props}>
-      {children}
-    </h6>
+    </p>
   ),
 }
 
-const remarkPlugins = [remarkGfm, remarkBreaks]
+interface MarkdownProps {
+  children: string
+  isStreaming?: boolean
+}
 
-const NonMemoizedMarkdown = ({ children }: { children: string }) => {
+function MarkdownContent({ children, isStreaming = false }: MarkdownProps) {
   return (
-    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+    <Streamdown
+      mode={isStreaming ? 'streaming' : 'static'}
+      isAnimating={isStreaming}
+      parseIncompleteMarkdown={isStreaming}
+      components={components}
+      className="text-sm leading-relaxed text-foreground"
+    >
       {children}
-    </ReactMarkdown>
+    </Streamdown>
   )
 }
 
-export const Markdown = memo(NonMemoizedMarkdown, (prevProps, nextProps) => prevProps.children === nextProps.children)
+export const Markdown = memo(MarkdownContent, (prev, next) => prev.children === next.children && prev.isStreaming === next.isStreaming)

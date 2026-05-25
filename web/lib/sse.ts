@@ -177,7 +177,8 @@ export class SSEClient {
         if (line.startsWith('event:')) {
           eventName = line.substring(6).trim()
         } else if (line.startsWith('data:')) {
-          eventData = line.substring(5).trim()
+          const dataLine = line.substring(5).trimStart()
+          eventData = eventData ? `${eventData}\n${dataLine}` : dataLine
         }
       }
 

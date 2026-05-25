@@ -363,6 +363,7 @@ function ChatMessages({ messages, loadingMessages, isLoading, streamingPhase }: 
             key={message.id}
             message={message}
             isThinking={isLoading && index === messages.length - 1 && message.role === MessageRole.ASSISTANT && !message.content.trim()}
+            isStreaming={isLoading && index === messages.length - 1 && message.role === MessageRole.ASSISTANT && !!message.content.trim()}
             streamingPhase={streamingPhase}
           />
         ))}
@@ -374,10 +375,11 @@ function ChatMessages({ messages, loadingMessages, isLoading, streamingPhase }: 
 interface ChatMessageItemProps {
   message: ChatMessage
   isThinking?: boolean
+  isStreaming?: boolean
   streamingPhase: ChatStreamPhase
 }
 
-function ChatMessageItem({ message, isThinking = false, streamingPhase }: ChatMessageItemProps) {
+function ChatMessageItem({ message, isThinking = false, isStreaming = false, streamingPhase }: ChatMessageItemProps) {
   const isUserMessage = message.role === MessageRole.USER
 
   if (isUserMessage) {
@@ -402,8 +404,8 @@ function ChatMessageItem({ message, isThinking = false, streamingPhase }: ChatMe
 
   return (
     <div className="min-w-0">
-      <div className="text-sm leading-relaxed text-foreground prose-sm max-w-none">
-        <Markdown>{message.content}</Markdown>
+      <div className="min-w-0 max-w-none">
+        <Markdown isStreaming={isStreaming}>{message.content}</Markdown>
       </div>
     </div>
   )

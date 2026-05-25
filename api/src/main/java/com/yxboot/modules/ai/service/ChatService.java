@@ -108,7 +108,8 @@ public class ChatService {
                         try {
                             String chunk = extractContent(response);
                             fullResponseBuilder.append(chunk);
-                            if (chunk != null && !chunk.trim().isEmpty()) {
+                            // 保留仅含换行/空白的 chunk，Markdown 块级语法依赖行首换行符
+                            if (chunk != null && !chunk.isEmpty()) {
                                 emitter.send(SseEmitter.event().data(Map.of("chunk", chunk)));
                             }
                         } catch (IOException e) {
