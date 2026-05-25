@@ -3,14 +3,15 @@
 import { datasetService } from '@/api/dataset'
 import { DatasetFormDialog } from '@/app/[locale]/(main)/dataset/_components/DatasetFormDialog'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { Dataset } from '@/types/dataset'
 import { DatasetStatus } from '@/types/dataset'
-import { Edit, FileStack, MoreHorizontal, Plus, Search, Trash, User } from 'lucide-react'
+import { Edit, FileStack, Plus, Search, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState, useTransition } from 'react'
@@ -287,17 +288,14 @@ export default function DatasetsPage() {
                         </div>
                       </div>
 
-                      {/* Actions menu — visible on hover */}
+                      {/* Actions menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 -mr-1 -mt-0.5 text-muted-foreground"
+                          <RowActionsTrigger
+                            size="sm"
+                            className="-mr-1 -mt-0.5"
                             onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-36">
                           <DropdownMenuItem
@@ -333,13 +331,10 @@ export default function DatasetsPage() {
                   <div className="px-5 pb-4 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Avatar className="h-5 w-5 ring-1 ring-border">
-                        {dataset.creatorAvatar?.startsWith('http') ? (
-                          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">{dataset.creatorAvatar}</AvatarFallback>
-                        ) : (
-                          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                            {dataset.creatorUsername?.slice(0, 1).toUpperCase() ?? <User className="h-2.5 w-2.5" />}
-                          </AvatarFallback>
-                        )}
+                        {dataset.creatorAvatar && <AvatarImage src={dataset.creatorAvatar} alt={dataset.creatorUsername} />}
+                        <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                          {dataset.creatorUsername?.slice(0, 1).toUpperCase() ?? <User className="h-2.5 w-2.5" />}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="text-[11px] text-muted-foreground">{dataset.creatorUsername || '未知'}</span>
                     </div>

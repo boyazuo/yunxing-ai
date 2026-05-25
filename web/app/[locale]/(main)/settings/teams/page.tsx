@@ -1,63 +1,22 @@
 'use client'
 
 import { invitationService } from '@/api/invitation'
-import { teamService, UserInTenant } from '@/api/team'
+import { type UserInTenant, teamService } from '@/api/team'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import type { ApiResponse } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { Tenant, TenantUserRole } from '@/types/account'
+import { type Tenant, TenantUserRole } from '@/types/account'
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  CheckCircle2,
-  ChevronDown,
-  Crown,
-  MoreVertical,
-  PencilIcon,
-  Search,
-  ShieldCheck,
-  UserPlus,
-  UserX,
-  Users,
-} from 'lucide-react'
+import { CheckCircle2, ChevronDown, Crown, PencilIcon, Search, ShieldCheck, UserPlus, UserX, Users } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -104,32 +63,27 @@ const initialTeams: Tenant[] = [{ tenantId: '', tenantName: '' }]
 const initialMembers: UserInTenant[] = []
 
 export default function TeamsPage() {
-  const { data: session, update } = useSession()
+  const { data: session } = useSession()
   const [isOpenAddDialog, setIsOpenAddDialog] = useState(false)
   const [isOpenEditNameDialog, setIsOpenEditNameDialog] = useState(false)
   const [isTeamSwitcherOpen, setIsTeamSwitcherOpen] = useState(false)
   const [members, setMembers] = useState(initialMembers)
   const [teams, setTeams] = useState(initialTeams)
-  const [currentTeam, setCurrentTeam] = useState(
-    initialTeams.find((team) => team.isActive) || initialTeams[0]
-  )
+  const [currentTeam, setCurrentTeam] = useState(initialTeams.find((team) => team.isActive) || initialTeams[0])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
 
-  const [
-    currentUserInTenant,
-    setCurrentUserInTenant,
-  ] = useState<UserInTenant | null>()
+  const [currentUserInTenant, setCurrentUserInTenant] = useState<UserInTenant | null>()
   // 加载当前用户所涉及的团队
   useEffect(() => {
     // 这里添加获取当前用户所涉及的团队的API调用
     teamService.getTeams().then((data) => {
       console.log('获取团队信息:', data)
 
-      data.forEach((team) => {
+      for (const team of data) {
         team.isActive = team.role === 'owner'
-      })
+      }
 
       setTeams(data)
       setCurrentTeam(data.find((team) => team.isActive) || data[0])
@@ -148,7 +102,7 @@ export default function TeamsPage() {
         setMembers(data)
       })
     }
-  }, [currentTeam])
+  }, [currentTeam, session?.user.userId])
 
   // 成员邀请表单
   const memberForm = useForm<z.infer<typeof memberFormSchema>>({
@@ -180,7 +134,7 @@ export default function TeamsPage() {
       console.log('邀请团队成员:', data)
 
       // 调用邀请 并 发送邮件的API
-      const res: any = await invitationService.createInvitations({
+      const res: ApiResponse<unknown> = await invitationService.createInvitations({
         inviterTenantId: currentTeam.tenantId,
         inviteeEmail: data.email,
         inviteeRole: data.role,
@@ -207,17 +161,13 @@ export default function TeamsPage() {
     setIsSubmitting(true)
     try {
       // 修改团队名称的API调用
-      const res: any = await teamService.updateTeam({
+      const res: ApiResponse<null> = await teamService.updateTeam({
         tenantId: currentTeam.tenantId,
         tenantName: data.teamName,
       })
 
       if (res.code === 0) {
-        const updatedTeams = teams.map((team) =>
-          team.tenantId === currentTeam.tenantId
-            ? { ...team, tenantName: data.teamName }
-            : team
-        )
+        const updatedTeams = teams.map((team) => (team.tenantId === currentTeam.tenantId ? { ...team, tenantName: data.teamName } : team))
 
         setTeams(updatedTeams)
         setCurrentTeam({ ...currentTeam, tenantName: data.teamName })
@@ -275,16 +225,10 @@ export default function TeamsPage() {
   const handleChangeRole = (userId: string, newRole: TenantUserRole) => {
     try {
       // 这里添加修改团队成员角色的API调用
-      teamService
-        .updupdateTenantUserRole(newRole, currentTeam.tenantId, userId)
-        .then((res) => {
-          setMembers(
-            members.map((member) =>
-              member.userId === userId ? { ...member, role: newRole } : member
-            )
-          )
-          toast.success('团队成员角色已更新')
-        })
+      teamService.updupdateTenantUserRole(newRole, currentTeam.tenantId, userId).then((res) => {
+        setMembers(members.map((member) => (member.userId === userId ? { ...member, role: newRole } : member)))
+        toast.success('团队成员角色已更新')
+      })
     } catch (error) {
       toast.error('更新团队成员角色失败')
       console.error(error)
@@ -312,28 +256,23 @@ export default function TeamsPage() {
 
   // 获取计划名称显示
   const getPlanDisplay = (plan: string | undefined) => {
-    plan = plan || 'free'
+    const planKey = plan || 'free'
     const planMap: Record<string, string> = {
       free: '免费版',
       basic: '基础版',
       pro: '专业版',
     }
-    return planMap[plan] || plan
+    return planMap[planKey] || planKey
   }
 
   // 筛选成员
   const filteredMembers = members.filter((member) => {
     // 搜索筛选
     const matchesSearch =
-      member.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (member.username?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) || (member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
 
     // 标签筛选
-    const matchesTab =
-      activeTab === 'all' ||
-      (activeTab === 'active' && member.isActive) ||
-      (activeTab === 'admin' &&
-        (member.role === 'admin' || member.role === 'owner'))
+    const matchesTab = activeTab === 'all' || (activeTab === 'active' && member.isActive) || (activeTab === 'admin' && (member.role === 'admin' || member.role === 'owner'))
 
     return matchesSearch && matchesTab
   })
@@ -349,31 +288,18 @@ export default function TeamsPage() {
                 {/* 团队切换器 */}
                 <div className="relative">
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsTeamSwitcherOpen(!isTeamSwitcherOpen)}
-                      className="w-full md:w-auto justify-between border-dashed"
-                    >
+                    <Button variant="outline" onClick={() => setIsTeamSwitcherOpen(!isTeamSwitcherOpen)} className="w-full md:w-auto justify-between border-dashed">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(currentTeam.tenantName)}
-                          </AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">{getInitials(currentTeam.tenantName)}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">
-                          {currentTeam.tenantName}
-                        </span>
+                        <span className="text-sm font-medium">{currentTeam.tenantName}</span>
                       </div>
                       <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
 
                     {currentUserInTenant?.role === 'owner' ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full"
-                        onClick={() => setIsOpenEditNameDialog(true)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsOpenEditNameDialog(true)}>
                         <PencilIcon className="h-3.5 w-3.5" />
                         <span className="sr-only">编辑团队名称</span>
                       </Button>
@@ -384,34 +310,22 @@ export default function TeamsPage() {
 
                   {isTeamSwitcherOpen && (
                     <div className="absolute top-full left-0 z-10 mt-1 w-full md:w-[240px] rounded-md border bg-popover p-1 shadow-md">
-                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground">
-                        团队列表
-                      </div>
+                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground">团队列表</div>
                       {teams.map((team) => (
                         <button
                           type="button"
                           key={team.tenantId}
                           onClick={() => handleTeamChange(team.tenantId)}
-                          className={cn(
-                            'flex items-center gap-2 w-full rounded-md p-2 text-left text-sm transition-colors',
-                            'hover:bg-accent',
-                            team.isActive ? 'bg-accent' : ''
-                          )}
+                          className={cn('flex items-center gap-2 w-full rounded-md p-2 text-left text-sm transition-colors', 'hover:bg-accent', team.isActive ? 'bg-accent' : '')}
                         >
                           <Avatar className="h-5 w-5">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {getInitials(team.tenantName)}
-                            </AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">{getInitials(team.tenantName)}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 truncate">
                             <p className="font-medium">{team.tenantName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {getRoleLabel(team.role)}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{getRoleLabel(team.role)}</p>
                           </div>
-                          {team.isActive && (
-                            <CheckCircle2 className="h-4 w-4 text-primary" />
-                          )}
+                          {team.isActive && <CheckCircle2 className="h-4 w-4 text-primary" />}
                         </button>
                       ))}
                     </div>
@@ -442,15 +356,10 @@ export default function TeamsPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>邀请新团队成员</DialogTitle>
-                    <DialogDescription>
-                      输入团队成员信息并发送邀请。团队成员将收到邀请邮件。
-                    </DialogDescription>
+                    <DialogDescription>输入团队成员信息并发送邀请。团队成员将收到邀请邮件。</DialogDescription>
                   </DialogHeader>
                   <Form {...memberForm}>
-                    <form
-                      onSubmit={memberForm.handleSubmit(onSubmitMember)}
-                      className="space-y-4"
-                    >
+                    <form onSubmit={memberForm.handleSubmit(onSubmitMember)} className="space-y-4">
                       <FormField
                         control={memberForm.control}
                         name="email"
@@ -470,10 +379,7 @@ export default function TeamsPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>角色</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="选择角色" />
@@ -483,10 +389,7 @@ export default function TeamsPage() {
                                 {roles
                                   .filter((role) => role.value !== 'owner')
                                   .map((role) => (
-                                    <SelectItem
-                                      key={role.value}
-                                      value={role.value}
-                                    >
+                                    <SelectItem key={role.value} value={role.value}>
                                       <div className="flex items-center">
                                         {role.icon}
                                         {role.label}
@@ -510,22 +413,14 @@ export default function TeamsPage() {
               </Dialog>
 
               {/* 修改团队名称对话框 */}
-              <Dialog
-                open={isOpenEditNameDialog}
-                onOpenChange={setIsOpenEditNameDialog}
-              >
+              <Dialog open={isOpenEditNameDialog} onOpenChange={setIsOpenEditNameDialog}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>修改团队名称</DialogTitle>
-                    <DialogDescription>
-                      更新您的团队名称，这将显示在所有成员的界面中。
-                    </DialogDescription>
+                    <DialogDescription>更新您的团队名称，这将显示在所有成员的界面中。</DialogDescription>
                   </DialogHeader>
                   <Form {...teamNameForm}>
-                    <form
-                      onSubmit={teamNameForm.handleSubmit(onSubmitTeamName)}
-                      className="space-y-4"
-                    >
+                    <form onSubmit={teamNameForm.handleSubmit(onSubmitTeamName)} className="space-y-4">
                       <FormField
                         control={teamNameForm.control}
                         name="teamName"
@@ -559,18 +454,11 @@ export default function TeamsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle>团队成员</CardTitle>
-              <CardDescription className="text-[12px]">
-                管理团队中的成员及其权限。
-              </CardDescription>
+              <CardDescription className="text-[12px]">管理团队中的成员及其权限。</CardDescription>
             </div>
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索成员..."
-                className="pl-8 w-full sm:w-[200px] lg:w-[250px]"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <Input placeholder="搜索成员..." className="pl-8 w-full sm:w-[200px] lg:w-[250px]" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
 
@@ -580,9 +468,7 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'all'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:bg-background/50'
+                  activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
                 )}
                 onClick={() => setActiveTab('all')}
               >
@@ -592,9 +478,7 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'active'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:bg-background/50'
+                  activeTab === 'active' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
                 )}
                 onClick={() => setActiveTab('active')}
               >
@@ -604,9 +488,7 @@ export default function TeamsPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-                  activeTab === 'admin'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:bg-background/50'
+                  activeTab === 'admin' ? 'bg-background text-foreground shadow-sm' : 'hover:bg-background/50',
                 )}
                 onClick={() => setActiveTab('admin')}
               >
@@ -621,98 +503,49 @@ export default function TeamsPage() {
             {filteredMembers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-2" />
-                <p className="text-muted-foreground mb-2">
-                  {searchQuery ? '没有找到匹配的成员' : '还没有团队成员'}
-                </p>
+                <p className="text-muted-foreground mb-2">{searchQuery ? '没有找到匹配的成员' : '还没有团队成员'}</p>
                 {searchQuery && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSearchQuery('')}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
                     清除搜索
                   </Button>
                 )}
               </div>
             ) : (
               filteredMembers.map((member) => (
-                <div
-                  key={member.userId}
-                  className={cn(
-                    'flex items-center justify-between p-2 rounded-lg transition-colors',
-                    'hover:bg-accent/50 group'
-                  )}
-                >
+                <div key={member.userId} className={cn('flex items-center justify-between p-2 rounded-lg transition-colors', 'hover:bg-accent/50 group')}>
                   <div className="flex items-center space-x-4">
                     <Avatar className="border">
                       <AvatarImage src={member.avatar} alt={member.username} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(member.username)}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary">{getInitials(member.username ?? member.email ?? '?')}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
                         <div className="font-medium">{member.username}</div>
-                        {member.isActive && (
-                          <CheckCircle2 className="text-green-500 h-3.5 w-3.5" />
-                        )}
+                        {member.isActive && <CheckCircle2 className="text-green-500 h-3.5 w-3.5" />}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {member.email}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{member.email}</div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge
-                      variant="outline"
-                      className="hidden md:flex items-center gap-1 px-2"
-                    >
+                    <Badge variant="outline" className="hidden md:flex items-center gap-1 px-2">
                       {getRoleIcon(member.role)}
                       <span>{getRoleLabel(member.role)}</span>
                     </Badge>
-                    {(currentUserInTenant?.role === 'owner' ||
-                      currentUserInTenant?.role === 'admin') &&
-                    currentUserInTenant.userId != member.userId ? (
+                    {(currentUserInTenant?.role === 'owner' || currentUserInTenant?.role === 'admin') && currentUserInTenant.userId !== member.userId ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-70 group-hover:opacity-100"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">操作</span>
-                          </Button>
+                          <RowActionsTrigger icon="vertical" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleChangeRole(
-                                member.userId,
-                                TenantUserRole.ADMIN
-                              )
-                            }
-                            className="flex items-center"
-                          >
+                          <DropdownMenuItem onClick={() => handleChangeRole(member.userId, TenantUserRole.ADMIN)} className="flex items-center">
                             <ShieldCheck className="mr-2 h-4 w-4" />
                             设为管理员
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleChangeRole(
-                                member.userId,
-                                TenantUserRole.NORMAL
-                              )
-                            }
-                            className="flex items-center"
-                          >
+                          <DropdownMenuItem onClick={() => handleChangeRole(member.userId, TenantUserRole.NORMAL)} className="flex items-center">
                             <Users className="mr-2 h-4 w-4" />
                             设为成员
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive flex items-center"
-                            onClick={() => handleDeleteMember(member.userId)}
-                          >
+                          <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center" onClick={() => handleDeleteMember(member.userId)}>
                             <UserX className="mr-2 h-4 w-4" />
                             移除团队成员
                           </DropdownMenuItem>

@@ -15,6 +15,7 @@ Thumbs.db
 *.code-workspace
 
 # 环境变量文件
+.env
 .env.local
 
 # 日志文件

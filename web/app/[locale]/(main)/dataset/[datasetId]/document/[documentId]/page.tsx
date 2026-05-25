@@ -2,6 +2,7 @@
 
 import { documentService, segmentService } from '@/api/document'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
 import { CustomPagination } from '@/components/blocks/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +21,6 @@ import {
   Edit,
   FileText,
   Layers,
-  MoreHorizontal,
   Search,
   Trash2,
   X,
@@ -362,7 +362,7 @@ export default function DocumentSegmentsPage() {
                   aria-label="全选"
                 />
               </TableHead>
-              <TableHead className="w-20 font-medium">位置</TableHead>
+              <TableHead className="w-28 font-medium">位置</TableHead>
               <TableHead className="w-36 hidden sm:table-cell font-medium">标题</TableHead>
               <TableHead className="font-medium">内容预览</TableHead>
               <TableHead className="w-20 hidden md:table-cell font-medium">字数</TableHead>
@@ -464,14 +464,7 @@ export default function DocumentSegmentsPage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">操作菜单</span>
-                          </Button>
+                          <RowActionsTrigger className="ml-auto" label="操作菜单" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-28">
                           <DropdownMenuItem onClick={() => handleEditSegment(segment)}>
@@ -553,8 +546,8 @@ export default function DocumentSegmentsPage() {
 
       {/* 分页 */}
       {total > pageSize && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-4">
+          <span className="min-w-48 shrink-0 whitespace-nowrap text-sm text-muted-foreground">
             第 <span className="tabular-nums">{(page - 1) * pageSize + 1}</span>–<span className="tabular-nums">{Math.min(page * pageSize, total)}</span> 条，共 <span className="tabular-nums">{total}</span> 条
           </span>
           <CustomPagination currentPage={page} pageSize={pageSize} totalItems={total} onPageChange={handlePageChange} />

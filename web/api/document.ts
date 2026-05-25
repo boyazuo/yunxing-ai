@@ -1,4 +1,5 @@
 import { type ApiResponse, api } from '@/lib/api'
+import { normalizePage } from '@/lib/pagination'
 import type { DatasetDocument, DocumentSegment, DocumentStatus } from '@/types/document'
 
 /**
@@ -18,15 +19,10 @@ export const documentService = {
     current: number
     size: number
   }> => {
-    const response = await api.get<{
-      records: DatasetDocument[]
-      total: number
-      current: number
-      size: number
-    }>('/dataset-documents/page', {
+    const response = await api.get('/dataset-documents/page', {
       params: { datasetId, current: page, size },
     })
-    return response.data
+    return normalizePage<DatasetDocument>(response.data, page, size)
   },
 
   /**
@@ -91,13 +87,8 @@ export const segmentService = {
       params.keyword = keyword.trim()
     }
 
-    const response = await api.get<{
-      records: DocumentSegment[]
-      total: number
-      current: number
-      size: number
-    }>('/document-segments/page', { params })
-    return response.data
+    const response = await api.get('/document-segments/page', { params })
+    return normalizePage<DocumentSegment>(response.data, page, size)
   },
 
   getChildSegmentsByParent: async (parentSegmentId: string | number): Promise<DocumentSegment[]> => {

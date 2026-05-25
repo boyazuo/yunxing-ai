@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { App } from '@/types/app'
 import { ChatStreamPhase, MessageRole } from '@/types/chat'
-import { ArrowRight, ArrowUp, FileText, Loader2, Settings, Share2 } from 'lucide-react'
+import { ArrowUp, Loader2, Settings, Share2 } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from './markdown'
 import { ThinkingIndicator } from './thinking-indicator'
@@ -31,17 +31,7 @@ export interface ChatInterfaceHandle {
 }
 
 export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
-  (
-    {
-      activeApp,
-      hasActiveConversation,
-      activeConversationId,
-      userId = '',
-      onNewConversation,
-      className = '',
-    },
-    ref,
-  ) => {
+  ({ activeApp, hasActiveConversation, activeConversationId, userId = '', onNewConversation, className = '' }, ref) => {
     const [userInput, setUserInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -266,21 +256,8 @@ export const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>
           />
         ) : (
           <>
-            <ChatMessages
-              messages={messages}
-              activeApp={activeApp}
-              loadingMessages={loadingMessages}
-              isLoading={isLoading}
-              streamingPhase={streamingPhase}
-            />
-            <ChatInputDock
-              userInput={userInput}
-              setUserInput={setUserInput}
-              isLoading={isLoading}
-              activeApp={activeApp}
-              handleSendMessage={handleSendMessage}
-              variant="bottom"
-            />
+            <ChatMessages messages={messages} activeApp={activeApp} loadingMessages={loadingMessages} isLoading={isLoading} streamingPhase={streamingPhase} />
+            <ChatInputDock userInput={userInput} setUserInput={setUserInput} isLoading={isLoading} activeApp={activeApp} handleSendMessage={handleSendMessage} variant="bottom" />
           </>
         )}
       </div>
@@ -321,14 +298,7 @@ interface EmptyChatStateProps {
   handleSendMessage: () => Promise<void>
 }
 
-function EmptyChatState({
-  activeApp,
-  loadingMessages,
-  userInput,
-  setUserInput,
-  isLoading,
-  handleSendMessage,
-}: EmptyChatStateProps) {
+function EmptyChatState({ activeApp, loadingMessages, userInput, setUserInput, isLoading, handleSendMessage }: EmptyChatStateProps) {
   if (loadingMessages) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -344,25 +314,12 @@ function EmptyChatState({
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
       <div className="w-full max-w-2xl flex flex-col items-center gap-8 animate-in fade-in duration-500">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {activeApp ? '我能为你做什么？' : '欢迎使用云行 AI'}
-          </h1>
-          {activeApp?.intro && (
-            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">{activeApp.intro}</p>
-          )}
-          {!activeApp && (
-            <p className="text-sm text-muted-foreground">请从左侧选择一个应用，开始智能对话</p>
-          )}
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{activeApp ? '我能为你做什么？' : '欢迎使用云行 AI'}</h1>
+          {activeApp?.intro && <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">{activeApp.intro}</p>}
+          {!activeApp && <p className="text-sm text-muted-foreground">请从左侧选择一个应用，开始智能对话</p>}
         </div>
 
-        <ChatInputDock
-          userInput={userInput}
-          setUserInput={setUserInput}
-          isLoading={isLoading}
-          activeApp={activeApp}
-          handleSendMessage={handleSendMessage}
-          variant="center"
-        />
+        <ChatInputDock userInput={userInput} setUserInput={setUserInput} isLoading={isLoading} activeApp={activeApp} handleSendMessage={handleSendMessage} variant="center" />
       </div>
     </div>
   )
@@ -405,12 +362,7 @@ function ChatMessages({ messages, loadingMessages, isLoading, streamingPhase }: 
           <ChatMessageItem
             key={message.id}
             message={message}
-            isThinking={
-              isLoading &&
-              index === messages.length - 1 &&
-              message.role === MessageRole.ASSISTANT &&
-              !message.content.trim()
-            }
+            isThinking={isLoading && index === messages.length - 1 && message.role === MessageRole.ASSISTANT && !message.content.trim()}
             streamingPhase={streamingPhase}
           />
         ))}
@@ -466,36 +418,17 @@ interface ChatInputDockProps {
   variant: 'center' | 'bottom'
 }
 
-function ChatInputDock({
-  userInput,
-  setUserInput,
-  isLoading,
-  activeApp,
-  handleSendMessage,
-  variant,
-}: ChatInputDockProps) {
+function ChatInputDock({ userInput, setUserInput, isLoading, activeApp, handleSendMessage, variant }: ChatInputDockProps) {
   const isInputDisabled = !activeApp || isLoading
   const isSendDisabled = !userInput.trim() || isLoading || !activeApp
 
-  const placeholder =
-    variant === 'center'
-      ? activeApp
-        ? '分配一个任务或提问任何问题'
-        : '请先选择应用...'
-      : activeApp
-        ? '提出后续问题...'
-        : '请先选择应用...'
+  const placeholder = variant === 'center' ? (activeApp ? '分配一个任务或提问任何问题' : '请先选择应用...') : activeApp ? '提出后续问题...' : '请先选择应用...'
 
-  const wrapperClass =
-    variant === 'center'
-      ? 'w-full'
-      : 'border-t border-border/40 p-4 md:p-5 bg-background shrink-0'
+  const wrapperClass = variant === 'center' ? 'w-full' : 'border-t border-border/40 p-4 md:p-5 bg-background shrink-0'
 
   return (
     <div className={wrapperClass}>
-      <div
-        className={`relative mx-auto ${variant === 'center' ? 'max-w-2xl' : 'max-w-3xl'}`}
-      >
+      <div className={`relative mx-auto ${variant === 'center' ? 'max-w-2xl' : 'max-w-3xl'}`}>
         <div
           className={`relative rounded-2xl border border-border/70 bg-card shadow-sm transition-shadow duration-200 focus-within:shadow-md focus-within:border-border ${
             variant === 'center' ? 'shadow-md' : ''
@@ -514,23 +447,8 @@ function ChatInputDock({
             }}
             disabled={isInputDisabled}
           />
-          <div className="absolute left-3 bottom-3 flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground cursor-pointer"
-              disabled={isInputDisabled}
-            >
-              <FileText className="h-4 w-4" />
-            </Button>
-          </div>
           <div className="absolute right-3 bottom-3">
-            <Button
-              size="icon"
-              className="h-8 w-8 rounded-full cursor-pointer"
-              onClick={handleSendMessage}
-              disabled={isSendDisabled}
-            >
+            <Button size="icon" className="h-8 w-8 rounded-full cursor-pointer" onClick={handleSendMessage} disabled={isSendDisabled}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
             </Button>
           </div>
@@ -539,13 +457,6 @@ function ChatInputDock({
         {variant === 'bottom' && (
           <div className="flex justify-between mt-2 text-[11px] px-1">
             <span className="text-muted-foreground">Enter 发送 · Shift+Enter 换行</span>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors duration-200 cursor-pointer"
-            >
-              知识库增强
-              <ArrowRight className="h-3 w-3" />
-            </button>
           </div>
         )}
       </div>

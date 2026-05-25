@@ -5,7 +5,7 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin()
 
 const nextConfig: NextConfig = {
-  // 其他配置可以添加在这里
+  output: 'standalone',
 }
 
 export default withNextIntl(nextConfig)

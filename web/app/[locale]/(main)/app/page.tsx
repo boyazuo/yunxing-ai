@@ -3,6 +3,7 @@
 import { appService } from '@/api/apps'
 import { AppFormDialog } from '@/app/[locale]/(main)/app/_components/AppFormDialog'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { App } from '@/types/app'
 import { AppType } from '@/types/app'
-import { Bot, Edit, GitBranch, Layers, MessageSquare, MoreHorizontal, Plus, Search, Trash, User } from 'lucide-react'
+import { Bot, Edit, GitBranch, Layers, MessageSquare, Plus, Search, Trash, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState, useTransition } from 'react'
@@ -292,14 +293,11 @@ export default function SpacePage() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 -mr-1 -mt-0.5 text-muted-foreground cursor-pointer"
+                          <RowActionsTrigger
+                            size="sm"
+                            className="-mr-1 -mt-0.5 cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-36">
                           <DropdownMenuItem

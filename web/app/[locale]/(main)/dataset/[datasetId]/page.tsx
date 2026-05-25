@@ -4,6 +4,7 @@ import { datasetService } from '@/api/dataset'
 import { documentService } from '@/api/document'
 import { DocumentUploadDialog } from '@/app/[locale]/(main)/dataset/_components/DocumentUploadDialog'
 import { ConfirmDialog } from '@/components/blocks/confirm-dialog'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
 import { CustomPagination } from '@/components/blocks/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -25,7 +26,6 @@ import {
   FileText,
   FileType2,
   Loader2,
-  MoreHorizontal,
   Plus,
   Search,
   Trash,
@@ -87,7 +87,7 @@ function StatusPill({ status }: { status: DocumentStatus }) {
     [DocumentStatus.FAILED]: { icon: AlertCircle, label: getDocumentStatusText(status), cls: 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-400', dot: 'bg-red-500' },
   } as const
 
-  const cfg = configs[status] ?? configs[DocumentStatus.PENDING]
+  const cfg = configs[status as keyof typeof configs] ?? configs[DocumentStatus.PENDING]
   const IconComp = cfg.icon
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.cls}`}>
@@ -345,13 +345,10 @@ export default function DatasetDocumentsPage() {
                       <TableCell>
                         <span className="text-sm text-muted-foreground tabular-nums">{formatDateTime(doc.createTime)}</span>
                       </TableCell>
-                      <TableCell className="pr-5">
+                      <TableCell className="pr-5 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">操作</span>
-                            </Button>
+                            <RowActionsTrigger className="ml-auto" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-36">
                             <DropdownMenuItem disabled={!canView} asChild={canView}>

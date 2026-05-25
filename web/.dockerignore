@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env.local
+.env*.local
+npm-debug.log*
+pnpm-debug.log*
+.turbo
+.vercel

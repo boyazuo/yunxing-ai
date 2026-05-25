@@ -1,0 +1,25 @@
+# 生产环境：通过 Nginx 统一入口（80 端口）
+# 使用方式：docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    ports: !reset []
+
+  web:
+    ports: !reset []
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: yunxing-nginx
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - yunxing-net

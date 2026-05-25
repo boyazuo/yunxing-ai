@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { RowActionsTrigger } from '@/components/blocks/row-actions'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils'
 import type { App } from '@/types/app'
 import type { Conversation } from '@/types/chat'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ChevronDown, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 
@@ -234,24 +235,14 @@ export const ConversationList = forwardRef<ConversationListHandle, ConversationL
                           </span>
                         </button>
 
-                        <div
-                          className={cn(
-                            'absolute right-0.5 top-1/2 -translate-y-1/2 transition-opacity',
-                            isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                          )}
-                        >
+                        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  'h-6 w-6 cursor-pointer text-muted-foreground hover:bg-muted/80',
-                                )}
-                              >
-                                <MoreHorizontal className="h-3.5 w-3.5" />
-                                <span className="sr-only">操作菜单</span>
-                              </Button>
+                              <RowActionsTrigger
+                                size="xs"
+                                className="cursor-pointer"
+                                label="操作菜单"
+                              />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-36">
                               <DropdownMenuItem
