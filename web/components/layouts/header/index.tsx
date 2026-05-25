@@ -6,7 +6,7 @@ import LocaleToggle from '@/components/locale/toggle'
 import ThemeToggle from '@/components/theme/toggle'
 import { cn } from '@/lib/utils'
 import { Database, Home, Layers } from 'lucide-react'
-import Image from 'next/image'
+import { BrandLogo } from '@/components/brand/brand-logo'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -38,13 +38,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
       <div className="flex h-14 items-center px-6">
-        {/* Logo */}
-        <Link href="/home" className="flex items-center gap-2.5 mr-8 flex-shrink-0 cursor-pointer group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/15 transition-colors">
-            <Image src="/logo.png" alt="云行 AI" width={20} height={20} />
-          </div>
-          <span className="font-bold text-sm tracking-tight">云行 AI</span>
-        </Link>
+        <BrandLogo href="/home" className="mr-8 cursor-pointer" />
 
         {/* Nav */}
         <nav className="hidden flex-1 md:flex">

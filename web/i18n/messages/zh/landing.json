@@ -1,0 +1,83 @@
+{
+  "landing": {
+    "meta": {
+      "title": "云行 AI — 企业级 AI 应用构建平台",
+      "description": "快速构建、部署与管理 AI 应用。支持 RAG 知识库、流式对话、多租户协作，让团队更快落地智能产品。"
+    },
+    "nav": {
+      "features": "产品能力",
+      "workflow": "使用流程",
+      "getStarted": "开始体验"
+    },
+    "hero": {
+      "badge": "企业级 AI 应用平台",
+      "title": "把 AI 能力",
+      "titleHighlight": "交付到业务一线",
+      "description": "云行 AI 帮助团队快速搭建可上线的智能应用：可视化配置、知识库增强、流式对话与多租户协作，一站式完成从原型到生产。",
+      "ctaPrimary": "开始体验",
+      "ctaSecondary": "了解能力",
+      "stats": {
+        "apps": "应用编排",
+        "rag": "知识库 RAG",
+        "teams": "团队协作"
+      },
+      "preview": {
+        "windowTitle": "yunxing-ai · 工作台",
+        "appsLabel": "应用",
+        "chatLabel": "对话预览",
+        "appNames": ["客服助手", "知识问答", "内部 Copilot"],
+        "userMessage": "根据知识库，总结本周产品更新要点",
+        "assistantMessage": "已检索 3 份文档。本周重点包括：新增 RAG 严格模式、流式对话优化，以及团队工作空间权限细化…"
+      }
+    },
+    "features": {
+      "title": "为真实业务场景而生",
+      "subtitle": "从应用构建到知识检索，覆盖 AI 产品落地所需的核心能力",
+      "items": {
+        "apps": {
+          "title": "AI 应用构建",
+          "description": "可视化配置系统提示词、变量与模型，快速创建可对外服务的智能应用。"
+        },
+        "rag": {
+          "title": "知识库与 RAG",
+          "description": "支持文档上传、分段与向量检索，让回答 grounded 于企业知识，减少幻觉。"
+        },
+        "chat": {
+          "title": "流式对话体验",
+          "description": "SSE 流式输出，会话与消息完整管理，提供接近原生 Chat 的交互体验。"
+        },
+        "workspace": {
+          "title": "多租户与团队",
+          "description": "工作空间隔离、成员邀请与权限管理，适配企业级协作与治理需求。"
+        }
+      }
+    },
+    "workflow": {
+      "title": "三步开启智能应用",
+      "subtitle": "无需复杂基建，专注业务价值交付",
+      "steps": {
+        "one": {
+          "title": "创建应用",
+          "description": "配置模型、提示词与变量，定义应用的行为边界与输出风格。"
+        },
+        "two": {
+          "title": "接入知识库",
+          "description": "上传 PDF、Word 等文档，选择分段策略并完成向量化索引。"
+        },
+        "three": {
+          "title": "发布与对话",
+          "description": "一键发布应用，通过对话界面验证效果，持续迭代优化。"
+        }
+      }
+    },
+    "cta": {
+      "title": "准备好构建你的第一个 AI 应用了吗？",
+      "description": "立即进入工作台，体验从配置到对话的完整流程。",
+      "button": "开始体验"
+    },
+    "footer": {
+      "tagline": "云行 AI — 让智能应用更快落地",
+      "copyright": "© {year} 云行 AI. All rights reserved."
+    }
+  }
+}

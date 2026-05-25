@@ -1,0 +1,83 @@
+{
+  "landing": {
+    "meta": {
+      "title": "Yunxing AI — Enterprise AI App Platform",
+      "description": "Build, deploy, and manage AI applications faster. RAG knowledge bases, streaming chat, and multi-tenant collaboration in one platform."
+    },
+    "nav": {
+      "features": "Features",
+      "workflow": "How it works",
+      "getStarted": "Get started"
+    },
+    "hero": {
+      "badge": "Enterprise AI platform",
+      "title": "Bring AI",
+      "titleHighlight": "to production teams",
+      "description": "Yunxing AI helps teams ship intelligent apps faster: visual configuration, knowledge-augmented answers, streaming chat, and workspace collaboration—from prototype to production.",
+      "ctaPrimary": "Get started",
+      "ctaSecondary": "Explore features",
+      "stats": {
+        "apps": "App builder",
+        "rag": "RAG knowledge",
+        "teams": "Team workspaces"
+      },
+      "preview": {
+        "windowTitle": "yunxing-ai · workspace",
+        "appsLabel": "Apps",
+        "chatLabel": "Chat preview",
+        "appNames": ["Support bot", "Knowledge Q&A", "Internal copilot"],
+        "userMessage": "Summarize this week's product updates from the knowledge base",
+        "assistantMessage": "Retrieved 3 documents. Highlights: new RAG strict mode, streaming chat improvements, and refined workspace permissions…"
+      }
+    },
+    "features": {
+      "title": "Built for real-world delivery",
+      "subtitle": "Everything you need to launch AI products your business can trust",
+      "items": {
+        "apps": {
+          "title": "AI app builder",
+          "description": "Configure prompts, variables, and models visually to launch customer-ready intelligent apps."
+        },
+        "rag": {
+          "title": "Knowledge & RAG",
+          "description": "Ingest documents, chunk and index vectors, and ground answers in your enterprise knowledge."
+        },
+        "chat": {
+          "title": "Streaming chat",
+          "description": "SSE streaming with full conversation history—native chat UX for validation and support."
+        },
+        "workspace": {
+          "title": "Multi-tenant teams",
+          "description": "Workspace isolation, invites, and permissions designed for enterprise collaboration."
+        }
+      }
+    },
+    "workflow": {
+      "title": "Three steps to your first app",
+      "subtitle": "Skip heavy infrastructure—focus on business outcomes",
+      "steps": {
+        "one": {
+          "title": "Create an app",
+          "description": "Set models, system prompts, and variables to define behavior and tone."
+        },
+        "two": {
+          "title": "Connect knowledge",
+          "description": "Upload PDFs and Word docs, choose chunking strategies, and build vector indexes."
+        },
+        "three": {
+          "title": "Ship & iterate",
+          "description": "Publish your app and validate in chat—iterate continuously on real feedback."
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to build your first AI app?",
+      "description": "Jump into the workspace and experience the full flow from setup to conversation.",
+      "button": "Get started"
+    },
+    "footer": {
+      "tagline": "Yunxing AI — Ship intelligent apps faster",
+      "copyright": "© {year} Yunxing AI. All rights reserved."
+    }
+  }
+}
