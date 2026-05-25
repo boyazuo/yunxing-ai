@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { BadgeCheck, Bell, CreditCard, LogOut, Sparkles } from 'lucide-react'
+import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useSession, signOut } from 'next-auth/react'
 export default function UserAvatar() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -24,17 +24,13 @@ export default function UserAvatar() {
   }
 
   const handleLogout = () => {
-    signOut({callbackUrl: '/login'})
+    signOut({ callbackUrl: '/login' })
   }
- 
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative border-none text-muted-foreground hover:bg-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer"
-        >
+        <Button variant="ghost" size="icon" className="relative border-none text-muted-foreground hover:bg-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.avatar} alt={user?.username || ''} />
             <AvatarFallback>{user?.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -52,7 +48,7 @@ export default function UserAvatar() {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => router.push('/settings')}>
             <BadgeCheck className="mr-2 h-4 w-4" />
-            <span>账号设置</span>
+            <span>账户设置</span>
           </DropdownMenuItem>
           <DropdownMenuItem>
             <CreditCard className="mr-2 h-4 w-4" />
