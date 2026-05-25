@@ -73,7 +73,9 @@ class RagChatPromptServiceTest {
         assertThat(result.getDirectResponse()).isNull();
         assertThat(result.getUserPrompt()).contains("【参考内容】").contains("云行 AI 是企业知识库平台");
         assertThat(result.getUserPrompt()).contains("不得使用外部知识");
+        assertThat(result.getUserPrompt()).contains("Markdown");
         assertThat(result.getSystemPrompt()).contains("严格的知识库问答助手");
+        assertThat(result.getSystemPrompt()).contains("回复组织");
     }
 
     @Test
