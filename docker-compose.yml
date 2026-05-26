@@ -47,7 +47,7 @@ services:
     volumes:
       - upload_data:/data/uploads
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - yunxing-net
 
@@ -66,7 +66,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     networks:
       - yunxing-net
 
