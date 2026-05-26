@@ -24,4 +24,7 @@ docker compose "${COMPOSE_FILES[@]}" up -d "$@"
 
 echo ""
 echo "构建完成。服务启动中..."
+if [[ " ${COMPOSE_FILES[*]} " == *" docker-compose.prod.yml "* ]]; then
+  echo "生产模式：请配置宿主机 Nginx（参考 docker/nginx/yunxing-ai.conf）"
+fi
 docker compose "${COMPOSE_FILES[@]}" ps

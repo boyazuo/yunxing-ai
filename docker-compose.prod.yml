@@ -1,25 +1,14 @@
-# 生产环境：通过 Nginx 统一入口（80 端口）
+# 生产环境：api/web 仅绑定本机，由宿主机 Nginx 反向代理
 # 使用方式：docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
-  api:
+  qdrant:
     ports: !reset []
+
+  api:
+    ports:
+      - "127.0.0.1:8080:8080"
 
   web:
-    ports: !reset []
-
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: yunxing-nginx
-    restart: unless-stopped
-    depends_on:
-      api:
-        condition: service_healthy
-      web:
-        condition: service_healthy
     ports:
-      - "80:80"
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      - yunxing-net
+      - "127.0.0.1:3000:3000"

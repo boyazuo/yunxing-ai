@@ -21,11 +21,14 @@ docker compose "${COMPOSE_FILES[@]}" up -d "$@"
 
 echo ""
 echo "云行 AI 已启动"
-echo "  前端: http://localhost:3000"
-echo "  后端: http://localhost:8080"
-echo "  Swagger: http://localhost:8080/swagger-ui.html"
 if [[ " ${COMPOSE_FILES[*]} " == *" docker-compose.prod.yml "* ]]; then
-  echo "  Nginx 统一入口: http://localhost"
+  echo "  生产模式：api/web 仅监听本机"
+  echo "  请确保宿主机 Nginx 已配置并 reload"
+  echo "  配置参考: docker/nginx/yunxing-ai.conf"
+else
+  echo "  前端: http://localhost:3000"
+  echo "  后端: http://localhost:8080"
+  echo "  Swagger: http://localhost:8080/swagger-ui.html"
 fi
 
 docker compose "${COMPOSE_FILES[@]}" ps
