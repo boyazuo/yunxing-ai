@@ -30,7 +30,7 @@ const rowActionsTriggerVariants = cva(
   },
 )
 
-type RowActionsTriggerProps = ComponentProps<typeof Button> &
+type RowActionsTriggerProps = Omit<ComponentProps<typeof Button>, 'size'> &
   VariantProps<typeof rowActionsTriggerVariants> & {
     icon?: 'horizontal' | 'vertical'
     label?: string

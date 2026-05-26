@@ -7,7 +7,7 @@ export interface NormalizedPage<T> {
 }
 
 /** MyBatis-Flex Page 与前端约定的字段名差异 */
-interface FlexPage<T> {
+export interface FlexPage<T> {
   records?: T[]
   total?: number
   totalRow?: number

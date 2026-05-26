@@ -1,5 +1,5 @@
 import { type ApiResponse, api } from '@/lib/api'
-import { normalizePage } from '@/lib/pagination'
+import { type FlexPage, normalizePage } from '@/lib/pagination'
 import type { DatasetDocument, DocumentSegment, DocumentStatus } from '@/types/document'
 
 /**
@@ -19,7 +19,7 @@ export const documentService = {
     current: number
     size: number
   }> => {
-    const response = await api.get('/dataset-documents/page', {
+    const response = await api.get<FlexPage<DatasetDocument>>('/dataset-documents/page', {
       params: { datasetId, current: page, size },
     })
     return normalizePage<DatasetDocument>(response.data, page, size)
@@ -87,7 +87,7 @@ export const segmentService = {
       params.keyword = keyword.trim()
     }
 
-    const response = await api.get('/document-segments/page', { params })
+    const response = await api.get<FlexPage<DocumentSegment>>('/document-segments/page', { params })
     return normalizePage<DocumentSegment>(response.data, page, size)
   },
 
