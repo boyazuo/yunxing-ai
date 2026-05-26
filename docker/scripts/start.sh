@@ -11,7 +11,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-docker compose up -d "$@"
+docker-compose up -d "$@"
 
 echo ""
 echo "云行 AI 已启动"
@@ -20,4 +20,4 @@ echo "  后端: http://localhost:8080"
 echo "  Swagger: http://localhost:8080/swagger-ui.html"
 echo "  生产部署请配置宿主机 Nginx: docker/nginx/yunxing-ai.conf"
 
-docker compose ps
+docker-compose ps

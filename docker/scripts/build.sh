@@ -13,9 +13,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "请编辑 $ENV_FILE，至少填写 AI_CHAT_API_KEY 与 AI_EMBEDDING_API_KEY"
 fi
 
-docker compose build "$@"
-docker compose up -d "$@"
+docker-compose build "$@"
+docker-compose up -d "$@"
 
 echo ""
 echo "构建完成。服务启动中..."
-docker compose ps
+docker-compose ps

@@ -11,5 +11,5 @@ if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
   exit 0
 fi
 
-docker compose down -v --remove-orphans
+docker-compose down -v --remove-orphans
 echo "已清理所有容器与数据卷"

@@ -59,7 +59,7 @@
 | 组件 | 版本要求 |
 |------|----------|
 | Docker | 24.0+ |
-| Docker Compose | v2.20+（支持 `docker compose` 命令） |
+| Docker Compose | v2.20+（`docker-compose` 或 `docker compose` 均可） |
 | 宿主机 Nginx | 1.18+（生产环境） |
 | 阿里云 RDS MySQL | 8.0+，已创建数据库实例与业务库 |
 | 外部 Redis | 6.0+，部署服务器可访问 |
@@ -154,7 +154,8 @@ chmod +x docker/scripts/*.sh
 **方式二：直接使用 Docker Compose**
 
 ```bash
-docker compose up -d --build
+docker-compose up -d --build
+# 若已安装 Docker Compose 插件，也可使用：docker compose up -d --build
 ```
 
 ### 5. 访问应用（本地调试）
@@ -217,7 +218,7 @@ docker compose up -d --build
 > **注意**：`NEXT_PUBLIC_API_BASE_URL` 在构建 Web 镜像时写入，修改后需重新构建：
 >
 > ```bash
-> docker compose build web && docker compose up -d web
+> docker-compose build web && docker-compose up -d web
 > ```
 
 ### 邮件（可选）
@@ -242,7 +243,7 @@ MAIL_PASSWORD=your-password
 ```bash
 ./docker/scripts/start.sh
 # 或
-docker compose up -d
+docker-compose up -d
 ```
 
 访问 http://localhost:3000 与 http://localhost:8080。
@@ -265,7 +266,7 @@ UPLOAD_URL_PREFIX=https://your-domain.com/
 ```bash
 ./docker/scripts/build.sh
 # 或
-docker compose up -d --build
+docker-compose up -d --build
 ```
 
 #### 第三步：配置宿主机 Nginx
@@ -319,17 +320,17 @@ Certbot 会自动修改 Nginx 配置并启用 HTTPS。完成后确认 `.env` 中
 | 查看单个服务日志 | `./docker/scripts/logs.sh api` |
 | 清理容器与数据卷 | `./docker/scripts/clean.sh` |
 
-也可直接使用 Docker Compose：
+也可直接使用 Docker Compose（`docker-compose` 与 `docker compose` 等价）：
 
 ```bash
 # 查看服务状态
-docker compose ps
+docker-compose ps
 
 # 重启单个服务
-docker compose restart api
+docker-compose restart api
 
 # 仅重新构建后端
-docker compose build api && docker compose up -d api
+docker-compose build api && docker-compose up -d api
 
 # 连接 RDS 数据库（需本地安装 mysql 客户端）
 mysql -h ${MYSQL_HOST} -P ${MYSQL_PORT:-3306} -u ${MYSQL_USER} -p ${MYSQL_DATABASE}
@@ -371,7 +372,7 @@ mysqldump -h ${MYSQL_HOST} -P ${MYSQL_PORT:-3306} -u ${MYSQL_USER} -p ${MYSQL_DA
 mysql -h ${MYSQL_HOST} -P ${MYSQL_PORT:-3306} -u ${MYSQL_USER} -p ${MYSQL_DATABASE} < backup.sql
 ```
 
-> 执行 `clean.sh` 或 `docker compose down -v` 会**永久删除** Docker 数据卷（Qdrant、上传文件），**不会**影响 RDS 与外部 Redis 数据，但操作前仍建议确认已备份。
+> 执行 `clean.sh` 或 `docker-compose down -v` 会**永久删除** Docker 数据卷（Qdrant、上传文件），**不会**影响 RDS 与外部 Redis 数据，但操作前仍建议确认已备份。
 
 ## 数据库迁移
 
@@ -401,7 +402,7 @@ mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p ${MYSQL_DATABASE} < doc/sql/migration
 
 ### 502 Bad Gateway（Nginx）
 
-1. 确认 Docker 容器正常运行：`docker compose ps`
+1. 确认 Docker 容器正常运行：`docker-compose ps`
 2. 确认 api/web 在本机可访问：
    ```bash
    curl http://127.0.0.1:8080/api-docs
@@ -421,7 +422,7 @@ mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p ${MYSQL_DATABASE} < doc/sql/migration
 
 1. 确认 `.env` 中已填写 `AI_CHAT_API_KEY` 与 `AI_EMBEDDING_API_KEY`
 2. 查看后端日志：`./docker/scripts/logs.sh api`
-3. 确认 Qdrant 容器正常运行：`docker compose ps qdrant`
+3. 确认 Qdrant 容器正常运行：`docker-compose ps qdrant`
 
 ### 端口冲突
 

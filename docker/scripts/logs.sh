@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 SERVICE="${1:-}"
 
 if [[ -n "$SERVICE" ]]; then
-  docker compose logs -f "$SERVICE"
+  docker-compose logs -f "$SERVICE"
 else
-  docker compose logs -f
+  docker-compose logs -f
 fi
