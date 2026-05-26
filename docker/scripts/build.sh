@@ -13,18 +13,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "请编辑 $ENV_FILE，至少填写 AI_CHAT_API_KEY 与 AI_EMBEDDING_API_KEY"
 fi
 
-COMPOSE_FILES=(-f docker-compose.yml)
-if [[ "${1:-}" == "--prod" ]]; then
-  COMPOSE_FILES+=(-f docker-compose.prod.yml)
-  shift
-fi
-
-docker compose "${COMPOSE_FILES[@]}" build "$@"
-docker compose "${COMPOSE_FILES[@]}" up -d "$@"
+docker compose build "$@"
+docker compose up -d "$@"
 
 echo ""
 echo "构建完成。服务启动中..."
-if [[ " ${COMPOSE_FILES[*]} " == *" docker-compose.prod.yml "* ]]; then
-  echo "生产模式：请配置宿主机 Nginx（参考 docker/nginx/yunxing-ai.conf）"
-fi
-docker compose "${COMPOSE_FILES[@]}" ps
+docker compose ps

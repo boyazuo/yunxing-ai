@@ -11,24 +11,13 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-COMPOSE_FILES=(-f docker-compose.yml)
-if [[ "${1:-}" == "--prod" ]]; then
-  COMPOSE_FILES+=(-f docker-compose.prod.yml)
-  shift
-fi
-
-docker compose "${COMPOSE_FILES[@]}" up -d "$@"
+docker compose up -d "$@"
 
 echo ""
 echo "云行 AI 已启动"
-if [[ " ${COMPOSE_FILES[*]} " == *" docker-compose.prod.yml "* ]]; then
-  echo "  生产模式：api/web 仅监听本机"
-  echo "  请确保宿主机 Nginx 已配置并 reload"
-  echo "  配置参考: docker/nginx/yunxing-ai.conf"
-else
-  echo "  前端: http://localhost:3000"
-  echo "  后端: http://localhost:8080"
-  echo "  Swagger: http://localhost:8080/swagger-ui.html"
-fi
+echo "  前端: http://localhost:3000"
+echo "  后端: http://localhost:8080"
+echo "  Swagger: http://localhost:8080/swagger-ui.html"
+echo "  生产部署请配置宿主机 Nginx: docker/nginx/yunxing-ai.conf"
 
-docker compose "${COMPOSE_FILES[@]}" ps
+docker compose ps

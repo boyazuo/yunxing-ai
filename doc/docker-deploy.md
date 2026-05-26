@@ -29,7 +29,7 @@
                    │  宿主机 Nginx    │  :80 / :443
                    │  (生产环境)      │
                    └────────┬────────┘
-                            │ 127.0.0.1
+                            │
               ┌─────────────┴─────────────┐
               │                           │
        ┌──────▼──────┐             ┌──────▼──────┐
@@ -50,9 +50,9 @@
 | 宿主机 Nginx | 生产环境统一入口，反向代理到本机 Docker 容器 | 80 / 443 |
 | 阿里云 RDS | 业务数据库（外部托管，需自行创建实例与库表） | 3306 |
 | 外部 Redis | 缓存（外部托管，如阿里云 Redis） | 6379 |
-| qdrant | 向量数据库（RAG 知识库），生产环境不对外暴露 | 6333 / 6334 |
-| api | Java 后端（Spring Boot），生产环境仅监听 127.0.0.1 | 8080 |
-| web | 前端（Next.js），生产环境仅监听 127.0.0.1 | 3000 |
+| qdrant | 向量数据库（RAG 知识库），仅容器内网络访问 | — |
+| api | Java 后端（Spring Boot） | 8080 |
+| web | 前端（Next.js） | 3000 |
 
 ## 前置要求
 
@@ -84,8 +84,7 @@
 
 ```
 yunxing-ai/
-├── docker-compose.yml          # 标准部署编排
-├── docker-compose.prod.yml     # 生产模式叠加（本机端口 + 隐藏 Qdrant 对外端口）
+├── docker-compose.yml          # 部署编排（本地与生产共用）
 ├── .env.docker.example         # 环境变量模板
 ├── api/
 │   ├── Dockerfile
@@ -234,7 +233,9 @@ MAIL_PASSWORD=your-password
 
 ## 部署模式
 
-### 本地调试模式
+本地调试与生产部署使用**同一套** `docker-compose.yml`，差异在于 `.env` 中的对外地址，以及生产环境是否配置宿主机 Nginx。
+
+### 本地调试
 
 各服务直接暴露端口，适合本地开发、测试与调试。
 
@@ -246,9 +247,9 @@ docker compose up -d
 
 访问 http://localhost:3000 与 http://localhost:8080。
 
-### 生产模式（宿主机 Nginx + Docker）
+### 生产部署（宿主机 Nginx + Docker）
 
-Docker 只运行 `qdrant`、`api`、`web` 三个容器。`api` / `web` 仅绑定 `127.0.0.1`，由服务器上已有的 Nginx 对外提供统一入口。
+Docker 运行 `qdrant`、`api`、`web` 三个容器，由服务器上已有的 Nginx 对外提供统一入口。
 
 #### 第一步：修改 `.env` 中的对外地址
 
@@ -262,15 +263,10 @@ UPLOAD_URL_PREFIX=https://your-domain.com/
 #### 第二步：构建并启动 Docker 容器
 
 ```bash
-./docker/scripts/build.sh --prod
+./docker/scripts/build.sh
 # 或
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 ```
-
-生产模式下：
-- `api` 监听 `127.0.0.1:8080`
-- `web` 监听 `127.0.0.1:3000`
-- `qdrant` 不对外暴露端口
 
 #### 第三步：配置宿主机 Nginx
 
@@ -316,12 +312,9 @@ Certbot 会自动修改 Nginx 配置并启用 HTTPS。完成后确认 `.env` 中
 
 | 操作 | 命令 |
 |------|------|
-| 启动（本地调试） | `./docker/scripts/start.sh` |
-| 启动（生产） | `./docker/scripts/start.sh --prod` |
-| 构建并启动（本地） | `./docker/scripts/build.sh` |
-| 构建并启动（生产） | `./docker/scripts/build.sh --prod` |
+| 启动 | `./docker/scripts/start.sh` |
+| 构建并启动 | `./docker/scripts/build.sh` |
 | 停止 | `./docker/scripts/stop.sh` |
-| 停止（生产） | `./docker/scripts/stop.sh --prod` |
 | 查看全部日志 | `./docker/scripts/logs.sh` |
 | 查看单个服务日志 | `./docker/scripts/logs.sh api` |
 | 清理容器与数据卷 | `./docker/scripts/clean.sh` |
@@ -414,9 +407,8 @@ mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p ${MYSQL_DATABASE} < doc/sql/migration
    curl http://127.0.0.1:8080/api-docs
    curl http://127.0.0.1:3000
    ```
-3. 确认使用了 `--prod` 模式启动（端口绑定在 127.0.0.1）
-4. 检查 Nginx 配置：`sudo nginx -t`
-5. 查看 Nginx 错误日志：`sudo tail -f /var/log/nginx/error.log`
+3. 检查 Nginx 配置：`sudo nginx -t`
+4. 查看 Nginx 错误日志：`sudo tail -f /var/log/nginx/error.log`
 
 ### 前端无法登录 / API 请求跨域
 
@@ -433,7 +425,7 @@ mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p ${MYSQL_DATABASE} < doc/sql/migration
 
 ### 端口冲突
 
-本地调试模式下，若 8080、3000 等端口已被占用，可在 `docker-compose.yml` 中修改 `ports` 映射。生产模式下 api/web 绑定本机端口，一般不与 Nginx 的 80/443 冲突。
+本地调试或生产环境下，若 8080、3000 等端口已被占用，可在 `docker-compose.yml` 中修改 `ports` 映射，并同步更新 `.env` 与 Nginx 配置中的对应地址。
 
 ### 查看容器资源占用
 
@@ -446,7 +438,7 @@ docker stats yunxing-qdrant yunxing-api yunxing-web
 1. **修改默认密码**：务必更换 `.env` 中 JWT、NextAuth 的默认密钥，并使用强密码的 RDS / Redis 账号。
 2. **RDS / Redis 安全**：优先使用 VPC 内网连接；若走公网，务必配置白名单并启用自动备份。
 3. **使用 HTTPS**：通过 Certbot 在宿主机 Nginx 上配置 TLS，并相应更新 `.env` 中所有对外地址为 `https://`。
-4. **限制端口暴露**：生产模式使用 `--prod`，api/web 仅监听 127.0.0.1，Qdrant 不映射对外端口。
+4. **限制端口暴露**：Qdrant 不映射宿主机端口；生产环境建议通过安全组 / 防火墙仅放行 80、443，禁止公网直接访问 3000、8080。
 5. **文件存储**：默认使用容器内本地存储（`upload_data` 卷）。如需 OSS，修改 `application-docker.yml` 中的 `yxboot.upload` 配置。
 6. **监控与日志**：建议接入 Docker 日志驱动或 ELK/Loki 等日志系统，并启用 RDS / Redis 自动备份与 `upload_data` 数据卷备份。
 7. **资源规划**：知识库向量写入与 AI 对话对内存和 CPU 有一定要求，生产环境建议分配 ≥ 8 GB 内存。
